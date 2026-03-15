@@ -40,6 +40,7 @@ interface PoolData {
   attributes: PoolAttrs
   relationships?: {
     base_token?: { data?: { id?: string } }
+    quote_token?: { data?: { id?: string } }
     dex?: { data?: { id?: string } }
   }
 }

@@ -10,7 +10,7 @@ import { isSupportedSwapNetwork } from '../lib/evm/config'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { getSwapTokens, type EvmToken } from '../lib/evm/tokens'
 import { readSolanaBalance } from '../lib/solana/balances'
-import { executeJupiterSwap, getSolanaKeypairFromStorage } from '../lib/solana/executeSwap'
+import { executeJupiterSwap } from '../lib/solana/executeSwap'
 import { getSolanaQuoteWithFallback, type SolanaLiveQuote } from '../lib/solana/quote'
 import { fetchTokenByMint, isEvmAddress, isSolanaMint } from '../api/jupiter'
 import { SOLANA_TOKENS, type SolanaToken } from '../lib/solana/tokens'
@@ -166,7 +166,9 @@ export function SwapPage() {
   const quoteSupported = isSolana ? Boolean(solanaAddress) : isSupportedSwapNetwork(network)
   const tokenOptions = useMemo((): SwapToken[] => {
     if (isSolana) return solanaAddress ? SOLANA_TOKENS : []
-    return quoteSupported ? (getSwapTokens(network) as SwapToken[]) : []
+    return quoteSupported && isSupportedSwapNetwork(network)
+      ? (getSwapTokens(network as import('../lib/evm/config').SupportedSwapNetwork) as SwapToken[])
+      : []
   }, [isSolana, network, quoteSupported, solanaAddress])
   const defaultFrom = tokenOptions[0]
   const defaultTo = tokenOptions.find((item) => item.symbol === 'USDC' || item.symbol === 'USDT') ?? tokenOptions[1] ?? tokenOptions[0]
@@ -347,7 +349,11 @@ export function SwapPage() {
           }),
         )
         if (cancelled) return
-        const confirmed = results.filter((r) => r.status?.confirmationStatus === 'confirmed' || r.status?.confirmationStatus === 'finalized')
+        const confirmed = results.filter((r) => {
+          const s = r.status && 'value' in r.status ? r.status.value : r.status
+          const st = s as { confirmationStatus?: string } | null
+          return st?.confirmationStatus === 'confirmed' || st?.confirmationStatus === 'finalized'
+        })
         if (confirmed.length === 0) return
         let shouldRefresh = false
         persistHistory((current) =>
@@ -356,7 +362,8 @@ export function SwapPage() {
             const m = confirmed.find((c) => c.sig === item.txHash)
             if (!m) return item
             shouldRefresh = true
-            return { ...item, status: m.status?.err ? 'failed' : 'success' }
+            const s = m.status && 'value' in m.status ? m.status.value : m.status
+            return { ...item, status: (s as { err?: unknown })?.err ? 'failed' : 'success' }
           }),
         )
         if (shouldRefresh) refreshSolana()
@@ -441,10 +448,10 @@ export function SwapPage() {
           .finally(() => {
             if (!cancelled) setQuoteLoading(false)
           })
-      } else if (provider && !isSolana) {
+      } else if (provider && !isSolana && isSupportedSwapNetwork(network)) {
         void getBestLiveQuote({
           provider,
-          network,
+          network: network as import('../lib/evm/config').SupportedSwapNetwork,
           fromToken: fromToken as EvmToken,
           toToken: toToken as EvmToken,
           amountIn,

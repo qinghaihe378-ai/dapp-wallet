@@ -364,7 +364,7 @@ async function quoteFromGeckoPools(request: QuoteRequest): Promise<LiveQuote | n
         protocolId: protocol.id,
         protocolLabel: protocol.label,
         routerAddress: protocol.routerAddress,
-        quoteMode: protocol.quoteMode,
+        quoteMode: protocol.quoteMode === 'unsupported' ? 'v3' : protocol.quoteMode,
         amountInWei: amountWei,
         amountOutWei: quoted.amountOutWei,
         minimumAmountOutWei,

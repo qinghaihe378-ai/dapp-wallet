@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Keypair } from '@solana/web3.js'
 import { getSolanaKeypairFromStorage } from '../lib/solana/executeSwap'
 
 export function useSolanaWallet() {

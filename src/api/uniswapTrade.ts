@@ -181,7 +181,7 @@ export async function fetchUniswapQuote(
     'Content-Type': 'application/json',
     Accept: 'application/json',
   }
-  if (!USE_PROXY) {
+  if (!USE_PROXY && apiKey) {
     headers['x-api-key'] = apiKey
     headers['x-universal-router-version'] = '2.0'
     headers['x-permit2-disabled'] = 'true'

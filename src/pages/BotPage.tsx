@@ -10,7 +10,7 @@ import { executeQuotedSwap } from '../lib/evm/executeSwap'
 import { getSolanaQuoteWithFallback } from '../lib/solana/quote'
 import { executeJupiterSwap } from '../lib/solana/executeSwap'
 import { getSolanaTokenBySymbol } from '../lib/solana/tokens'
-import { fetchTokenByMint, isEvmAddress, isSolanaMint } from '../api/jupiter'
+import { fetchTokenByMint, isEvmAddress } from '../api/jupiter'
 import { SOLANA_TOKENS, type SolanaToken } from '../lib/solana/tokens'
 import { NETWORK_CONFIG } from '../lib/walletConfig'
 import { ethers } from 'ethers'
@@ -43,8 +43,8 @@ export function BotPage() {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [WELCOME_MSG])
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'parsing' | 'switching' | 'quoting' | 'executing' | 'done' | 'error'>('idle')
-  const [txHash, setTxHash] = useState<string | null>(null)
-  const [txChain, setTxChain] = useState<BotChain | null>(null)
+  const [, setTxHash] = useState<string | null>(null)
+  const [, setTxChain] = useState<BotChain | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [pendingBuy, setPendingBuy] = useState<{
     intent: { chain: BotChain; amount: string; payToken: string; buyToken: string }

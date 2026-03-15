@@ -23,7 +23,7 @@ export async function executeJupiterSwap(
   quote: SolanaLiveQuote,
   userPublicKey: string,
 ): Promise<{ swapHash: string }> {
-  let txBuf: Uint8Array
+  let txBuf: Uint8Array | undefined
   if (quote.pumpDevTx) {
     txBuf = base64ToUint8Array(quote.pumpDevTx)
   } else if (quote.raydiumQuote) {
@@ -103,6 +103,7 @@ export async function executeJupiterSwap(
     throw new Error('无效报价')
   }
 
+  if (!txBuf) throw new Error('无效报价')
   const tx = VersionedTransaction.deserialize(txBuf)
   tx.sign([keypair])
 
