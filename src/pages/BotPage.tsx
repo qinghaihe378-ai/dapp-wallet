@@ -32,7 +32,7 @@ function getQuoteErrorMessage(error: unknown): string {
   if (msg.toLowerCase().includes('insufficient')) return '余额不足'
   if (msg.includes('无报价') || msg.includes('均无报价') || msg.includes('流动性') || msg.includes('V4 路由') || msg.includes('V4 有池子') || msg.includes('[API:')) return msg
   if (msg === 'Failed to fetch' || msg.toLowerCase().includes('failed to fetch')) {
-    return '网络请求失败，请检查网络或稍后重试。若在使用 Uniswap API，请确认可访问外网且 API Key 有效。'
+    return '网络请求失败，请检查网络或稍后重试。Sol 链需能访问 Jupiter/Raydium；EVM 链需能访问 Uniswap。国内可尝试 VPN 或配置 API Key。'
   }
   return msg.slice(0, 80)
 }

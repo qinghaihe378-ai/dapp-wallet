@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Connection } from '@solana/web3.js'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
@@ -108,6 +109,9 @@ function getQuoteErrorMessage(error: unknown) {
   }
   if (message.toLowerCase().includes('no route') || message.toLowerCase().includes('insufficient liquidity')) {
     return '暂无可用路由或流动性不足。'
+  }
+  if (message === 'Failed to fetch' || message.toLowerCase().includes('failed to fetch')) {
+    return '网络请求失败。Sol 链需能访问 Jupiter/Raydium；EVM 链需能访问 Uniswap。国内可尝试 VPN 或配置 API Key。'
   }
   return '发起兑换失败，请检查网络、余额和滑点设置。'
 }

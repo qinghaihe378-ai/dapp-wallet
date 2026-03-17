@@ -112,8 +112,8 @@ export function HomePage() {
     <div className="page ave-page ave-home-shell">
       <div className="home-banner-panel">
         <div className="home-banner-copy">
-          <div className="home-banner-title">合约直播</div>
-          <div className="home-banner-desc">看见交易的另一种可能</div>
+          <div className="home-banner-title">ClawDEX</div>
+          <div className="home-banner-desc">合约直播 · 看见交易的另一种可能</div>
           <div className="home-banner-metrics">
             <span>实时广播</span>
             <span>高手跟单</span>

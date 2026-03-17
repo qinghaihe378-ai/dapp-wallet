@@ -160,7 +160,7 @@ export function AppHeader() {
   if (headerMode === 'home') {
     return (
       <header className="ave-header ave-header-home">
-        <Link to="/profile" className="ave-home-avatar" aria-label="个人中心">A</Link>
+        <Link to="/profile" className="ave-home-avatar" aria-label="个人中心" title="ClawDEX">C</Link>
         <div className="ave-home-search-wrap" ref={searchRef}>
           <div className="ave-home-search">
             <span className="ave-home-search-icon" aria-hidden="true">⌕</span>
