@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchAllNewTokens, SUPPORTED_NETWORKS } from '../api/geckoterminal'
+import { SUPPORTED_NETWORKS } from '../api/geckoterminal'
 import type { NewTokenItem } from '../api/geckoterminal'
-import { searchByAddressOrQuery } from '../api/markets'
-import { fetchDexScreenerAllNewTokens } from '../api/dexscreenerNewTokens'
 
 const REFRESH_INTERVAL_MS = 30_000
 const PRICE_REFRESH_INTERVAL_MS = 45_000
@@ -29,7 +27,10 @@ export function NewTokensPage() {
   const load = useCallback(async () => {
     setError(null)
     try {
-      const list = await fetchDexScreenerAllNewTokens().catch(() => fetchAllNewTokens())
+      const res = await fetch('/api/new-tokens')
+      if (!res.ok) throw new Error('加载新币失败')
+      const data = (await res.json()) as { items?: NewTokenItem[] }
+      const list = data.items ?? []
       setItems((prev) => {
         const byKey = new Map<string, NewTokenItem>()
         for (const t of [...list, ...prev]) {
@@ -77,14 +78,6 @@ export function NewTokensPage() {
   const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
   const keyOf = (chainId: string, addr: string) => `${chainId}:${addr.toLowerCase()}`
 
-  const toDexScreenerChain = (chainId: string) => {
-    if (chainId === 'eth') return 'ethereum'
-    if (chainId === 'bsc') return 'bsc'
-    if (chainId === 'base') return 'base'
-    if (chainId === 'polygon_pos') return 'polygon'
-    return chainId
-  }
-
   const refreshPrices = useCallback(async () => {
     const now = Date.now()
     const tasks: Array<{ chainId: string; address: string }> = []
@@ -102,23 +95,11 @@ export function NewTokensPage() {
 
     if (tasks.length === 0) return
 
-    const results = await Promise.allSettled(
-      tasks.map(async (t) => {
-        const wantedChain = toDexScreenerChain(t.chainId)
-        const items = await searchByAddressOrQuery(t.address)
-        const hit =
-          items.find((it) => it.id.startsWith(`${wantedChain}:`)) ??
-          items.find((it) => it.id.endsWith(`:${t.address}`)) ??
-          items[0]
-        if (!hit || !Number.isFinite(hit.current_price) || hit.current_price <= 0) return null
-        return {
-          key: keyOf(t.chainId, t.address),
-          priceUsd: hit.current_price,
-          change24h: hit.price_change_percentage_24h ?? null,
-          at: now,
-        }
-      }),
-    )
+    const results: Array<
+      | { status: 'fulfilled'; value: { key: string; priceUsd: number; change24h: number | null; at: number } }
+      | { status: 'rejected'; reason: unknown }
+    > = []
+    // 价格刷新逻辑暂时关闭，保留结构以便后续接 DexScreener 行情
 
     const next: Record<string, { priceUsd: number; change24h: number | null; at: number }> = {}
     for (const r of results) {
