@@ -1,7 +1,7 @@
-import Redis from 'ioredis'
-import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens'
+import { Redis } from 'ioredis'
+import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens.js'
 
-const redis = new Redis(process.env.REDIS_URL!)
+const redis = new Redis(process.env.REDIS_URL as string)
 const KEY = 'clawdex:new-tokens:latest'
 const TTL_SECONDS = 60
 

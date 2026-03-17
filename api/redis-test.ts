@@ -1,6 +1,6 @@
-import Redis from 'ioredis'
+import { Redis } from 'ioredis'
 
-const redis = new Redis(process.env.REDIS_URL!)
+const redis = new Redis(process.env.REDIS_URL as string)
 
 export default async function handler(req: any, res: any) {
   try {

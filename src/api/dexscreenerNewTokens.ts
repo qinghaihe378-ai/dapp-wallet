@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { NewTokenItem } from './geckoterminal'
+import type { NewTokenItem } from './geckoterminal.js'
 
 /**
  * DexScreener 没有“new pools”官方接口，这里用搜索接口聚合出“近期创建的 pair”，
