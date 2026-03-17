@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchAllNewTokens, SUPPORTED_NETWORKS } from '../api/geckoterminal'
 import type { NewTokenItem } from '../api/geckoterminal'
+import { searchByAddressOrQuery } from '../api/markets'
+import { fetchDexScreenerAllNewTokens } from '../api/dexscreenerNewTokens'
 
 const REFRESH_INTERVAL_MS = 30_000
+const PRICE_REFRESH_INTERVAL_MS = 45_000
+const MAX_PRICE_LOOKUPS_PER_CHAIN = 20
 
 function formatUsd(val: string | null): string {
   if (val == null) return '—'
@@ -29,11 +34,12 @@ export function NewTokensPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [priceMap, setPriceMap] = useState<Record<string, { priceUsd: number; change24h: number | null; at: number }>>({})
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const list = await fetchAllNewTokens()
+      const list = await fetchDexScreenerAllNewTokens().catch(() => fetchAllNewTokens())
       setItems((prev) => {
         const byKey = new Map<string, NewTokenItem>()
         for (const t of [...list, ...prev]) {
@@ -78,6 +84,76 @@ export function NewTokensPage() {
     return map
   }, [items])
 
+  const shortAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  const keyOf = (chainId: string, addr: string) => `${chainId}:${addr.toLowerCase()}`
+
+  const toDexScreenerChain = (chainId: string) => {
+    if (chainId === 'eth') return 'ethereum'
+    if (chainId === 'bsc') return 'bsc'
+    if (chainId === 'base') return 'base'
+    if (chainId === 'polygon_pos') return 'polygon'
+    return chainId
+  }
+
+  const refreshPrices = useCallback(async () => {
+    const now = Date.now()
+    const tasks: Array<{ chainId: string; address: string }> = []
+
+    for (const net of SUPPORTED_NETWORKS) {
+      const list = byChain.get(net.id) ?? []
+      const sliced = list.slice(0, MAX_PRICE_LOOKUPS_PER_CHAIN)
+      for (const row of sliced) {
+        const k = keyOf(row.chainId, row.tokenAddress)
+        const cached = priceMap[k]
+        if (cached && now - cached.at < PRICE_REFRESH_INTERVAL_MS) continue
+        tasks.push({ chainId: row.chainId, address: row.tokenAddress })
+      }
+    }
+
+    if (tasks.length === 0) return
+
+    const results = await Promise.allSettled(
+      tasks.map(async (t) => {
+        const wantedChain = toDexScreenerChain(t.chainId)
+        const items = await searchByAddressOrQuery(t.address)
+        const hit =
+          items.find((it) => it.id.startsWith(`${wantedChain}:`)) ??
+          items.find((it) => it.id.endsWith(`:${t.address}`)) ??
+          items[0]
+        if (!hit || !Number.isFinite(hit.current_price) || hit.current_price <= 0) return null
+        return {
+          key: keyOf(t.chainId, t.address),
+          priceUsd: hit.current_price,
+          change24h: hit.price_change_percentage_24h ?? null,
+          at: now,
+        }
+      }),
+    )
+
+    const next: Record<string, { priceUsd: number; change24h: number | null; at: number }> = {}
+    for (const r of results) {
+      if (r.status !== 'fulfilled' || !r.value) continue
+      next[r.value.key] = { priceUsd: r.value.priceUsd, change24h: r.value.change24h, at: r.value.at }
+    }
+    if (Object.keys(next).length > 0) {
+      setPriceMap((prev) => ({ ...prev, ...next }))
+    }
+  }, [byChain, priceMap])
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (cancelled) return
+      await refreshPrices().catch(() => {})
+    }
+    void run()
+    const iv = setInterval(run, PRICE_REFRESH_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [refreshPrices])
+
   return (
     <div className="page ave-page">
       <section className="card new-token-hero">
@@ -109,38 +185,43 @@ export function NewTokensPage() {
             </div>
             <div className="new-token-list">
               {list.map((row) => (
-                <div key={`${row.chainId}_${row.poolAddress}`} className="new-token-card">
-                  <div className="new-token-top">
+                (() => {
+                  const cached = priceMap[keyOf(row.chainId, row.tokenAddress)]
+                  const showPrice = cached ? String(cached.priceUsd) : row.priceUsd
+                  const showChange =
+                    cached && cached.change24h != null ? String(cached.change24h) : row.priceChange24h
+                  const isDown = showChange != null && Number(showChange) < 0
+                  const isUp = showChange != null && Number(showChange) >= 0
+                  return (
+                <Link
+                  key={`${row.chainId}_${row.poolAddress}`}
+                  to={`/market?q=${encodeURIComponent(row.tokenAddress)}`}
+                  className="home-token-row"
+                >
+                  <div className="home-token-main">
+                    <span className="wallet-token-avatar wallet-token-avatar-violet" aria-hidden="true">
+                      {(row.symbol?.trim()?.[0] ?? '?').toUpperCase()}
+                    </span>
                     <div>
-                      <div className="new-token-symbol">{row.symbol}</div>
-                      <div className="new-token-dex">{row.dexId}</div>
-                    </div>
-                    <div className={row.priceChange24h != null && Number(row.priceChange24h) < 0 ? 'down' : 'up'}>
-                      {row.priceChange24h != null ? `${row.priceChange24h}%` : '—'}
-                    </div>
-                  </div>
-                  <code className="addr">
-                    {row.tokenAddress.slice(0, 6)}...{row.tokenAddress.slice(-4)}
-                  </code>
-                  <div className="new-token-grid">
-                    <div className="metric-card">
-                      <span className="metric-label">价格</span>
-                      <span className="metric-value">{formatUsd(row.priceUsd)}</span>
-                    </div>
-                    <div className="metric-card">
-                      <span className="metric-label">FDV</span>
-                      <span className="metric-value">{formatUsd(row.fdvUsd)}</span>
-                    </div>
-                    <div className="metric-card">
-                      <span className="metric-label">流动性</span>
-                      <span className="metric-value">{formatUsd(row.reserveUsd)}</span>
-                    </div>
-                    <div className="metric-card">
-                      <span className="metric-label">发现时间</span>
-                      <span className="metric-value">{formatTime(row.poolCreatedAt)}</span>
+                      <div className="home-token-name">{row.symbol?.toUpperCase() ?? row.symbol}</div>
+                      <div className="home-token-sub">
+                        <span>{row.dexId}</span>
+                        <span className="home-token-sub-sep">·</span>
+                        <span>{shortAddr(row.tokenAddress)}</span>
+                        <span className="home-token-sub-sep">·</span>
+                        <span>流动性 {formatUsd(row.reserveUsd)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                  <div className="home-token-side">
+                    <span className="home-token-price">${formatUsd(showPrice)}</span>
+                    <span className={`home-token-badge ${isDown ? 'down' : isUp ? 'up' : 'up'}`}>
+                      {showChange != null ? `${Number(showChange) >= 0 ? '+' : ''}${Number(showChange).toFixed(2)}%` : '—'}
+                    </span>
+                  </div>
+                </Link>
+                  )
+                })()
               ))}
             </div>
           </div>
