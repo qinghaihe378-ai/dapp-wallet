@@ -19,16 +19,6 @@ function formatUsd(val: string | null): string {
   return n.toExponential(2)
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = (now.getTime() - d.getTime()) / 1000
-  if (diff < 60) return `${Math.floor(diff)}秒前`
-  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
-  return d.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
 export function NewTokensPage() {
   const [items, setItems] = useState<NewTokenItem[]>([])
   const [loading, setLoading] = useState(true)

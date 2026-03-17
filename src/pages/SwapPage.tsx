@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { Connection } from '@solana/web3.js'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
