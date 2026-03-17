@@ -314,7 +314,7 @@ export function BotPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder="bsc 买 0.1 BNB 的 USDT"
+              placeholder="买 0.1 BNB 的 USDT"
               disabled={status === 'quoting' || status === 'executing' || status === 'switching'}
             />
             <button

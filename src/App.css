@@ -482,7 +482,8 @@ button:disabled,
   right: auto;
   bottom: 0;
   transform: translateX(-50%);
-  z-index: 150;
+  z-index: 9999;
+  pointer-events: auto;
   display: flex;
   align-items: stretch;
   justify-content: space-between;
@@ -511,6 +512,8 @@ button:disabled,
   text-decoration: none;
   color: var(--text-soft);
   position: relative;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .ave-tab.active {
