@@ -1,4 +1,8 @@
 {
+  "redirects": [
+    { "source": "/dmin", "destination": "/admin", "permanent": false },
+    { "source": "/dmin/(.*)", "destination": "/admin", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
