@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
@@ -30,15 +30,38 @@ export function MarketDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<KLinePeriod>('1h')
+  const [dexPairAddress, setDexPairAddress] = useState<string | null>(null)
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
+
+  const dexTokenAddress = useMemo(() => {
+    if (!dexItem?.id) return null
+    return dexItem.id.split(':')[1] ?? null
+  }, [dexItem?.id])
+
+  const dexScreenerChainId = useMemo(() => {
+    if (!dexItem) return null
+    // MarketItem.chain 约定：eth/bsc/base/sol/polygon
+    if (dexItem.chain === 'eth') return 'ethereum'
+    if (dexItem.chain === 'sol') return 'solana'
+    return dexItem.chain
+  }, [dexItem])
+
+  const geckoNetworkId = useMemo(() => {
+    if (!dexItem) return null
+    if (dexItem.chain === 'eth') return 'eth'
+    if (dexItem.chain === 'polygon') return 'polygon_pos'
+    if (dexItem.chain === 'sol') return 'solana'
+    return dexItem.chain
+  }, [dexItem])
 
   useEffect(() => {
     if (!coinId) return
     if (isDexFormat) {
       setLoading(true)
       setError(null)
+      setDexPairAddress(null)
       fetchDexTokenById(coinId)
         .then((item) => {
           setDexItem(item ?? null)
@@ -77,6 +100,29 @@ export function MarketDetailPage() {
     }
     void load()
   }, [coinId, isDexFormat, isCoingeckoFormat])
+
+  useEffect(() => {
+    if (!dexScreenerChainId || !dexTokenAddress) return
+    let cancelled = false
+
+    const loadPair = async () => {
+      try {
+        setDexPairAddress(null)
+        const res = await fetch(`https://api.dexscreener.com/token-pairs/v1/${dexScreenerChainId}/${dexTokenAddress}`)
+        if (!res.ok) return
+        const json = (await res.json()) as Array<{ pairAddress?: string } | null>
+        const first = Array.isArray(json) ? json.find((p) => p?.pairAddress) : null
+        const pair = (first as { pairAddress?: string } | null)?.pairAddress ?? null
+        if (cancelled) return
+        setDexPairAddress(pair)
+      } catch {
+        // ignore
+      }
+    }
+
+    void loadPair()
+    return () => { cancelled = true }
+  }, [dexScreenerChainId, dexTokenAddress])
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -163,7 +209,8 @@ export function MarketDetailPage() {
             </div>
             <KLineChart
               syntheticData={{ currentPrice: price, change24h }}
-              dexScreener={{ chainId: dexItem.chain === 'eth' ? 'ethereum' : dexItem.chain, tokenAddress: dexItem.id.split(':')[1] }}
+              geckoPool={geckoNetworkId && dexPairAddress ? { network: geckoNetworkId, poolAddress: dexPairAddress } : undefined}
+              dexScreener={dexScreenerChainId && dexTokenAddress ? { chainId: dexScreenerChainId, tokenAddress: dexTokenAddress } : undefined}
               period={period}
             />
           </div>

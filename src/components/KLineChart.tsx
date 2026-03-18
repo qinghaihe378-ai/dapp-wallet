@@ -6,6 +6,8 @@ export type KLinePeriod = '1m' | '5m' | '30m' | '1h' | '2h' | '1d' | '1w'
 interface Props {
   syntheticData: { currentPrice: number; change24h: number }
   period?: KLinePeriod
+  /** GeckoTerminal 真实 OHLCV：传入 network + poolAddress 会显示真实蜡烛（推荐） */
+  geckoPool?: { network: string; poolAddress: string }
   /** DexScreener 实时价格：传入 chainId + tokenAddress 后会显示实时价格线图（非蜡烛） */
   dexScreener?: { chainId: string; tokenAddress: string }
 }
@@ -18,6 +20,21 @@ const PERIOD_CONFIG: Record<KLinePeriod, { count: number; label: string }> = {
   '2h': { count: 24, label: '2H' },
   '1d': { count: 7, label: '1D' },
   '1w': { count: 4, label: '1W' },
+}
+
+type GeckoTimeframe = 'minute' | 'hour' | 'day'
+
+function toGeckoParams(period: KLinePeriod): { timeframe: GeckoTimeframe; aggregate: number; limit: number; pollMs: number } {
+  const limit = Math.min(500, Math.max(60, PERIOD_CONFIG[period].count * 3))
+  switch (period) {
+    case '1m': return { timeframe: 'minute', aggregate: 1, limit, pollMs: 5000 }
+    case '5m': return { timeframe: 'minute', aggregate: 5, limit, pollMs: 7000 }
+    case '30m': return { timeframe: 'minute', aggregate: 30, limit, pollMs: 12000 }
+    case '1h': return { timeframe: 'hour', aggregate: 1, limit, pollMs: 20000 }
+    case '2h': return { timeframe: 'hour', aggregate: 2, limit, pollMs: 25000 }
+    case '1d': return { timeframe: 'day', aggregate: 1, limit, pollMs: 60000 }
+    case '1w': return { timeframe: 'day', aggregate: 7, limit, pollMs: 120000 }
+  }
 }
 
 /** 根据当前价和 24h 涨跌幅生成 OHLC 蜡烛数据 */
@@ -58,14 +75,72 @@ function generateSyntheticOHLC(
   return candles
 }
 
-export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props) {
+export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreener }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null>(null)
   const [livePricePoints, setLivePricePoints] = useState<LineData[]>([])
+  const [geckoCandles, setGeckoCandles] = useState<CandlestickData[]>([])
 
-  const useLivePrice = Boolean(syntheticData.currentPrice > 0 && dexScreener)
+  const useGeckoOhlcv = Boolean(geckoPool?.network && geckoPool?.poolAddress)
+  const useLivePrice = !useGeckoOhlcv && Boolean(syntheticData.currentPrice > 0 && dexScreener)
   const dex = dexScreener
+  const gecko = geckoPool
+
+  useEffect(() => {
+    if (!gecko) return
+    setGeckoCandles([])
+  }, [gecko?.network, gecko?.poolAddress, period])
+
+  useEffect(() => {
+    if (!gecko?.network || !gecko?.poolAddress) return
+    let cancelled = false
+    const { timeframe, aggregate, limit, pollMs } = toGeckoParams(period)
+
+    const tick = async () => {
+      try {
+        const qs = new URLSearchParams({
+          network: gecko.network,
+          pool: gecko.poolAddress,
+          timeframe,
+          aggregate: String(aggregate),
+          limit: String(limit),
+        })
+        const r = await fetch(`/api/ohlcv?${qs.toString()}`)
+        if (!r.ok) return
+        const json = (await r.json()) as {
+          ok?: boolean
+          data?: { data?: { attributes?: { ohlcv_list?: Array<[number, number, number, number, number, number]> } } }
+        }
+        const list = json?.data?.data?.attributes?.ohlcv_list ?? []
+        if (!Array.isArray(list) || list.length === 0) return
+        const candles: CandlestickData[] = []
+        for (const row of list) {
+          const [ts, o, h, l, c] = row
+          if (!Number.isFinite(ts) || !Number.isFinite(o) || !Number.isFinite(h) || !Number.isFinite(l) || !Number.isFinite(c)) continue
+          candles.push({
+            time: Math.floor(ts) as UTCTimestamp,
+            open: o,
+            high: h,
+            low: l,
+            close: c,
+          })
+        }
+        candles.sort((a, b) => Number(a.time) - Number(b.time))
+        if (cancelled) return
+        setGeckoCandles(candles)
+      } catch {
+        // ignore
+      }
+    }
+
+    void tick()
+    const iv = setInterval(tick, pollMs)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [gecko?.network, gecko?.poolAddress, period])
 
   const liveConfig = useMemo(() => {
     const windowSeconds =
@@ -157,7 +232,11 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
   }, [syntheticData.currentPrice, syntheticData.change24h, period])
 
   useEffect(() => {
-    if (!containerRef.current || (useLivePrice ? livePricePoints.length === 0 : data.length === 0)) return
+    const hasAnyData =
+      (useGeckoOhlcv && geckoCandles.length > 0) ||
+      (useLivePrice && livePricePoints.length > 0) ||
+      (!useGeckoOhlcv && !useLivePrice && data.length > 0)
+    if (!containerRef.current || !hasAnyData) return
 
     const container = containerRef.current
     const chart = createChart(container, {
@@ -189,7 +268,18 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
       },
     })
 
-    if (useLivePrice) {
+    if (useGeckoOhlcv) {
+      const candlestickSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#0ecb81',
+        downColor: '#f6465d',
+        borderUpColor: '#0ecb81',
+        borderDownColor: '#f6465d',
+        wickUpColor: '#0ecb81',
+        wickDownColor: '#f6465d',
+      })
+      candlestickSeries.setData(geckoCandles)
+      seriesRef.current = candlestickSeries
+    } else if (useLivePrice) {
       const line = chart.addSeries(LineSeries, {
         color: '#f0b90b',
         lineWidth: 2,
@@ -219,9 +309,13 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [data, livePricePoints, useLivePrice])
+  }, [data, geckoCandles, livePricePoints, useGeckoOhlcv, useLivePrice])
 
-  if ((useLivePrice && livePricePoints.length === 0) || (!useLivePrice && data.length === 0)) return null
+  if (
+    (useGeckoOhlcv && geckoCandles.length === 0) ||
+    (useLivePrice && livePricePoints.length === 0) ||
+    (!useGeckoOhlcv && !useLivePrice && data.length === 0)
+  ) return null
 
   const periodLabel = PERIOD_CONFIG[period].label
 
@@ -229,9 +323,15 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
     <div>
       <div className="chart-header">
         <div>
-          <div className="chart-title">{useLivePrice ? `实时价格 · ${periodLabel}` : `K 线图 · ${periodLabel}`}</div>
+          <div className="chart-title">
+            {useGeckoOhlcv ? `K 线图 · ${periodLabel}` : useLivePrice ? `实时价格 · ${periodLabel}` : `K 线图 · ${periodLabel}`}
+          </div>
           <div className="chart-subtitle">
-            {useLivePrice ? 'DexScreener 轮询实时价格（非蜡烛 OHLC）' : '根据当前价与涨跌幅生成，不依赖外部 API'}
+            {useGeckoOhlcv
+              ? 'GeckoTerminal OHLCV（真实蜡烛）'
+              : useLivePrice
+                ? 'DexScreener 轮询实时价格（非蜡烛 OHLC）'
+                : '根据当前价与涨跌幅生成，不依赖外部 API'}
           </div>
         </div>
       </div>
