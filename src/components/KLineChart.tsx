@@ -78,37 +78,38 @@ export function KLineChart({ syntheticData, period = '1h' }: Props) {
       autoSize: true,
       layout: {
         attributionLogo: false,
-        background: { color: 'transparent' },
-        textColor: '#70809f',
+        // Binance-like dark theme
+        background: { color: '#0b0e11' },
+        textColor: '#b7bdc6',
         fontFamily: 'inherit',
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.08)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.08)' },
+        vertLines: { color: '#1e2329' },
+        horzLines: { color: '#1e2329' },
       },
       rightPriceScale: {
-        borderColor: 'transparent',
+        borderColor: '#1e2329',
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: 'transparent',
+        borderColor: '#1e2329',
         timeVisible: true,
         secondsVisible: false,
       },
       crosshair: {
-        vertLine: { labelBackgroundColor: 'rgba(11, 19, 35, 0.9)' },
-        horzLine: { labelBackgroundColor: 'rgba(11, 19, 35, 0.9)' },
+        vertLine: { labelBackgroundColor: '#1e2329', color: '#5e6673' },
+        horzLine: { labelBackgroundColor: '#1e2329', color: '#5e6673' },
       },
     })
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: '#0ecb81',
+      downColor: '#f6465d',
+      borderUpColor: '#0ecb81',
+      borderDownColor: '#f6465d',
+      wickUpColor: '#0ecb81',
+      wickDownColor: '#f6465d',
     })
 
     candlestickSeries.setData(data)
