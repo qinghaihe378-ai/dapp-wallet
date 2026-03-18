@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SUPPORTED_NETWORKS } from '../api/geckoterminal'
 import type { NewTokenItem } from '../api/geckoterminal'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 const REFRESH_INTERVAL_MS = 30_000
 const PRICE_REFRESH_INTERVAL_MS = 45_000
@@ -18,6 +19,7 @@ function formatUsd(val: string | null): string {
 }
 
 export function NewTokensPage() {
+  const { config } = usePageConfig('newTokens')
   const [items, setItems] = useState<NewTokenItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -125,83 +127,110 @@ export function NewTokensPage() {
     }
   }, [refreshPrices])
 
+  const sections = useMemo(() => {
+    const defaults = [
+      { id: 'hero', enabled: true, order: 0 },
+      { id: 'chains', enabled: true, order: 1 },
+      { id: 'emptyNote', enabled: true, order: 2 },
+    ]
+    const fromCfg = config?.sections && Array.isArray(config.sections) ? config.sections : defaults
+    return [...fromCfg]
+      .filter((s) => s && typeof s.id === 'string')
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((s) => s.enabled !== false)
+  }, [config?.sections])
+
   return (
     <div className="page ave-page">
-      <section className="card new-token-hero">
-        <div className="page-header">
-          <div className="page-header-main">
-            <span className="page-kicker">Radar</span>
-            <h1 className="page-title">新池雷达</h1>
-            <p className="page-subtitle">按链聚合 GeckoTerminal 新池数据，移动端改为卡片流展示。</p>
-          </div>
-        </div>
-        <div className="wallet-summary">
-          <span>每 {REFRESH_INTERVAL_MS / 1000} 秒更新</span>
-          {lastRefresh && (
-            <span>上次刷新：{lastRefresh.toLocaleTimeString('zh-CN')}</span>
-          )}
-        </div>
-      </section>
+      {config?.notice && <p className="tip">{config.notice}</p>}
       {error && <p className="error">{error}</p>}
       {loading && items.length === 0 && <p className="ave-loading">加载中…</p>}
 
-      {SUPPORTED_NETWORKS.map((net) => {
-        const list = byChain.get(net.id) ?? []
-        if (list.length === 0) return null
-        return (
-          <div key={net.id} className="card new-tokens-chain-block">
-            <div className="new-token-chain-header">
-              <h3>{net.name}</h3>
-              <span className="new-token-count">{list.length} 个新池</span>
-            </div>
-            <div className="new-token-list">
-              {list.map((row) => (
-                (() => {
-                  const cached = priceMap[keyOf(row.chainId, row.tokenAddress)]
-                  const showPrice = cached ? String(cached.priceUsd) : row.priceUsd
-                  const showChange =
-                    cached && cached.change24h != null ? String(cached.change24h) : row.priceChange24h
-                  const isDown = showChange != null && Number(showChange) < 0
-                  const isUp = showChange != null && Number(showChange) >= 0
-                  return (
-                <Link
-                  key={`${row.chainId}_${row.poolAddress}`}
-                  to={`/market?q=${encodeURIComponent(row.tokenAddress)}`}
-                  className="home-token-row"
-                >
-                  <div className="home-token-main">
-                    <span className="wallet-token-avatar wallet-token-avatar-violet" aria-hidden="true">
-                      {(row.symbol?.trim()?.[0] ?? '?').toUpperCase()}
-                    </span>
-                    <div>
-                      <div className="home-token-name">{row.symbol?.toUpperCase() ?? row.symbol}</div>
-                      <div className="home-token-sub">
-                        <span>{row.dexId}</span>
-                        <span className="home-token-sub-sep">·</span>
-                        <span>{shortAddr(row.tokenAddress)}</span>
-                        <span className="home-token-sub-sep">·</span>
-                        <span>流动性 {formatUsd(row.reserveUsd)}</span>
-                      </div>
+      {sections.map((s) => {
+        if (s.id === 'hero') {
+          return (
+            <section key="hero" className="card new-token-hero">
+              <div className="page-header">
+                <div className="page-header-main">
+                  <span className="page-kicker">Radar</span>
+                  <h1 className="page-title">{config?.title || '新池雷达'}</h1>
+                  <p className="page-subtitle">{config?.subtitle || '按链聚合 GeckoTerminal 新池数据，移动端改为卡片流展示。'}</p>
+                </div>
+              </div>
+              <div className="wallet-summary">
+                <span>每 {REFRESH_INTERVAL_MS / 1000} 秒更新</span>
+                {lastRefresh && (
+                  <span>上次刷新：{lastRefresh.toLocaleTimeString('zh-CN')}</span>
+                )}
+              </div>
+            </section>
+          )
+        }
+        if (s.id === 'chains') {
+          return (
+            <div key="chains">
+              {SUPPORTED_NETWORKS.map((net) => {
+                const list = byChain.get(net.id) ?? []
+                if (list.length === 0) return null
+                return (
+                  <div key={net.id} className="card new-tokens-chain-block">
+                    <div className="new-token-chain-header">
+                      <h3>{net.name}</h3>
+                      <span className="new-token-count">{list.length} 个新池</span>
+                    </div>
+                    <div className="new-token-list">
+                      {list.map((row) => (
+                        (() => {
+                          const cached = priceMap[keyOf(row.chainId, row.tokenAddress)]
+                          const showPrice = cached ? String(cached.priceUsd) : row.priceUsd
+                          const showChange =
+                            cached && cached.change24h != null ? String(cached.change24h) : row.priceChange24h
+                          const isDown = showChange != null && Number(showChange) < 0
+                          const isUp = showChange != null && Number(showChange) >= 0
+                          return (
+                            <Link
+                              key={`${row.chainId}_${row.poolAddress}`}
+                              to={`/market?q=${encodeURIComponent(row.tokenAddress)}`}
+                              className="home-token-row"
+                            >
+                              <div className="home-token-main">
+                                <span className="wallet-token-avatar wallet-token-avatar-violet" aria-hidden="true">
+                                  {(row.symbol?.trim()?.[0] ?? '?').toUpperCase()}
+                                </span>
+                                <div>
+                                  <div className="home-token-name">{row.symbol?.toUpperCase() ?? row.symbol}</div>
+                                  <div className="home-token-sub">
+                                    <span>{row.dexId}</span>
+                                    <span className="home-token-sub-sep">·</span>
+                                    <span>{shortAddr(row.tokenAddress)}</span>
+                                    <span className="home-token-sub-sep">·</span>
+                                    <span>流动性 {formatUsd(row.reserveUsd)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="home-token-side">
+                                <span className="home-token-price">${formatUsd(showPrice)}</span>
+                                <span className={`home-token-badge ${isDown ? 'down' : isUp ? 'up' : 'up'}`}>
+                                  {showChange != null ? `${Number(showChange) >= 0 ? '+' : ''}${Number(showChange).toFixed(2)}%` : '—'}
+                                </span>
+                              </div>
+                            </Link>
+                          )
+                        })()
+                      ))}
                     </div>
                   </div>
-                  <div className="home-token-side">
-                    <span className="home-token-price">${formatUsd(showPrice)}</span>
-                    <span className={`home-token-badge ${isDown ? 'down' : isUp ? 'up' : 'up'}`}>
-                      {showChange != null ? `${Number(showChange) >= 0 ? '+' : ''}${Number(showChange).toFixed(2)}%` : '—'}
-                    </span>
-                  </div>
-                </Link>
-                  )
-                })()
-              ))}
+                )
+              })}
             </div>
-          </div>
-        )
+          )
+        }
+        if (s.id === 'emptyNote') {
+          if (loading || items.length > 0 || error) return null
+          return <p key="emptyNote" className="tip">暂无新池数据，请稍等刷新。</p>
+        }
+        return null
       })}
-
-      {!loading && items.length === 0 && !error && (
-        <p className="tip">暂无新池数据，请稍等刷新。</p>
-      )}
     </div>
   )
 }

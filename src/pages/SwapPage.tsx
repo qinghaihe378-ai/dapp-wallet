@@ -14,6 +14,7 @@ import { executeJupiterSwap } from '../lib/solana/executeSwap'
 import { getSolanaQuoteWithFallback, type SolanaLiveQuote } from '../lib/solana/quote'
 import { fetchTokenByMint, isEvmAddress, isSolanaMint } from '../api/jupiter'
 import { SOLANA_TOKENS, type SolanaToken } from '../lib/solana/tokens'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 interface SwapHistoryItem {
   id: string
@@ -129,6 +130,7 @@ export function SwapPage() {
   const { signer, address, network, balance, provider, refreshBalance, refreshNonce } = useWallet()
   const { getPrice } = usePrices()
   const { keypair: solanaKeypair, address: solanaAddress, refresh: refreshSolana } = useSolanaWallet()
+  const { config } = usePageConfig('swap')
   const swapSelectionKey = `swapSelection:${network}`
   const swapSlippageKey = `swapSlippage:${network}`
   const swapHistoryKey = `swapHistory:${network}`
@@ -870,6 +872,11 @@ export function SwapPage() {
 
   return (
     <div className="page ave-page ave-swap-shell">
+      {config?.notice && (
+        <div className="home-status-note" style={{ marginBottom: 12 }}>
+          {config.notice}
+        </div>
+      )}
       <div className="swap-mode-segment">
         <button type="button" className="active">兑换&跨链</button>
         <button type="button">池子</button>

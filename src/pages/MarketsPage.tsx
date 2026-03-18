@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { type ChainId, type MarketItem, COLLECTION_INTERVAL_MS, isContractAddress, searchByAddressOrQuery } from '../api/markets'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 function formatCompact(value: number) {
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`
@@ -16,6 +17,7 @@ const MARKET_FAVORITES_ONLY_KEY_PREFIX = 'marketFavoritesOnly'
 
 export function MarketsPage() {
   const { network } = useWallet()
+  const { config } = usePageConfig('market')
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? ''
   const marketSortKey = `${MARKET_SORT_KEY_PREFIX}:${network}`
@@ -155,100 +157,134 @@ export function MarketsPage() {
     setFavorites((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
   }
 
+  const sections = useMemo(() => {
+    const defaults = [
+      { id: 'controls', enabled: true, order: 0 },
+      { id: 'table', enabled: true, order: 1 },
+      { id: 'list', enabled: true, order: 2 },
+    ]
+    const fromCfg = config?.sections && Array.isArray(config.sections) ? config.sections : defaults
+    return [...fromCfg]
+      .filter((s) => s && typeof s.id === 'string')
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((s) => s.enabled !== false)
+  }, [config?.sections])
+
   return (
     <div className="page ave-page ave-market-shell">
       <div className="market-panel">
-        <div className="market-sort-row">
-          <button type="button" className={sortBy === 'default' ? 'active' : ''} onClick={() => setSortBy('default')}>默认</button>
-          <button type="button" className={sortBy === 'change' ? 'active' : ''} onClick={() => setSortBy('change')}>涨幅</button>
-          <button type="button" className={sortBy === 'price' ? 'active' : ''} onClick={() => setSortBy('price')}>价格</button>
-        </div>
-        <div className="market-chain-row">
-          {CHAIN_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`market-chain-pill ${chainFilter === opt.value ? 'active' : ''}`}
-              onClick={() => setChainFilter(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        {apiProvider && (
-          <div className="market-api-hint">数据源: {apiProvider}</div>
-        )}
+        {config?.notice && <div className="market-api-hint">{config.notice}</div>}
 
-        <div className="market-table-head">
-          <span>币种 / 池子</span>
-          <span>价格</span>
-          <span>24h涨跌幅</span>
-        </div>
-
-        {(loading || addressSearchLoading) && <p className="ave-loading">加载中…</p>}
-        {error && (
-          <div className="market-error-wrap">
-            <p className="error">{error}</p>
-            <button type="button" className="btn-primary market-retry-btn" onClick={() => void loadMarkets()}>
-              重新加载
-            </button>
-          </div>
-        )}
-
-        <div className="market-watch-list">
-          {rows.map((item) => {
-            const isDexToken = item.id.includes(':')
-            const innerLink = (
-              <>
-                <div className="market-watch-main">
-                  <img src={item.image} alt="" className="market-watch-icon" />
-                  <div>
-                    <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
-                    <div className="market-watch-sub">
-                      <span>{item.symbol.toUpperCase()}/USDC</span>
-                      <span className={`market-watch-chain market-watch-chain-${item.chain}`}>
-                        {item.chain.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="market-watch-price">
-                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
-                  <div className="market-watch-price-sub">Vol {formatCompact(item.current_price * 125000)}</div>
-                </div>
-                <div className={`market-watch-change ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
-                  {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
-                  {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
-                </div>
-              </>
-            )
+        {sections.map((s) => {
+          if (s.id === 'controls') {
             return (
-            <div key={item.id} className="market-watch-row-wrap">
-              <Link
-                to={isDexToken ? `/market/${encodeURIComponent(item.id)}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
-                className="market-watch-row"
-              >
-                {innerLink}
-              </Link>
-              <button
-                type="button"
-                className={`market-watch-fav ${favorites.includes(item.id) ? 'active' : ''}`}
-                onClick={() => toggleFavorite(item.id)}
-                aria-label="收藏"
-              >
-                {favorites.includes(item.id) ? '★' : '☆'}
-              </button>
-            </div>
+              <div key="controls">
+                <div className="market-sort-row">
+                  <button type="button" className={sortBy === 'default' ? 'active' : ''} onClick={() => setSortBy('default')}>默认</button>
+                  <button type="button" className={sortBy === 'change' ? 'active' : ''} onClick={() => setSortBy('change')}>涨幅</button>
+                  <button type="button" className={sortBy === 'price' ? 'active' : ''} onClick={() => setSortBy('price')}>价格</button>
+                </div>
+                <div className="market-chain-row">
+                  {CHAIN_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`market-chain-pill ${chainFilter === opt.value ? 'active' : ''}`}
+                      onClick={() => setChainFilter(opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {apiProvider && (
+                  <div className="market-api-hint">数据源: {apiProvider}</div>
+                )}
+              </div>
             )
-          })}
-          {!loading && !addressSearchLoading && rows.length === 0 && (
-            <div className="market-empty-note">
-              {searchQuery && isContractAddress(searchQuery)
-                ? '未找到该合约地址对应的交易对'
-                : '暂无匹配的自选池子'}
-            </div>
-          )}
-        </div>
+          }
+
+          if (s.id === 'table') {
+            return (
+              <div key="table">
+                <div className="market-table-head">
+                  <span>币种 / 池子</span>
+                  <span>价格</span>
+                  <span>24h涨跌幅</span>
+                </div>
+
+                {(loading || addressSearchLoading) && <p className="ave-loading">加载中…</p>}
+                {error && (
+                  <div className="market-error-wrap">
+                    <p className="error">{error}</p>
+                    <button type="button" className="btn-primary market-retry-btn" onClick={() => void loadMarkets()}>
+                      重新加载
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          if (s.id === 'list') {
+            return (
+              <div key="list" className="market-watch-list">
+                {rows.map((item) => {
+                  const isDexToken = item.id.includes(':')
+                  const innerLink = (
+                    <>
+                      <div className="market-watch-main">
+                        <img src={item.image} alt="" className="market-watch-icon" />
+                        <div>
+                          <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
+                          <div className="market-watch-sub">
+                            <span>{item.symbol.toUpperCase()}/USDC</span>
+                            <span className={`market-watch-chain market-watch-chain-${item.chain}`}>
+                              {item.chain.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="market-watch-price">
+                        ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
+                        <div className="market-watch-price-sub">Vol {formatCompact(item.current_price * 125000)}</div>
+                      </div>
+                      <div className={`market-watch-change ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                        {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
+                        {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                      </div>
+                    </>
+                  )
+                  return (
+                    <div key={item.id} className="market-watch-row-wrap">
+                      <Link
+                        to={isDexToken ? `/market/${encodeURIComponent(item.id)}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
+                        className="market-watch-row"
+                      >
+                        {innerLink}
+                      </Link>
+                      <button
+                        type="button"
+                        className={`market-watch-fav ${favorites.includes(item.id) ? 'active' : ''}`}
+                        onClick={() => toggleFavorite(item.id)}
+                        aria-label="收藏"
+                      >
+                        {favorites.includes(item.id) ? '★' : '☆'}
+                      </button>
+                    </div>
+                  )
+                })}
+                {!loading && !addressSearchLoading && rows.length === 0 && (
+                  <div className="market-empty-note">
+                    {searchQuery && isContractAddress(searchQuery)
+                      ? '未找到该合约地址对应的交易对'
+                      : '暂无匹配的自选池子'}
+                  </div>
+                )}
+              </div>
+            )
+          }
+          return null
+        })}
       </div>
     </div>
   )

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { fetchMarketsWithFallback, COLLECTION_INTERVAL_MS } from '../api/markets'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 interface HomeItem {
   id: string
@@ -20,6 +21,7 @@ const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 
 export function HomePage() {
   const { network } = useWallet()
+  const { config } = usePageConfig('home')
   const homeQuickActionKey = `${HOME_QUICK_ACTION_KEY_PREFIX}:${network}`
   const homeFilterKey = `${HOME_FILTER_KEY_PREFIX}:${network}`
   const homeSectionKey = `${HOME_SECTION_KEY_PREFIX}:${network}`
@@ -108,80 +110,113 @@ export function HomePage() {
     window.localStorage.setItem(homeSectionKey, activeSection)
   }, [activeSection, homeSectionKey])
 
+  const sections = useMemo(() => {
+    const defaults = [
+      { id: 'banner', enabled: true, order: 0 },
+      { id: 'tabs', enabled: true, order: 1 },
+      { id: 'market', enabled: true, order: 2 },
+      { id: 'quickNote', enabled: true, order: 3 },
+    ]
+    const fromCfg = config?.sections && Array.isArray(config.sections) ? config.sections : defaults
+    return [...fromCfg]
+      .filter((s) => s && typeof s.id === 'string')
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((s) => s.enabled !== false)
+  }, [config?.sections])
+
   return (
     <div className="page ave-page ave-home-shell">
-      <div className="home-banner-panel">
-        <div className="home-banner-copy">
-          <div className="home-banner-title">ClawDEX</div>
-          <div className="home-banner-desc">合约直播 · 看见交易的另一种可能</div>
-          <div className="home-banner-metrics">
-            <span>实时广播</span>
-            <span>高手跟单</span>
-          </div>
-        </div>
-        <div className="home-banner-live">LIVE</div>
-      </div>
+      {config?.notice && (
+        <div className="home-status-note">{config.notice}</div>
+      )}
 
-      <div className="home-section-tabs">
-        <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
-        <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
-        <Link to="/new-tokens" className="ave-header-tab home-section-tab-link">新币</Link>
-      </div>
-
-      <div className="home-market-panel">
-        <div className="home-panel-head">
-          <div className="home-panel-title">
-            {activeSection === 'hot' ? '热门列表' : '涨幅排行'}
-          </div>
-          <div className="home-panel-sub">
-            {activeSection === 'hot' && (activeFilter === 'all' ? '全链热门' : `${activeFilter.toUpperCase()} 热门`)}
-            {activeSection === 'gain' && '24h 涨幅高到低'}
-          </div>
-        </div>
-
-        <div className="home-filter-strip">
-          <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
-          <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
-          <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
-          <button type="button" className={`home-filter-pill ${activeFilter === 'sol' ? 'active' : ''}`} onClick={() => setActiveFilter('sol')}>SOL</button>
-          <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
-          <span className="home-filter-caption">价格</span>
-          <span className="home-filter-caption">涨幅</span>
-        </div>
-
-        <div className="home-token-feed">
-          {filteredItems.map((item) => (
-            <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
-              <div className="home-token-main">
-                <img src={item.image} alt="" className="home-token-icon" />
-                <div>
-                  <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
-                  <div className="home-token-sub">
-                    <span>{item.symbol.toUpperCase()}</span>
-                    <span className="home-token-sub-sep">/</span>
-                    <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
-                  </div>
+      {sections.map((s) => {
+        if (s.id === 'banner') {
+          return (
+            <div key="banner" className="home-banner-panel">
+              <div className="home-banner-copy">
+                <div className="home-banner-title">{config?.title || 'ClawDEX'}</div>
+                <div className="home-banner-desc">{config?.subtitle || '合约直播 · 看见交易的另一种可能'}</div>
+                <div className="home-banner-metrics">
+                  <span>实时广播</span>
+                  <span>高手跟单</span>
                 </div>
               </div>
-              <div className="home-token-side">
-                <span className="home-token-price">
-                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
-                </span>
-                <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
-                  {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
-                  {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
-                </span>
+              <div className="home-banner-live">LIVE</div>
+            </div>
+          )
+        }
+        if (s.id === 'tabs') {
+          return (
+            <div key="tabs" className="home-section-tabs">
+              <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
+              <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
+              <Link to="/new-tokens" className="ave-header-tab home-section-tab-link">新币</Link>
+            </div>
+          )
+        }
+        if (s.id === 'market') {
+          return (
+            <div key="market" className="home-market-panel">
+              <div className="home-panel-head">
+                <div className="home-panel-title">
+                  {activeSection === 'hot' ? '热门列表' : '涨幅排行'}
+                </div>
+                <div className="home-panel-sub">
+                  {activeSection === 'hot' && (activeFilter === 'all' ? '全链热门' : `${activeFilter.toUpperCase()} 热门`)}
+                  {activeSection === 'gain' && '24h 涨幅高到低'}
+                </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
-      {(activeQuickAction === 'receive' || activeQuickAction === 'invite') && (
-        <div className="home-status-note">
-          {activeQuickAction === 'receive' ? '收款二维码已就绪' : '邀请奖励入口已激活'}
-        </div>
-      )}
+              <div className="home-filter-strip">
+                <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
+                <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
+                <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
+                <button type="button" className={`home-filter-pill ${activeFilter === 'sol' ? 'active' : ''}`} onClick={() => setActiveFilter('sol')}>SOL</button>
+                <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
+                <span className="home-filter-caption">价格</span>
+                <span className="home-filter-caption">涨幅</span>
+              </div>
+
+              <div className="home-token-feed">
+                {filteredItems.map((item) => (
+                  <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
+                    <div className="home-token-main">
+                      <img src={item.image} alt="" className="home-token-icon" />
+                      <div>
+                        <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
+                        <div className="home-token-sub">
+                          <span>{item.symbol.toUpperCase()}</span>
+                          <span className="home-token-sub-sep">/</span>
+                          <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="home-token-side">
+                      <span className="home-token-price">
+                        ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
+                      </span>
+                      <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                        {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
+                        {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        if (s.id === 'quickNote') {
+          if (!(activeQuickAction === 'receive' || activeQuickAction === 'invite')) return null
+          return (
+            <div key="quickNote" className="home-status-note">
+              {activeQuickAction === 'receive' ? '收款二维码已就绪' : '邀请奖励入口已激活'}
+            </div>
+          )
+        }
+        return null
+      })}
     </div>
   )
 }

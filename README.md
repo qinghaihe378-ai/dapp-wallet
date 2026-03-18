@@ -1,4 +1,45 @@
-# React + TypeScript + Vite
+# ClawDEX (React + Vite)
+
+## 本地运行
+
+```bash
+npm i
+npm run dev
+```
+
+## 一键推送到 GitHub（触发 Vercel 自动部署）
+
+```bash
+npm run deploy "更新说明"
+```
+
+## Redis 环境变量（Vercel）
+
+- **`REDIS_URL`**：Redis 连接串（Vercel Redis 绑定项目后会提供/自动填充）
+
+## 后台管理系统（/admin）
+
+后台用于管理各页面内容与模块开关/排序，配置存 Redis。
+
+Vercel 环境变量新增：
+
+- **`ADMIN_PASSWORD`**：后台登录密码
+- **`ADMIN_SECRET`**：会话签名密钥（随机字符串，建议至少 32 位）
+
+访问：
+
+- **`/admin`**
+
+接口：
+
+- `POST /api/admin/login`
+- `POST /api/admin/logout`
+- `GET/PUT /api/admin/config?page=home|market|newTokens|bot|swap`
+- `GET /api/public-config?page=...`（前台读取）
+
+---
+
+下面是 Vite 模板原始说明（可忽略）。
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

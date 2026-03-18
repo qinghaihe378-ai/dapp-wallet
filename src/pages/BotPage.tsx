@@ -14,6 +14,7 @@ import { fetchTokenByMint, isEvmAddress } from '../api/jupiter'
 import { SOLANA_TOKENS, type SolanaToken } from '../lib/solana/tokens'
 import { NETWORK_CONFIG } from '../lib/walletConfig'
 import { ethers } from 'ethers'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 const SLIPPAGE_BPS = 200
 
@@ -40,6 +41,7 @@ function getQuoteErrorMessage(error: unknown): string {
 export function BotPage() {
   const { provider, signer, address, network, switchNetwork, refreshBalance } = useWallet()
   const { keypair: solanaKeypair, address: solanaAddress, refresh: refreshSolana } = useSolanaWallet()
+  const { config } = usePageConfig('bot')
   const [messages, setMessages] = useState<ChatMessage[]>(() => [WELCOME_MSG])
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'parsing' | 'switching' | 'quoting' | 'executing' | 'done' | 'error'>('idle')
@@ -274,6 +276,11 @@ export function BotPage() {
 
   return (
     <div className="page ave-page bot-page">
+      {config?.notice && (
+        <div className="home-status-note" style={{ marginBottom: 12 }}>
+          {config.notice}
+        </div>
+      )}
       <div className="ave-section bot-chat-section" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="bot-chat-window">
           <div className="bot-chat-header">购买助手</div>

@@ -10,6 +10,7 @@ import { BotPage } from './pages/BotPage'
 import { SwapPage } from './pages/SwapPage'
 import { WalletPage } from './pages/WalletPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { AdminPage } from './pages/AdminPage'
 import './App.css'
 
 const tabs = [
@@ -76,6 +77,7 @@ function TabIcon({ name }: { name: string }) {
 function AppContent() {
   const location = useLocation()
   const isBot = location.pathname === '/bot'
+  const hideNav = location.pathname === '/admin'
   return (
     <>
       <AppHeader />
@@ -89,10 +91,11 @@ function AppContent() {
               <Route path="/bot" element={<BotPage />} />
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
-          <nav className="ave-bottom-nav" aria-label="底部导航">
+          {!hideNav && <nav className="ave-bottom-nav" aria-label="底部导航">
             {tabs.map((tab) => (
               <NavLink
                 key={tab.to}
@@ -105,7 +108,7 @@ function AppContent() {
                 <span className="ave-tab-label">{tab.label}</span>
               </NavLink>
             ))}
-          </nav>
+          </nav>}
     </>
   )
 }
