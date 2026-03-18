@@ -92,6 +92,7 @@ function AppContent() {
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/*" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
