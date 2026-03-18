@@ -346,6 +346,27 @@ export async function fetchMarketsWithFallback(
   throw new Error(`所有 API 均失败: ${errors.join('; ')}`)
 }
 
+/** 优先拉链上 Dex 市场（DexScreener/Birdeye），再回退聚合行情 */
+export async function fetchOnchainMarketsWithFallback(
+  perPage = 50,
+  page = 1,
+): Promise<FetchMarketsResult> {
+  const errors: string[] = []
+  const onchainFirst = MARKET_APIS.filter((a) => a.name === 'DexScreener' || a.name === 'Birdeye')
+  const rest = MARKET_APIS.filter((a) => !onchainFirst.includes(a))
+  for (const api of [...onchainFirst, ...rest]) {
+    try {
+      const data = await api.fetch(perPage, page)
+      if (data.length > 0) return { data, provider: api.name }
+    } catch (e) {
+      const msg = axios.isAxiosError(e) ? `${e.message} (${e.response?.status ?? '?'})` : String(e)
+      errors.push(`${api.name}: ${msg}`)
+      console.warn(`[Markets] ${api.name} failed:`, msg)
+    }
+  }
+  throw new Error(`所有 API 均失败: ${errors.join('; ')}`)
+}
+
 /** 按公链分组 */
 export function groupByChain(items: MarketItem[]): Map<ChainId, MarketItem[]> {
   const map = new Map<ChainId, MarketItem[]>()

@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis'
-import { fetchMarketsWithFallback, groupByChain, type ChainId, type MarketItem } from '../src/api/markets.js'
+import { fetchOnchainMarketsWithFallback, groupByChain, type ChainId, type MarketItem } from '../src/api/markets.js'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 const TTL_SECONDS = 180
@@ -62,15 +62,15 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // 缓存缺失或强制刷新：拉第三方行情，按链缓存各 50 个
+    // 缓存缺失或强制刷新：优先拉链上 Dex 行情，按链缓存各 N 个
     try {
-      const { data, provider } = await fetchMarketsWithFallback(240, 1)
+      const { data, provider } = await fetchOnchainMarketsWithFallback(400, 1)
       const grouped = groupByChain(data)
       const now = Date.now()
       const writes: Array<Promise<unknown>> = []
       const byChain = new Map<ChainId, MarketItem[]>()
       for (const c of CHAINS) {
-        const items = (grouped.get(c) ?? []).slice(0, 50)
+        const items = (grouped.get(c) ?? []).slice(0, 120)
         byChain.set(c, items)
         const payload: MarketPayload = { updatedAt: now, provider, chain: c, items }
         writes.push(redis.set(keyFor(c), JSON.stringify(payload), 'EX', TTL_SECONDS))
