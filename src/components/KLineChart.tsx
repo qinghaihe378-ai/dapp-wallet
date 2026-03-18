@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type CandlestickData, type UTCTimestamp } from 'lightweight-charts'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createChart, CandlestickSeries, LineSeries, type IChartApi, type ISeriesApi, type CandlestickData, type UTCTimestamp, type LineData } from 'lightweight-charts'
 
 export type KLinePeriod = '1m' | '5m' | '30m' | '1h' | '2h' | '1d' | '1w'
 
 interface Props {
   syntheticData: { currentPrice: number; change24h: number }
   period?: KLinePeriod
+  /** DexScreener 实时价格：传入 chainId + tokenAddress 后会显示实时价格线图（非蜡烛） */
+  dexScreener?: { chainId: string; tokenAddress: string }
 }
 
 const PERIOD_CONFIG: Record<KLinePeriod, { count: number; label: string }> = {
@@ -56,22 +58,89 @@ function generateSyntheticOHLC(
   return candles
 }
 
-export function KLineChart({ syntheticData, period = '1h' }: Props) {
+export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const seriesRef = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null>(null)
+  const [livePricePoints, setLivePricePoints] = useState<LineData[]>([])
+
+  const useLivePrice = Boolean(syntheticData.currentPrice > 0 && dexScreener)
+  const dex = dexScreener
+
+  const liveMaxPoints = useMemo(() => {
+    // 5s 一个点
+    const step = 5
+    const seconds =
+      period === '1m' ? 60 :
+      period === '5m' ? 5 * 60 :
+      period === '30m' ? 30 * 60 :
+      period === '1h' ? 60 * 60 :
+      period === '2h' ? 2 * 60 * 60 :
+      period === '1d' ? 24 * 60 * 60 :
+      7 * 24 * 60 * 60
+    return Math.max(24, Math.floor(seconds / step))
+  }, [period])
+
+  useEffect(() => {
+    if (!dex) return
+    let cancelled = false
+    let pairId: string | null = null
+
+    const resolvePairId = async () => {
+      const res = await fetch(`https://api.dexscreener.com/token-pairs/v1/${dex.chainId}/${dex.tokenAddress}`)
+      if (!res.ok) throw new Error('DexScreener token-pairs 失败')
+      const json = (await res.json()) as Array<{ pairAddress?: string } | null>
+      const first = Array.isArray(json) ? json.find((p) => p?.pairAddress) : null
+      pairId = (first as { pairAddress?: string } | null)?.pairAddress ?? null
+    }
+
+    const tick = async () => {
+      if (!dex) return
+      try {
+        if (!pairId) await resolvePairId()
+        if (!pairId) return
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/pairs/${dex.chainId}/${pairId}`)
+        if (!res.ok) return
+        const json = (await res.json()) as { pairs?: Array<{ priceUsd?: string }> }
+        const priceStr = json?.pairs?.[0]?.priceUsd
+        const price = priceStr ? parseFloat(priceStr) : NaN
+        if (!Number.isFinite(price) || price <= 0) return
+        const t = Math.floor(Date.now() / 1000) as UTCTimestamp
+        if (cancelled) return
+        setLivePricePoints((prev) => {
+          const next = [...prev, { time: t, value: price }]
+          // 去重同秒
+          const dedup: LineData[] = []
+          for (const p of next) {
+            const last = dedup[dedup.length - 1]
+            if (last && last.time === p.time) {
+              dedup[dedup.length - 1] = p
+            } else {
+              dedup.push(p)
+            }
+          }
+          return dedup.slice(-liveMaxPoints)
+        })
+      } catch {
+        // ignore
+      }
+    }
+
+    void tick()
+    const iv = setInterval(tick, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [dex?.chainId, dex?.tokenAddress, liveMaxPoints])
 
   const data = useMemo(() => {
     if (syntheticData.currentPrice <= 0) return []
-    return generateSyntheticOHLC(
-      syntheticData.currentPrice,
-      syntheticData.change24h,
-      period
-    )
+    return generateSyntheticOHLC(syntheticData.currentPrice, syntheticData.change24h, period)
   }, [syntheticData.currentPrice, syntheticData.change24h, period])
 
   useEffect(() => {
-    if (!containerRef.current || data.length === 0) return
+    if (!containerRef.current || (useLivePrice ? livePricePoints.length === 0 : data.length === 0)) return
 
     const container = containerRef.current
     const chart = createChart(container, {
@@ -103,29 +172,39 @@ export function KLineChart({ syntheticData, period = '1h' }: Props) {
       },
     })
 
-    const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#0ecb81',
-      downColor: '#f6465d',
-      borderUpColor: '#0ecb81',
-      borderDownColor: '#f6465d',
-      wickUpColor: '#0ecb81',
-      wickDownColor: '#f6465d',
-    })
-
-    candlestickSeries.setData(data)
+    if (useLivePrice) {
+      const line = chart.addSeries(LineSeries, {
+        color: '#f0b90b',
+        lineWidth: 2,
+        priceLineColor: '#f0b90b',
+        lastValueVisible: true,
+      })
+      line.setData(livePricePoints)
+      seriesRef.current = line
+    } else {
+      const candlestickSeries = chart.addSeries(CandlestickSeries, {
+        upColor: '#0ecb81',
+        downColor: '#f6465d',
+        borderUpColor: '#0ecb81',
+        borderDownColor: '#f6465d',
+        wickUpColor: '#0ecb81',
+        wickDownColor: '#f6465d',
+      })
+      candlestickSeries.setData(data)
+      seriesRef.current = candlestickSeries
+    }
     chart.timeScale().fitContent()
 
     chartRef.current = chart
-    seriesRef.current = candlestickSeries
 
     return () => {
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [data])
+  }, [data, livePricePoints, useLivePrice])
 
-  if (data.length === 0) return null
+  if ((useLivePrice && livePricePoints.length === 0) || (!useLivePrice && data.length === 0)) return null
 
   const periodLabel = PERIOD_CONFIG[period].label
 
@@ -133,8 +212,10 @@ export function KLineChart({ syntheticData, period = '1h' }: Props) {
     <div>
       <div className="chart-header">
         <div>
-          <div className="chart-title">K 线图 · {periodLabel}</div>
-          <div className="chart-subtitle">根据当前价与涨跌幅生成，不依赖外部 API</div>
+          <div className="chart-title">{useLivePrice ? `实时价格 · ${periodLabel}` : `K 线图 · ${periodLabel}`}</div>
+          <div className="chart-subtitle">
+            {useLivePrice ? 'DexScreener 轮询实时价格（非蜡烛 OHLC）' : '根据当前价与涨跌幅生成，不依赖外部 API'}
+          </div>
         </div>
       </div>
       <div ref={containerRef} className="ave-kline-container" />

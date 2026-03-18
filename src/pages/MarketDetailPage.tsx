@@ -163,6 +163,7 @@ export function MarketDetailPage() {
             </div>
             <KLineChart
               syntheticData={{ currentPrice: price, change24h }}
+              dexScreener={{ chainId: dexItem.chain === 'eth' ? 'ethereum' : dexItem.chain, tokenAddress: dexItem.id.split(':')[1] }}
               period={period}
             />
           </div>
