@@ -121,7 +121,7 @@ export function MarketsPage() {
 
   const rows = useMemo(() => {
     const useAddressResults = searchQuery && isContractAddress(searchQuery) && addressSearchResults !== null
-    let next: MarketItem[] = useAddressResults ? [...addressSearchResults] : [...list].slice(0, 24)
+    let next: MarketItem[] = useAddressResults ? [...addressSearchResults] : [...list]
 
     if (chainFilter !== 'all') {
       next = next.filter((item) => item.chain === chainFilter)
@@ -143,7 +143,8 @@ export function MarketsPage() {
       next = [...next].sort((a, b) => b.current_price - a.current_price)
     }
 
-    return favoritesOnly ? next.filter((item) => favorites.includes(item.id)) : next
+    const finalList = favoritesOnly ? next.filter((item) => favorites.includes(item.id)) : next
+    return useAddressResults ? finalList : finalList.slice(0, 120)
   }, [addressSearchResults, chainFilter, favorites, favoritesOnly, list, searchQuery, sortBy])
 
   const CHAIN_OPTIONS: { value: ChainId | 'all'; label: string }[] = [
