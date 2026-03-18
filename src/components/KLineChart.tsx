@@ -67,10 +67,8 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
   const useLivePrice = Boolean(syntheticData.currentPrice > 0 && dexScreener)
   const dex = dexScreener
 
-  const liveMaxPoints = useMemo(() => {
-    // 5s 一个点
-    const step = 5
-    const seconds =
+  const liveConfig = useMemo(() => {
+    const windowSeconds =
       period === '1m' ? 60 :
       period === '5m' ? 5 * 60 :
       period === '30m' ? 30 * 60 :
@@ -78,8 +76,27 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
       period === '2h' ? 2 * 60 * 60 :
       period === '1d' ? 24 * 60 * 60 :
       7 * 24 * 60 * 60
-    return Math.max(24, Math.floor(seconds / step))
+
+    // 为避免 1W 数据点爆炸，周期越长，采样间隔越大（仍保持“实时”刷新）
+    const stepSeconds =
+      period === '1m' ? 5 :
+      period === '5m' ? 10 :
+      period === '30m' ? 30 :
+      period === '1h' ? 60 :
+      period === '2h' ? 90 :
+      period === '1d' ? 5 * 60 :
+      30 * 60
+
+    const maxPoints = Math.min(480, Math.max(12, Math.floor(windowSeconds / stepSeconds)))
+    const pollMs = Math.max(5000, stepSeconds * 1000)
+    return { windowSeconds, stepSeconds, maxPoints, pollMs }
   }, [period])
+
+  useEffect(() => {
+    // 切周期时清空点，避免“1m 看起来像 1h”
+    if (!dex) return
+    setLivePricePoints([])
+  }, [dex?.chainId, dex?.tokenAddress, period])
 
   useEffect(() => {
     if (!dex) return
@@ -119,7 +136,7 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
               dedup.push(p)
             }
           }
-          return dedup.slice(-liveMaxPoints)
+          return dedup.slice(-liveConfig.maxPoints)
         })
       } catch {
         // ignore
@@ -127,12 +144,12 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
     }
 
     void tick()
-    const iv = setInterval(tick, 5000)
+    const iv = setInterval(tick, liveConfig.pollMs)
     return () => {
       cancelled = true
       clearInterval(iv)
     }
-  }, [dex?.chainId, dex?.tokenAddress, liveMaxPoints])
+  }, [dex?.chainId, dex?.tokenAddress, liveConfig.maxPoints, liveConfig.pollMs])
 
   const data = useMemo(() => {
     if (syntheticData.currentPrice <= 0) return []
@@ -164,7 +181,7 @@ export function KLineChart({ syntheticData, period = '1h', dexScreener }: Props)
       timeScale: {
         borderColor: '#1e2329',
         timeVisible: true,
-        secondsVisible: false,
+        secondsVisible: period === '1m' || period === '5m',
       },
       crosshair: {
         vertLine: { labelBackgroundColor: '#1e2329', color: '#5e6673' },
