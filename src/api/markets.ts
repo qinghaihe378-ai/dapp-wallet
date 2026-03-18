@@ -227,7 +227,7 @@ const MARKET_APIS = [
   {
     name: 'Birdeye',
     fetch: async (perPage: number): Promise<MarketItem[]> => {
-      const apiKey = import.meta.env.VITE_BIRDEYE_API_KEY
+      const apiKey = (import.meta as any).env?.VITE_BIRDEYE_API_KEY as string | undefined
       if (!apiKey) throw new Error('Birdeye API key not configured (VITE_BIRDEYE_API_KEY)')
       const chains: Array<{ id: string; chain: ChainId }> = [
         { id: 'solana', chain: 'sol' },
