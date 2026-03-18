@@ -278,7 +278,14 @@ const MARKET_APIS = [
   {
     name: 'DexScreener',
     fetch: async (perPage: number): Promise<MarketItem[]> => {
-      const queries = ['bitcoin', 'ethereum', 'solana', 'bnb', 'usdt', 'matic', 'chainlink', 'uniswap', 'aave', 'avax']
+      const queries = [
+        // 主流/稳定币/链关键词（尽量覆盖每条链的热门池）
+        'usdc', 'usdt', 'weth', 'eth', 'bnb', 'sol', 'matic', 'base',
+        // 热门代币关键词
+        'pepe', 'shib', 'uni', 'link', 'aave', 'arb', 'op', 'bonk', 'jup',
+        // 原有
+        'bitcoin', 'ethereum', 'solana', 'chainlink', 'uniswap', 'avax',
+      ]
       const seen = new Set<string>()
       const all: MarketItem[] = []
       const results = await Promise.all(

@@ -2,7 +2,9 @@ import { Redis } from 'ioredis'
 import { fetchOnchainMarketsWithFallback, groupByChain, type ChainId, type MarketItem } from '../src/api/markets.js'
 
 const redis = new Redis(process.env.REDIS_URL as string)
-const TTL_SECONDS = 180
+// 让前端 10 秒轮询真正生效：缓存只保留短时间
+const TTL_SECONDS = 12
+const FRESH_MS = 10_000
 
 const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'sol']
 
@@ -50,12 +52,17 @@ export default async function handler(req: any, res: any) {
       if (chain !== 'all') {
         const cached = await redis.get(keyFor(chain))
         if (cached) {
-          res.status(200).json(JSON.parse(cached))
-          return
+          const payload = JSON.parse(cached) as MarketPayload
+          const age = Date.now() - (payload.updatedAt || 0)
+          if (age >= 0 && age < FRESH_MS) {
+            res.status(200).json(payload)
+            return
+          }
         }
       } else {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
-        if (okCount === CHAINS.length) {
+        const age = Date.now() - (updatedAt || 0)
+        if (okCount === CHAINS.length && age >= 0 && age < FRESH_MS) {
           res.status(200).json({ updatedAt, provider, chain: 'all', items: allItems } satisfies MarketPayload)
           return
         }
@@ -64,13 +71,13 @@ export default async function handler(req: any, res: any) {
 
     // 缓存缺失或强制刷新：优先拉链上 Dex 行情，按链缓存各 N 个
     try {
-      const { data, provider } = await fetchOnchainMarketsWithFallback(400, 1)
+      const { data, provider } = await fetchOnchainMarketsWithFallback(800, 1)
       const grouped = groupByChain(data)
       const now = Date.now()
       const writes: Array<Promise<unknown>> = []
       const byChain = new Map<ChainId, MarketItem[]>()
       for (const c of CHAINS) {
-        const items = (grouped.get(c) ?? []).slice(0, 120)
+        const items = (grouped.get(c) ?? []).slice(0, 250)
         byChain.set(c, items)
         const payload: MarketPayload = { updatedAt: now, provider, chain: c, items }
         writes.push(redis.set(keyFor(c), JSON.stringify(payload), 'EX', TTL_SECONDS))
