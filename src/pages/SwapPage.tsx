@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Connection } from '@solana/web3.js'
 import { ethers } from 'ethers'
 import { useSearchParams } from 'react-router-dom'
@@ -72,6 +72,11 @@ const PLACEHOLDER_SOLANA: SolanaToken = {
 
 function isSolanaToken(t: SwapToken): t is SolanaToken {
   return 'mint' in t && typeof (t as SolanaToken).mint === 'string'
+}
+
+/** 用于 localStorage 精确恢复（避免同名 symbol 歧义、自定义币不在默认列表） */
+function swapTokenStorageKey(t: SwapToken): string {
+  return isSolanaToken(t) ? t.mint : t.address.toLowerCase()
 }
 
 const STABLECOIN_SYMBOLS = new Set(['USDC', 'USDT', 'USDbC', 'DAI'])
@@ -203,21 +208,56 @@ export function SwapPage() {
     [searchParams],
   )
 
+  const prevSwapSelectionKeyRef = useRef(swapSelectionKey)
+  useEffect(() => {
+    if (prevSwapSelectionKeyRef.current !== swapSelectionKey) {
+      prevSwapSelectionKeyRef.current = swapSelectionKey
+      setAmountIn('')
+    }
+  }, [swapSelectionKey])
+
   useEffect(() => {
     if (quickTradeKeysPresent) return
+    const merged: SwapToken[] = [...tokenOptions, ...customTokens, ...customEvmTokens]
     const stored = window.localStorage.getItem(swapSelectionKey)
-    const parsed = stored ? JSON.parse(stored) as { from?: string; to?: string } : null
-    const storedFrom = parsed?.from ? tokenOptions.find((item) => item.symbol === parsed.from) : null
-    const storedTo = parsed?.to ? tokenOptions.find((item) => item.symbol === parsed.to) : null
+    const parsed = stored
+      ? (JSON.parse(stored) as { from?: string; to?: string; fromKey?: string; toKey?: string })
+      : null
+
+    const byKey = (key?: string | null) => {
+      if (!key?.trim()) return null
+      const k = key.trim().toLowerCase()
+      return (
+        merged.find((item) =>
+          isSolanaToken(item) ? item.mint.toLowerCase() === k : item.address.toLowerCase() === k,
+        ) ?? null
+      )
+    }
+    const bySym = (sym?: string | null) => {
+      if (!sym?.trim()) return null
+      const s = sym.trim().toUpperCase()
+      return merged.find((item) => item.symbol.toUpperCase() === s) ?? null
+    }
+
+    const storedFrom = byKey(parsed?.fromKey) ?? bySym(parsed?.from)
+    const storedTo = byKey(parsed?.toKey) ?? bySym(parsed?.to)
 
     setFromToken((storedFrom ?? defaultFrom ?? placeholder) as SwapToken)
     setToToken((storedTo ?? defaultTo ?? placeholder) as SwapToken)
-    setAmountIn('')
     setPickerTarget(null)
     setPickerQuery('')
     setLiveQuote(null)
     setQuoteError(null)
-  }, [quickTradeKeysPresent, defaultFrom, defaultTo, placeholder, swapSelectionKey, tokenOptions])
+  }, [
+    quickTradeKeysPresent,
+    customEvmTokens,
+    customTokens,
+    defaultFrom,
+    defaultTo,
+    placeholder,
+    swapSelectionKey,
+    tokenOptions,
+  ])
 
   /** 行情「快捷交易」：先切换目标链，再按地址/符号预填（避免在错误网络上匹配 token） */
   useEffect(() => {
@@ -355,7 +395,15 @@ export function SwapPage() {
       if (Number.isFinite(amountNum) && amountNum > 0) setAmountIn(String(amountNum))
 
       if (nextFrom && nextTo) {
-        window.localStorage.setItem(swapSelectionKey, JSON.stringify({ from: nextFrom.symbol, to: nextTo.symbol }))
+        window.localStorage.setItem(
+          swapSelectionKey,
+          JSON.stringify({
+            from: nextFrom.symbol,
+            to: nextTo.symbol,
+            fromKey: swapTokenStorageKey(nextFrom),
+            toKey: swapTokenStorageKey(nextTo),
+          }),
+        )
       }
 
       setSearchParams({}, { replace: true })
@@ -418,9 +466,11 @@ export function SwapPage() {
       JSON.stringify({
         from: fromToken.symbol,
         to: toToken.symbol,
+        fromKey: swapTokenStorageKey(fromToken),
+        toKey: swapTokenStorageKey(toToken),
       }),
     )
-  }, [fromToken.symbol, swapSelectionKey, toToken.symbol])
+  }, [fromToken, swapSelectionKey, toToken])
 
   useEffect(() => {
     if (!pickerTarget) {
