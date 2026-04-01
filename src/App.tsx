@@ -17,6 +17,7 @@ const tabs = [
   { to: '/', label: '首页', icon: 'home' },
   { to: '/market', label: '行情', icon: 'market' },
   { to: '/bot', label: 'Bot', icon: 'bot' },
+  { to: '/boot', label: 'boot', icon: 'bot' },
   { to: '/swap', label: '交易', icon: 'swap' },
   { to: '/wallet', label: '钱包', icon: 'wallet' },
 ]
@@ -76,7 +77,7 @@ function TabIcon({ name }: { name: string }) {
 
 function AppContent() {
   const location = useLocation()
-  const isBot = location.pathname === '/bot'
+  const isBot = location.pathname === '/bot' || location.pathname === '/boot'
   const hideNav = location.pathname === '/admin'
   return (
     <>
@@ -89,6 +90,7 @@ function AppContent() {
               <Route path="/new-tokens" element={<NewTokensPage />} />
               <Route path="/profile" element={<PersonalCenterPage />} />
               <Route path="/bot" element={<BotPage />} />
+              <Route path="/boot" element={<BotPage />} />
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/admin" element={<AdminPage />} />
