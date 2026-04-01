@@ -203,16 +203,22 @@ export function SwapPage() {
     if (tokenOptions.length === 0) return
     const fromQ = searchParams.get('from')?.trim().toUpperCase() ?? ''
     const toQ = searchParams.get('to')?.trim().toUpperCase() ?? ''
+    const fromAddrQ = searchParams.get('fromAddr')?.trim() ?? ''
+    const toAddrQ = searchParams.get('toAddr')?.trim() ?? ''
     const amountQ = searchParams.get('amount')?.trim() ?? ''
-    const key = `${network}|${fromQ}|${toQ}|${amountQ}`
-    if (!fromQ && !toQ && !amountQ) return
+    const key = `${network}|${fromQ}|${toQ}|${fromAddrQ}|${toAddrQ}|${amountQ}`
+    if (!fromQ && !toQ && !fromAddrQ && !toAddrQ && !amountQ) return
     if (quickAppliedRef.current === key) return
 
     const findBySymbol = (symbol: string) =>
       tokenOptions.find((t) => t.symbol.toUpperCase() === symbol) ?? null
+    const findByAddress = (address: string) =>
+      tokenOptions.find((t) =>
+        (isSolanaToken(t) ? t.mint.toLowerCase() : t.address.toLowerCase()) === address.toLowerCase(),
+      ) ?? null
 
-    const nextFrom = fromQ ? findBySymbol(fromQ) : null
-    const nextTo = toQ ? findBySymbol(toQ) : null
+    const nextFrom = fromAddrQ ? findByAddress(fromAddrQ) : (fromQ ? findBySymbol(fromQ) : null)
+    const nextTo = toAddrQ ? findByAddress(toAddrQ) : (toQ ? findBySymbol(toQ) : null)
     const amountNum = Number(amountQ)
 
     if (nextFrom) setFromToken(nextFrom)

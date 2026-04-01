@@ -43,20 +43,21 @@ export function MarketDetailPage() {
   const quickTradeTargets = useMemo(() => {
     if (dexItem) {
       const symbol = dexItem.symbol?.toUpperCase() ?? ''
+      const addr = dexTokenAddress ?? ''
       return {
-        buy: `/swap?from=USDT&to=${encodeURIComponent(symbol)}&amount=50`,
-        sell: `/swap?from=${encodeURIComponent(symbol)}&to=USDT&amount=50`,
+        buy: `/swap?from=USDC&to=${encodeURIComponent(symbol)}&toAddr=${encodeURIComponent(addr)}&amount=50`,
+        sell: `/swap?from=${encodeURIComponent(symbol)}&fromAddr=${encodeURIComponent(addr)}&to=USDC&amount=50`,
       }
     }
     if (detail) {
       const symbol = detail.symbol?.toUpperCase() ?? ''
       return {
-        buy: `/swap?from=USDT&to=${encodeURIComponent(symbol)}&amount=50`,
-        sell: `/swap?from=${encodeURIComponent(symbol)}&to=USDT&amount=50`,
+        buy: `/swap?from=USDC&to=${encodeURIComponent(symbol)}&amount=50`,
+        sell: `/swap?from=${encodeURIComponent(symbol)}&to=USDC&amount=50`,
       }
     }
     return { buy: '/swap', sell: '/swap' }
-  }, [detail, dexItem])
+  }, [detail, dexItem, dexTokenAddress])
 
   const dexScreenerChainId = useMemo(() => {
     if (!dexItem) return null
