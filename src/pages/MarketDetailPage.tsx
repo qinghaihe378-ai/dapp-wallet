@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
+import { marketChainIdToWalletNetwork } from '../lib/marketChainMap'
 
 interface CoinDetail {
   id: string
@@ -44,9 +45,11 @@ export function MarketDetailPage() {
     if (dexItem) {
       const symbol = dexItem.symbol?.toUpperCase() ?? ''
       const addr = dexTokenAddress ?? ''
+      const chain = marketChainIdToWalletNetwork(dexItem.chain)
+      const chainQ = `&chain=${encodeURIComponent(chain)}`
       return {
-        buy: `/swap?from=USDC&to=${encodeURIComponent(symbol)}&toAddr=${encodeURIComponent(addr)}&amount=50`,
-        sell: `/swap?from=${encodeURIComponent(symbol)}&fromAddr=${encodeURIComponent(addr)}&to=USDC&amount=50`,
+        buy: `/swap?from=USDC&to=${encodeURIComponent(symbol)}&toAddr=${encodeURIComponent(addr)}&amount=50${chainQ}`,
+        sell: `/swap?from=${encodeURIComponent(symbol)}&fromAddr=${encodeURIComponent(addr)}&to=USDC&amount=50${chainQ}`,
       }
     }
     if (detail) {

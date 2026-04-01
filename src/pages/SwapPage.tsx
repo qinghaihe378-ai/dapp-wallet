@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Connection } from '@solana/web3.js'
+import { ethers } from 'ethers'
 import { useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
 import { useSolanaWallet } from '../hooks/useSolanaWallet'
-import { NETWORK_CONFIG } from '../lib/walletConfig'
+import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { fetchEvmTokenByAddress, readTokenBalance } from '../lib/evm/balances'
 import { executeQuotedSwap } from '../lib/evm/executeSwap'
-import { isSupportedSwapNetwork } from '../lib/evm/config'
+import { isSupportedSwapNetwork, type SupportedSwapNetwork } from '../lib/evm/config'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { getSwapTokens, type EvmToken } from '../lib/evm/tokens'
 import { readSolanaBalance } from '../lib/solana/balances'
@@ -35,6 +36,20 @@ interface SwapHistoryItem {
 type HistoryFilter = 'all' | 'pending' | 'success' | 'failed'
 
 type SwapToken = EvmToken | SolanaToken
+
+const QUICK_TRADE_PARAM_KEYS = ['from', 'to', 'fromAddr', 'toAddr', 'amount', 'chain'] as const
+
+/** URL ?chain= 与行情跳转统一：mainnet|bsc|base|polygon|solana（及常见别名） */
+function parseSwapChainQuery(raw: string | null): Network | null {
+  const k = (raw ?? '').trim().toLowerCase()
+  if (!k) return null
+  if (k === 'mainnet' || k === 'eth' || k === 'ethereum') return 'mainnet'
+  if (k === 'bsc' || k === 'bnb') return 'bsc'
+  if (k === 'base') return 'base'
+  if (k === 'polygon' || k === 'matic') return 'polygon'
+  if (k === 'sol' || k === 'solana') return 'solana'
+  return null
+}
 
 const PLACEHOLDER_EVM: EvmToken = {
   symbol: '--',
@@ -129,7 +144,7 @@ function getPendingStageLabel(stage?: 'approving' | 'swapping', approveHash?: st
 
 export function SwapPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { signer, address, network, balance, provider, refreshBalance, refreshNonce } = useWallet()
+  const { signer, address, network, balance, provider, refreshBalance, refreshNonce, switchNetwork } = useWallet()
   const { getPrice } = usePrices()
   const { keypair: solanaKeypair, address: solanaAddress, refresh: refreshSolana } = useSolanaWallet()
   const { config } = usePageConfig('swap')
@@ -182,9 +197,14 @@ export function SwapPage() {
   const placeholder = isSolana ? PLACEHOLDER_SOLANA : PLACEHOLDER_EVM
   const [fromToken, setFromToken] = useState<SwapToken>(defaultFrom ?? placeholder)
   const [toToken, setToToken] = useState<SwapToken>(defaultTo ?? placeholder)
-  const quickAppliedRef = useRef('')
+
+  const quickTradeKeysPresent = useMemo(
+    () => QUICK_TRADE_PARAM_KEYS.some((key) => searchParams.has(key)),
+    [searchParams],
+  )
 
   useEffect(() => {
+    if (quickTradeKeysPresent) return
     const stored = window.localStorage.getItem(swapSelectionKey)
     const parsed = stored ? JSON.parse(stored) as { from?: string; to?: string } : null
     const storedFrom = parsed?.from ? tokenOptions.find((item) => item.symbol === parsed.from) : null
@@ -197,37 +217,166 @@ export function SwapPage() {
     setPickerQuery('')
     setLiveQuote(null)
     setQuoteError(null)
-  }, [defaultFrom, defaultTo, placeholder, swapSelectionKey, tokenOptions])
+  }, [quickTradeKeysPresent, defaultFrom, defaultTo, placeholder, swapSelectionKey, tokenOptions])
 
+  /** 行情「快捷交易」：先切换目标链，再按地址/符号预填（避免在错误网络上匹配 token） */
   useEffect(() => {
-    if (tokenOptions.length === 0) return
-    const fromQ = searchParams.get('from')?.trim().toUpperCase() ?? ''
-    const toQ = searchParams.get('to')?.trim().toUpperCase() ?? ''
-    const fromAddrQ = searchParams.get('fromAddr')?.trim() ?? ''
-    const toAddrQ = searchParams.get('toAddr')?.trim() ?? ''
-    const amountQ = searchParams.get('amount')?.trim() ?? ''
-    const key = `${network}|${fromQ}|${toQ}|${fromAddrQ}|${toAddrQ}|${amountQ}`
-    if (!fromQ && !toQ && !fromAddrQ && !toAddrQ && !amountQ) return
-    if (quickAppliedRef.current === key) return
+    const qs = searchParams.toString()
+    if (!qs) return
 
-    const findBySymbol = (symbol: string) =>
-      tokenOptions.find((t) => t.symbol.toUpperCase() === symbol) ?? null
-    const findByAddress = (address: string) =>
-      tokenOptions.find((t) =>
-        (isSolanaToken(t) ? t.mint.toLowerCase() : t.address.toLowerCase()) === address.toLowerCase(),
-      ) ?? null
+    const chainTarget = parseSwapChainQuery(searchParams.get('chain'))
+    const fromQ = (searchParams.get('from') ?? '').trim()
+    const toQ = (searchParams.get('to') ?? '').trim()
+    const fromAddrQ = (searchParams.get('fromAddr') ?? '').trim()
+    const toAddrQ = (searchParams.get('toAddr') ?? '').trim()
+    const amountQ = (searchParams.get('amount') ?? '').trim()
 
-    const nextFrom = fromAddrQ ? findByAddress(fromAddrQ) : (fromQ ? findBySymbol(fromQ) : null)
-    const nextTo = toAddrQ ? findByAddress(toAddrQ) : (toQ ? findBySymbol(toQ) : null)
-    const amountNum = Number(amountQ)
+    const hasTokenParams = Boolean(fromQ || toQ || fromAddrQ || toAddrQ || amountQ)
+    if (!chainTarget && !hasTokenParams) return
 
-    if (nextFrom) setFromToken(nextFrom)
-    if (nextTo) setToToken(nextTo)
-    if (Number.isFinite(amountNum) && amountNum > 0) setAmountIn(String(amountNum))
+    let cancelled = false
 
-    quickAppliedRef.current = key
-    setSearchParams({}, { replace: true })
-  }, [network, searchParams, setSearchParams, tokenOptions])
+    const findByAddr = (addr: string, merged: SwapToken[]) => {
+      const a = addr.toLowerCase()
+      return (
+        merged.find((t) =>
+          isSolanaToken(t) ? t.mint.toLowerCase() === a : t.address.toLowerCase() === a,
+        ) ?? null
+      )
+    }
+    const findBySym = (sym: string, merged: SwapToken[]) => {
+      const s = sym.trim().toUpperCase()
+      if (!s) return null
+      return merged.find((t) => t.symbol.toUpperCase() === s) ?? null
+    }
+
+    const resolveSolanaMint = async (mint: string): Promise<SolanaToken | null> => {
+      if (cancelled || !isSolanaMint(mint)) return null
+      try {
+        const info = await fetchTokenByMint(mint.trim())
+        const token: SolanaToken = {
+          symbol: info?.symbol ?? mint.slice(0, 8),
+          name: info?.name ?? 'Unknown',
+          mint: mint.trim(),
+          address: mint.trim(),
+          decimals: info?.decimals ?? 6,
+          isNative: false,
+          tone: 'sky',
+        }
+        setCustomTokens((prev) => (prev.some((t) => t.mint === token.mint) ? prev : [...prev, token]))
+        return token
+      } catch {
+        const token: SolanaToken = {
+          symbol: mint.slice(0, 8),
+          name: 'Unknown',
+          mint: mint.trim(),
+          address: mint.trim(),
+          decimals: 6,
+          isNative: false,
+          tone: 'sky',
+        }
+        setCustomTokens((prev) => (prev.some((t) => t.mint === token.mint) ? prev : [...prev, token]))
+        return token
+      }
+    }
+
+    const resolveEvmAddr = async (addrRaw: string): Promise<EvmToken | null> => {
+      if (cancelled || !isEvmAddress(addrRaw) || !isSupportedSwapNetwork(network)) return null
+      const addrNorm = addrRaw.trim().startsWith('0x') ? addrRaw.trim().toLowerCase() : `0x${addrRaw.trim().toLowerCase()}`
+      const readProvider =
+        provider ?? new ethers.JsonRpcProvider(NETWORK_CONFIG[network as SupportedSwapNetwork].rpcUrls[0])
+      const info = await fetchEvmTokenByAddress(readProvider, addrNorm)
+      if (!info) return null
+      const token: EvmToken = {
+        symbol: info.symbol,
+        name: info.symbol,
+        address: addrNorm,
+        decimals: info.decimals,
+        isNative: false,
+        tone: 'sky',
+      }
+      setCustomEvmTokens((prev) =>
+        prev.some((t) => t.address.toLowerCase() === token.address.toLowerCase()) ? prev : [...prev, token],
+      )
+      return token
+    }
+
+    void (async () => {
+      if (chainTarget && network !== chainTarget) {
+        try {
+          await switchNetwork(chainTarget)
+        } catch {
+          /* switchNetwork 内部已提示 */
+        }
+        return
+      }
+
+      if (!hasTokenParams) {
+        setSearchParams((prev) => {
+          const p = new URLSearchParams(prev)
+          p.delete('chain')
+          return p
+        }, { replace: true })
+        return
+      }
+
+      if (network === 'solana' && !solanaAddress) return
+
+      if (!isSolana) {
+        if (!isSupportedSwapNetwork(network)) {
+          setSearchParams({}, { replace: true })
+          return
+        }
+      }
+
+      if (tokenOptions.length === 0) return
+
+      const merged: SwapToken[] = [...tokenOptions, ...customTokens, ...customEvmTokens]
+
+      let nextFrom: SwapToken | null = fromAddrQ ? findByAddr(fromAddrQ, merged) : null
+      let nextTo: SwapToken | null = toAddrQ ? findByAddr(toAddrQ, merged) : null
+
+      if (fromAddrQ && !nextFrom) {
+        nextFrom = isSolana ? await resolveSolanaMint(fromAddrQ) : await resolveEvmAddr(fromAddrQ)
+      }
+      if (toAddrQ && !nextTo) {
+        nextTo = isSolana ? await resolveSolanaMint(toAddrQ) : await resolveEvmAddr(toAddrQ)
+      }
+
+      if (cancelled) return
+
+      if (!nextFrom && fromQ) nextFrom = findBySym(fromQ, merged)
+      if (!nextTo && toQ) nextTo = findBySym(toQ, merged)
+
+      if (nextFrom) setFromToken(nextFrom)
+      if (nextTo) setToToken(nextTo)
+
+      const amountNum = Number(amountQ)
+      if (Number.isFinite(amountNum) && amountNum > 0) setAmountIn(String(amountNum))
+
+      if (nextFrom && nextTo) {
+        window.localStorage.setItem(swapSelectionKey, JSON.stringify({ from: nextFrom.symbol, to: nextTo.symbol }))
+      }
+
+      setSearchParams({}, { replace: true })
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    customEvmTokens,
+    customTokens,
+    isSolana,
+    network,
+    provider,
+    searchParams,
+    setSearchParams,
+    solanaAddress,
+    swapSelectionKey,
+    switchNetwork,
+    tokenOptions,
+  ])
 
   useEffect(() => {
     const stored = window.localStorage.getItem(`recentSwapTokens:${network}`)
