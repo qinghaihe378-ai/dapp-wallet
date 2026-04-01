@@ -7,6 +7,7 @@ import { MarketsPage } from './pages/MarketsPage'
 import { NewTokensPage } from './pages/NewTokensPage'
 import { PersonalCenterPage } from './pages/PersonalCenterPage'
 import { BotPage } from './pages/BotPage'
+import { BootPage } from './pages/BootPage'
 import { SwapPage } from './pages/SwapPage'
 import { WalletPage } from './pages/WalletPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -90,7 +91,8 @@ function AppContent() {
               <Route path="/new-tokens" element={<NewTokensPage />} />
               <Route path="/profile" element={<PersonalCenterPage />} />
               <Route path="/bot" element={<BotPage />} />
-              <Route path="/boot" element={<BotPage />} />
+              <Route path="/boot" element={<BootPage />} />
+              <Route path="/boot/*" element={<BootPage />} />
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/admin" element={<AdminPage />} />

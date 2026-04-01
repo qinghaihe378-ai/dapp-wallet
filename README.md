@@ -34,8 +34,12 @@ Vercel 环境变量新增：
 
 - `POST /api/admin/login`
 - `POST /api/admin/logout`
-- `GET/PUT /api/admin/config?page=home|market|newTokens|bot|swap`
+- `GET/PUT /api/admin/config?page=home|market|newTokens|bot|boot|swap`
 - `GET /api/public-config?page=...`（前台读取）
+
+## Boot 交易站（/boot）
+
+站内指令交易：买卖、限价/止盈止损任务、狙击、跟单（Solana 地址活动检测）、风控面板。输入 `帮助` 查看指令格式。
 
 ---
 

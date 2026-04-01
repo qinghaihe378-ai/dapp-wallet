@@ -6,6 +6,7 @@ const PAGES: Array<{ id: PageId; label: string; defaultSections: string[] }> = [
   { id: 'market', label: '行情', defaultSections: ['controls', 'table', 'list'] },
   { id: 'newTokens', label: '新币', defaultSections: ['hero', 'chains', 'emptyNote'] },
   { id: 'bot', label: 'Bot', defaultSections: ['notice', 'chat'] },
+  { id: 'boot', label: 'Boot', defaultSections: ['notice', 'chat', 'tasks', 'risk', 'copy'] },
   { id: 'swap', label: '交易', defaultSections: ['notice', 'swapForm', 'history'] },
 ]
 

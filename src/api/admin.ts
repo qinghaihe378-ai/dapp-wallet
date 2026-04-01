@@ -1,4 +1,4 @@
-export type PageId = 'home' | 'market' | 'newTokens' | 'bot' | 'swap'
+export type PageId = 'home' | 'market' | 'newTokens' | 'bot' | 'boot' | 'swap'
 
 export type SectionConfig = {
   id: string
