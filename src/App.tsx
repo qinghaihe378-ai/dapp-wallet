@@ -7,7 +7,6 @@ import { MarketsPage } from './pages/MarketsPage'
 import { NewTokensPage } from './pages/NewTokensPage'
 import { PersonalCenterPage } from './pages/PersonalCenterPage'
 import { BotPage } from './pages/BotPage'
-import { BootPage } from './pages/BootPage'
 import { SwapPage } from './pages/SwapPage'
 import { WalletPage } from './pages/WalletPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -18,7 +17,6 @@ const tabs = [
   { to: '/', label: '首页', icon: 'home' },
   { to: '/market', label: '行情', icon: 'market' },
   { to: '/bot', label: 'Bot', icon: 'bot' },
-  { to: '/boot', label: 'boot', icon: 'bot' },
   { to: '/swap', label: '交易', icon: 'swap' },
   { to: '/wallet', label: '钱包', icon: 'wallet' },
 ]
@@ -78,7 +76,7 @@ function TabIcon({ name }: { name: string }) {
 
 function AppContent() {
   const location = useLocation()
-  const isBot = location.pathname === '/bot' || location.pathname === '/boot'
+  const isBot = location.pathname === '/bot'
   const hideNav = location.pathname === '/admin'
   return (
     <>
@@ -91,8 +89,6 @@ function AppContent() {
               <Route path="/new-tokens" element={<NewTokensPage />} />
               <Route path="/profile" element={<PersonalCenterPage />} />
               <Route path="/bot" element={<BotPage />} />
-              <Route path="/boot" element={<BootPage />} />
-              <Route path="/boot/*" element={<BootPage />} />
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />
               <Route path="/admin" element={<AdminPage />} />

@@ -19,6 +19,7 @@
   z-index: 130;
 }
 
+
 .page {
   width: 100%;
   max-width: var(--max-page-width);
@@ -6005,86 +6006,3 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Boot 交易页 */
-.boot-page .boot-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
-}
-@media (min-width: 900px) {
-  .boot-page .boot-grid {
-    grid-template-columns: 1fr 320px;
-    align-items: start;
-  }
-}
-.boot-page .boot-chat {
-  min-height: 420px;
-}
-.boot-page .boot-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.boot-panel-title {
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.boot-panel-sub {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.boot-task-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 13px;
-}
-.boot-task-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-}
-.boot-task-id {
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
-  opacity: 0.8;
-}
-.boot-task-cancel {
-  margin-left: auto;
-}
-.boot-field {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 10px;
-  font-size: 13px;
-}
-.boot-field input {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.2);
-  color: inherit;
-}
-.boot-templates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.boot-template-chip {
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  color: inherit;
-}
-.boot-mono {
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-}
