@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Connection } from '@solana/web3.js'
+import { useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
 import { useSolanaWallet } from '../hooks/useSolanaWallet'
@@ -127,6 +128,7 @@ function getPendingStageLabel(stage?: 'approving' | 'swapping', approveHash?: st
 }
 
 export function SwapPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { signer, address, network, balance, provider, refreshBalance, refreshNonce } = useWallet()
   const { getPrice } = usePrices()
   const { keypair: solanaKeypair, address: solanaAddress, refresh: refreshSolana } = useSolanaWallet()
@@ -180,6 +182,7 @@ export function SwapPage() {
   const placeholder = isSolana ? PLACEHOLDER_SOLANA : PLACEHOLDER_EVM
   const [fromToken, setFromToken] = useState<SwapToken>(defaultFrom ?? placeholder)
   const [toToken, setToToken] = useState<SwapToken>(defaultTo ?? placeholder)
+  const quickAppliedRef = useRef('')
 
   useEffect(() => {
     const stored = window.localStorage.getItem(swapSelectionKey)
@@ -195,6 +198,30 @@ export function SwapPage() {
     setLiveQuote(null)
     setQuoteError(null)
   }, [defaultFrom, defaultTo, placeholder, swapSelectionKey, tokenOptions])
+
+  useEffect(() => {
+    if (tokenOptions.length === 0) return
+    const fromQ = searchParams.get('from')?.trim().toUpperCase() ?? ''
+    const toQ = searchParams.get('to')?.trim().toUpperCase() ?? ''
+    const amountQ = searchParams.get('amount')?.trim() ?? ''
+    const key = `${network}|${fromQ}|${toQ}|${amountQ}`
+    if (!fromQ && !toQ && !amountQ) return
+    if (quickAppliedRef.current === key) return
+
+    const findBySymbol = (symbol: string) =>
+      tokenOptions.find((t) => t.symbol.toUpperCase() === symbol) ?? null
+
+    const nextFrom = fromQ ? findBySymbol(fromQ) : null
+    const nextTo = toQ ? findBySymbol(toQ) : null
+    const amountNum = Number(amountQ)
+
+    if (nextFrom) setFromToken(nextFrom)
+    if (nextTo) setToToken(nextTo)
+    if (Number.isFinite(amountNum) && amountNum > 0) setAmountIn(String(amountNum))
+
+    quickAppliedRef.current = key
+    setSearchParams({}, { replace: true })
+  }, [network, searchParams, setSearchParams, tokenOptions])
 
   useEffect(() => {
     const stored = window.localStorage.getItem(`recentSwapTokens:${network}`)

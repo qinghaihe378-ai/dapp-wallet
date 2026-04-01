@@ -40,6 +40,24 @@ export function MarketDetailPage() {
     return dexItem.id.split(':')[1] ?? null
   }, [dexItem?.id])
 
+  const quickTradeTargets = useMemo(() => {
+    if (dexItem) {
+      const symbol = dexItem.symbol?.toUpperCase() ?? ''
+      return {
+        buy: `/swap?from=USDT&to=${encodeURIComponent(symbol)}&amount=50`,
+        sell: `/swap?from=${encodeURIComponent(symbol)}&to=USDT&amount=50`,
+      }
+    }
+    if (detail) {
+      const symbol = detail.symbol?.toUpperCase() ?? ''
+      return {
+        buy: `/swap?from=USDT&to=${encodeURIComponent(symbol)}&amount=50`,
+        sell: `/swap?from=${encodeURIComponent(symbol)}&to=USDT&amount=50`,
+      }
+    }
+    return { buy: '/swap', sell: '/swap' }
+  }, [detail, dexItem])
+
   const dexScreenerChainId = useMemo(() => {
     if (!dexItem) return null
     // MarketItem.chain 约定：eth/bsc/base/sol/polygon
@@ -182,7 +200,9 @@ export function MarketDetailPage() {
               <div className="market-detail-cap">市值 {formatCompact(cap)}</div>
             )}
             <div className="market-detail-actions">
-              <Link to="/swap" className="btn-primary market-detail-action">去交易</Link>
+              <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
+              <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
+              <Link to="/swap" className="btn-ghost market-detail-action">高级交易</Link>
               <Link to="/wallet" className="btn-ghost market-detail-action">查看钱包</Link>
             </div>
           </section>
@@ -282,7 +302,9 @@ export function MarketDetailPage() {
             </div>
           </div>
           <div className="market-detail-actions">
-            <Link to="/swap" className="btn-primary market-detail-action">去交易</Link>
+            <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
+            <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
+            <Link to="/swap" className="btn-ghost market-detail-action">高级交易</Link>
             <Link to="/wallet" className="btn-ghost market-detail-action">查看钱包</Link>
           </div>
         </section>
