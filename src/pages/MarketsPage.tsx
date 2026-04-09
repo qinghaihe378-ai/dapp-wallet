@@ -151,8 +151,8 @@ export function MarketsPage() {
     { value: 'all', label: '全部' },
     { value: 'eth', label: 'ETH' },
     { value: 'bsc', label: 'BSC' },
-    { value: 'sol', label: 'SOL' },
     { value: 'base', label: 'Base' },
+    { value: 'polygon', label: 'Polygon' },
   ]
   const toggleFavorite = (id: string) => {
     setFavorites((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))

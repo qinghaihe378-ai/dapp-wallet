@@ -6,7 +6,7 @@ const redis = new Redis(process.env.REDIS_URL as string)
 const TTL_SECONDS = 12
 const FRESH_MS = 10_000
 
-const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'sol']
+const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'polygon']
 
 function keyFor(chain: ChainId) {
   return `clawdex:markets:${chain}`

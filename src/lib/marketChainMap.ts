@@ -10,8 +10,6 @@ export function marketChainIdToWalletNetwork(chain: ChainId): Network {
       return 'bsc'
     case 'base':
       return 'base'
-    case 'sol':
-      return 'solana'
     case 'polygon':
       return 'polygon'
     default:

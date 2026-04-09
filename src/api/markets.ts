@@ -14,7 +14,7 @@ export const COLLECTION_RULES = {
 export const COLLECTION_INTERVAL_MS = COLLECTION_RULES.intervalMs
 
 /** 公链标识，与 app 内 network 对应 */
-export type ChainId = 'eth' | 'bsc' | 'sol' | 'polygon' | 'base' | 'avax' | 'btc' | 'other'
+export type ChainId = 'eth' | 'bsc' | 'polygon' | 'base' | 'avax' | 'btc' | 'other'
 
 export interface MarketItem {
   id: string
@@ -87,7 +87,7 @@ const CHAIN_MAP: Record<string, ChainId> = {
   ethereum: 'eth',
   binancecoin: 'bsc',
   'bnb-binance-coin': 'bsc',
-  solana: 'sol',
+  solana: 'other',
   'matic-network': 'polygon',
   'matic-polygon': 'polygon',
   'avalanche-2': 'avax',
@@ -98,7 +98,7 @@ const CHAIN_MAP: Record<string, ChainId> = {
   'usdt-tether': 'eth',
   'eth-ethereum': 'eth',
   'btc-bitcoin': 'btc',
-  'sol-solana': 'sol',
+  'sol-solana': 'other',
   'xrp-xrp': 'other',
   'ada-cardano': 'other',
   'doge-dogecoin': 'other',
@@ -120,7 +120,7 @@ function getChain(coinId: string, symbol: string): ChainId {
   const lower = coinId.toLowerCase()
   if (CHAIN_MAP[lower]) return CHAIN_MAP[lower]
   const sym = symbol.toUpperCase()
-  if (sym === 'SOL') return 'sol'
+  if (sym === 'SOL') return 'other'
   if (sym === 'BNB') return 'bsc'
   if (sym === 'MATIC') return 'polygon'
   if (sym === 'AVAX') return 'avax'
@@ -131,7 +131,6 @@ function getChain(coinId: string, symbol: string): ChainId {
 
 /** DexScreener chainId -> 我们的 ChainId */
 const DEXSCREENER_CHAIN_MAP: Record<string, ChainId> = {
-  solana: 'sol',
   ethereum: 'eth',
   bsc: 'bsc',
   base: 'base',
@@ -230,7 +229,6 @@ const MARKET_APIS = [
       const apiKey = (import.meta as any).env?.VITE_BIRDEYE_API_KEY as string | undefined
       if (!apiKey) throw new Error('Birdeye API key not configured (VITE_BIRDEYE_API_KEY)')
       const chains: Array<{ id: string; chain: ChainId }> = [
-        { id: 'solana', chain: 'sol' },
         { id: 'ethereum', chain: 'eth' },
         { id: 'bsc', chain: 'bsc' },
         { id: 'base', chain: 'base' },
@@ -280,11 +278,11 @@ const MARKET_APIS = [
     fetch: async (perPage: number): Promise<MarketItem[]> => {
       const queries = [
         // 主流/稳定币/链关键词（尽量覆盖每条链的热门池）
-        'usdc', 'usdt', 'weth', 'eth', 'bnb', 'sol', 'matic', 'base',
+        'usdc', 'usdt', 'weth', 'eth', 'bnb', 'matic', 'base',
         // 热门代币关键词
-        'pepe', 'shib', 'uni', 'link', 'aave', 'arb', 'op', 'bonk', 'jup',
+        'pepe', 'shib', 'uni', 'link', 'aave', 'arb', 'op',
         // 原有
-        'bitcoin', 'ethereum', 'solana', 'chainlink', 'uniswap', 'avax',
+        'bitcoin', 'ethereum', 'chainlink', 'uniswap', 'avax',
       ]
       const seen = new Set<string>()
       const all: MarketItem[] = []
@@ -305,8 +303,9 @@ const MARKET_APIS = [
           if (seen.has(key)) continue
           const price = parseFloat(p.priceUsd ?? '0') || 0
           if (price <= 0 || (p.marketCap ?? 0) < 10_000) continue
+          const chain = DEXSCREENER_CHAIN_MAP[p.chainId]
+          if (!chain) continue
           seen.add(key)
-          const chain = DEXSCREENER_CHAIN_MAP[p.chainId] ?? getChain(p.baseToken.symbol, p.baseToken.symbol)
           all.push({
             id: key,
             symbol: p.baseToken.symbol,
@@ -385,12 +384,10 @@ export function groupByChain(items: MarketItem[]): Map<ChainId, MarketItem[]> {
   return map
 }
 
-/** 判断是否为合约地址（EVM 0x... 或 Solana base58） */
+/** 判断是否为 EVM 合约地址（0x...） */
 export function isContractAddress(q: string): boolean {
   const s = q.trim()
-  if (s.startsWith('0x') && s.length === 42) return true
-  if (s.length >= 32 && s.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(s)) return true
-  return false
+  return s.startsWith('0x') && s.length === 42
 }
 
 /** 按合约地址或关键词搜索（DexScreener） */
@@ -409,8 +406,9 @@ export async function searchByAddressOrQuery(query: string): Promise<MarketItem[
     if (seen.has(key)) continue
     const price = parseFloat(p.priceUsd ?? '0') || 0
     if (price <= 0) continue
+    const chain = DEXSCREENER_CHAIN_MAP[p.chainId]
+    if (!chain) continue
     seen.add(key)
-    const chain = DEXSCREENER_CHAIN_MAP[p.chainId] ?? getChain(p.baseToken.symbol, p.baseToken.symbol)
     items.push({
       id: key,
       symbol: p.baseToken.symbol,

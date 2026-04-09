@@ -3,7 +3,6 @@ import { QRCodeSVG } from 'qrcode.react'
 import { ethers } from 'ethers'
 import { useWallet } from '../components/WalletProvider'
 import { NETWORK_CONFIG } from '../lib/walletConfig'
-import { SolanaWallet } from '../components/SolanaWallet'
 import { usePrices } from '../hooks/usePrices'
 import { readTrackedTokenBalances } from '../lib/evm/balances'
 import { isSupportedSwapNetwork } from '../lib/evm/config'
@@ -24,7 +23,7 @@ interface WalletRow {
   avatar: string
   avatarTone: 'sky' | 'violet' | 'gold' | 'emerald' | 'rose' | 'slate'
   chainBadge: string
-  chainTone: 'base' | 'eth' | 'bsc' | 'polygon' | 'solana'
+  chainTone: 'base' | 'eth' | 'bsc' | 'polygon'
   tone: 'up' | 'down' | 'flat'
 }
 
@@ -43,7 +42,6 @@ function getChainInfo(network: string): Pick<WalletRow, 'chainBadge' | 'chainTon
   if (network === 'base') return { chainBadge: 'B', chainTone: 'base' }
   if (network === 'bsc') return { chainBadge: 'B', chainTone: 'bsc' }
   if (network === 'polygon') return { chainBadge: 'P', chainTone: 'polygon' }
-  if (network === 'solana') return { chainBadge: 'S', chainTone: 'solana' }
   return { chainBadge: 'E', chainTone: 'eth' }
 }
 
@@ -111,8 +109,7 @@ export function WalletPage() {
   const [sendAmount, setSendAmount] = useState('')
   const [sendLoading, setSendLoading] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
-  const isSolana = network === 'solana'
-  const isObserveWallet = !address && !isSolana
+  const isObserveWallet = !address
 
   useEffect(() => {
     const v = window.localStorage.getItem(walletValuesVisibleKey) !== '0'
@@ -150,7 +147,7 @@ export function WalletPage() {
 
   useEffect(() => {
     const loadHoldings = async () => {
-      if (!address || !provider || isSolana || !isSupportedSwapNetwork(network)) {
+      if (!address || !provider || !isSupportedSwapNetwork(network)) {
         setHoldings([])
         return
       }
@@ -160,7 +157,7 @@ export function WalletPage() {
     }
 
     void loadHoldings()
-  }, [address, provider, network, isSolana, refreshNonce])
+  }, [address, provider, network, refreshNonce])
 
   const totalUsd = useMemo(() => {
     const nativePrice = getPrice(symbol, network)
@@ -174,7 +171,7 @@ export function WalletPage() {
   const chainInfo = useMemo(() => getChainInfo(network), [network])
 
   const rows: WalletRow[] = useMemo(() => {
-    if (isSolana || !address) {
+    if (!address) {
       return []
     }
 
@@ -211,7 +208,7 @@ export function WalletPage() {
     })
 
     return [...nativeRow, ...holdingRows]
-  }, [address, balance, chainInfo.chainBadge, chainInfo.chainTone, getPrice, holdings, isSolana, network, symbol, totalUsd])
+  }, [address, balance, chainInfo.chainBadge, chainInfo.chainTone, getPrice, holdings, network, symbol, totalUsd])
 
   const filteredRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -245,7 +242,7 @@ export function WalletPage() {
   }
 
   const handleSendTransfer = async () => {
-    if (!signer || !address || isSolana || !isSupportedSwapNetwork(network)) {
+    if (!signer || !address || !isSupportedSwapNetwork(network)) {
       setSendError('当前网络暂不支持转账')
       return
     }
@@ -394,7 +391,7 @@ export function WalletPage() {
       </div>
       </div>
 
-      {!address && !isSolana && (
+      {!address && (
         <div className="wallet-setup-toggle-wrap">
           <button
             type="button"
@@ -422,11 +419,6 @@ export function WalletPage() {
         </div>
       )}
 
-      {isSolana && (
-        <section className="wallet-solana-section">
-          <SolanaWallet />
-        </section>
-      )}
       </div>
 
       {activeRow && (
@@ -518,7 +510,7 @@ export function WalletPage() {
 
             {quickAction === 'send' && (
               <div className="wallet-send-sheet">
-                {address && !isSolana && isSupportedSwapNetwork(network) ? (
+                {address && isSupportedSwapNetwork(network) ? (
                   <>
                     <div className="wallet-send-token-row">
                       <span className="wallet-send-token-label">币种</span>
@@ -554,7 +546,7 @@ export function WalletPage() {
                   </>
                 ) : (
                   <div className="wallet-action-sheet-empty">
-                    {isSolana ? 'Solana 请使用下方钱包' : !address ? '请先创建或导入钱包' : '当前网络暂不支持'}
+                    {!address ? '请先创建或导入钱包' : '当前网络暂不支持'}
                   </div>
                 )}
               </div>

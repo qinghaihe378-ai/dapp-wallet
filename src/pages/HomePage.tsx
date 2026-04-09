@@ -36,17 +36,17 @@ export function HomePage() {
     const stored = window.localStorage.getItem(homeQuickActionKey)
     return stored === 'receive' || stored === 'invite' ? stored : null
   })
-  const [activeFilter, setActiveFilter] = useState<'all' | 'sol' | 'eth' | 'bsc' | 'base'>(() => {
+  const [activeFilter, setActiveFilter] = useState<'all' | 'eth' | 'bsc' | 'base'>(() => {
     if (typeof window === 'undefined') return 'all'
     const stored = window.localStorage.getItem(homeFilterKey)
-    return stored === 'sol' || stored === 'eth' || stored === 'bsc' || stored === 'base' || stored === 'all' ? stored : 'all'
+    if (stored === 'sol') return 'all'
+    return stored === 'eth' || stored === 'bsc' || stored === 'base' || stored === 'all' ? stored : 'all'
   })
   const baseFiltered =
     activeFilter === 'all'
       ? items
       : items.filter((item) => {
           const chain = item.chain?.toLowerCase()
-          if (activeFilter === 'sol') return chain === 'sol'
           if (activeFilter === 'eth') return chain === 'eth' || chain === 'btc'
           if (activeFilter === 'bsc') return chain === 'bsc'
           if (activeFilter === 'base') return chain === 'base'
@@ -86,7 +86,13 @@ export function HomePage() {
     const storedSection = window.localStorage.getItem(homeSectionKey)
     queueMicrotask(() => {
       setActiveQuickAction(storedQuickAction === 'receive' || storedQuickAction === 'invite' ? storedQuickAction : null)
-      setActiveFilter(storedFilter === 'sol' || storedFilter === 'eth' || storedFilter === 'bsc' || storedFilter === 'base' || storedFilter === 'all' ? storedFilter : 'all')
+      setActiveFilter(
+        storedFilter === 'sol'
+          ? 'all'
+          : storedFilter === 'eth' || storedFilter === 'bsc' || storedFilter === 'base' || storedFilter === 'all'
+            ? storedFilter
+            : 'all',
+      )
       setActiveSection(storedSection === 'gain' ? 'gain' : 'hot')
     })
   }, [homeFilterKey, homeQuickActionKey, homeSectionKey])
@@ -172,7 +178,6 @@ export function HomePage() {
                 <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
                 <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
                 <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
-                <button type="button" className={`home-filter-pill ${activeFilter === 'sol' ? 'active' : ''}`} onClick={() => setActiveFilter('sol')}>SOL</button>
                 <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
                 <span className="home-filter-caption">价格</span>
                 <span className="home-filter-caption">涨幅</span>

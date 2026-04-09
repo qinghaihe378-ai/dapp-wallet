@@ -24,7 +24,6 @@ const CHAIN_QUERY_SEEDS: Record<string, string[]> = {
   ethereum: ['weth', 'usdt', 'usdc', 'pepe', 'uniswap'],
   base: ['weth', 'usdc', 'aero', 'based', 'base'],
   polygon: ['wmatic', 'usdt', 'usdc', 'matic'],
-  solana: ['sol', 'usdc', 'usdt', 'ray', 'jup'],
 }
 
 const CHAIN_NAME: Record<string, string> = {
@@ -32,7 +31,6 @@ const CHAIN_NAME: Record<string, string> = {
   ethereum: 'Ethereum',
   base: 'Base',
   polygon: 'Polygon',
-  solana: 'Solana',
 }
 
 function toNewTokenItem(pair: DexScreenerPair, chainId: string): NewTokenItem | null {
@@ -89,7 +87,7 @@ export async function fetchDexScreenerNewTokensForChain(chainId: string, limit =
 }
 
 export async function fetchDexScreenerAllNewTokens(): Promise<NewTokenItem[]> {
-  const chains = ['ethereum', 'bsc', 'base', 'polygon', 'solana']
+  const chains = ['ethereum', 'bsc', 'base', 'polygon']
   const results = await Promise.allSettled(chains.map((c) => fetchDexScreenerNewTokensForChain(c)))
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
 }

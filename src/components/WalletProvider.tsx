@@ -22,12 +22,12 @@ const WalletContext = createContext<WalletContextValue | undefined>(undefined)
 
 const STORAGE_KEY = 'internal_evm_mnemonic_v1'
 
-function buildProvider(network: Exclude<Network, 'solana'>) {
+function buildProvider(network: Network) {
   const rpc = NETWORK_CONFIG[network].rpcUrls[0]
   return new ethers.JsonRpcProvider(rpc)
 }
 
-async function buildWalletForMnemonic(mnemonic: string, network: Exclude<Network, 'solana'>) {
+async function buildWalletForMnemonic(mnemonic: string, network: Network) {
   const provider = buildProvider(network)
   const wallet = ethers.Wallet.fromPhrase(mnemonic).connect(provider)
   const address = await wallet.getAddress()
@@ -53,16 +53,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [mnemonicModal, setMnemonicModal] = useState<{ phrase: string; revealed: boolean } | null>(null)
 
   const loadFromStorage = async (targetNetwork: Network) => {
-    if (targetNetwork === 'solana') {
-      setNetwork('solana')
-      setProvider(null)
-      setSigner(null)
-      setAddress(null)
-      setBalance(null)
-      setChainId(null)
-      setRefreshNonce((current) => current + 1)
-      return
-    }
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return
     const built = await buildWalletForMnemonic(saved, targetNetwork)
@@ -89,7 +79,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return
       }
       localStorage.setItem(STORAGE_KEY, mnemonic)
-      const evmNetwork = network === 'solana' ? 'mainnet' : network
+      const evmNetwork = network
       const built = await buildWalletForMnemonic(mnemonic, evmNetwork)
       setProvider(built.provider)
       setSigner(built.wallet)
@@ -117,7 +107,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setConnecting(true)
       ethers.Wallet.fromPhrase(phrase) // 校验格式
       localStorage.setItem(STORAGE_KEY, phrase)
-      const evmNetwork = network === 'solana' ? 'mainnet' : network
+      const evmNetwork = network
       const built = await buildWalletForMnemonic(phrase, evmNetwork)
       setProvider(built.provider)
       setSigner(built.wallet)
@@ -136,16 +126,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const switchNetwork = useCallback(async (target: Network) => {
     if (target === 'polygon') target = 'mainnet'
-    if (target === 'solana') {
-      setNetwork('solana')
-      setProvider(null)
-      setSigner(null)
-      setAddress(null)
-      setBalance(null)
-      setChainId(null)
-      setRefreshNonce((current) => current + 1)
-      return
-    }
     const mnemonic = localStorage.getItem(STORAGE_KEY)
     if (!mnemonic) {
       setNetwork(target)
@@ -173,7 +153,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const refreshBalance = useCallback(async () => {
-    if (!provider || !address || network === 'solana') {
+    if (!provider || !address) {
       return
     }
     try {

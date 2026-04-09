@@ -5,7 +5,7 @@ import { useWallet } from './WalletProvider'
 import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { type MarketItem, searchByAddressOrQuery } from '../api/markets'
 
-const NETWORKS: Network[] = ['mainnet', 'bsc', 'base', 'solana']
+const NETWORKS: Network[] = ['mainnet', 'bsc', 'base']
 
 export function AppHeader() {
   const { network, switchNetwork, address } = useWallet()

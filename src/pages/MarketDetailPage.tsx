@@ -64,9 +64,7 @@ export function MarketDetailPage() {
 
   const dexScreenerChainId = useMemo(() => {
     if (!dexItem) return null
-    // MarketItem.chain 约定：eth/bsc/base/sol/polygon
     if (dexItem.chain === 'eth') return 'ethereum'
-    if (dexItem.chain === 'sol') return 'solana'
     return dexItem.chain
   }, [dexItem])
 
@@ -74,7 +72,6 @@ export function MarketDetailPage() {
     if (!dexItem) return null
     if (dexItem.chain === 'eth') return 'eth'
     if (dexItem.chain === 'polygon') return 'polygon_pos'
-    if (dexItem.chain === 'sol') return 'solana'
     return dexItem.chain
   }, [dexItem])
 

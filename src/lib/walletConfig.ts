@@ -1,4 +1,4 @@
-export type Network = 'mainnet' | 'bsc' | 'polygon' | 'base' | 'solana'
+export type Network = 'mainnet' | 'bsc' | 'polygon' | 'base'
 
 export const NETWORK_CONFIG: Record<
   Network,
@@ -36,12 +36,5 @@ export const NETWORK_CONFIG: Record<
     rpcUrls: ['https://polygon-bor-rpc.publicnode.com'],
     symbol: 'MATIC',
     explorerTxBase: 'https://polygonscan.com/tx/',
-  },
-  solana: {
-    chainId: 0,
-    chainName: 'Solana Mainnet',
-    rpcUrls: ['https://solana-rpc.publicnode.com', 'https://rpc.ankr.com/solana', 'https://api.mainnet-beta.solana.com'],
-    symbol: 'SOL',
-    explorerTxBase: 'https://solscan.io/tx/',
   },
 }

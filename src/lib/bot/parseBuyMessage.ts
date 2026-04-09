@@ -1,9 +1,9 @@
 /**
- * Bot 购买消息解析
- * 支持格式：bsc 买 0.1 BNB 的 USDT | base 买 10 USDC 的 0x... | sol 买 1 SOL 的 USDC
+ * Bot 购买消息解析（仅 EVM）
+ * 支持格式：bsc 买 0.1 BNB 的 USDT | base 买 10 USDC 的 0x... | eth 买 0.1 ETH 的 USDC
  */
 
-export type BotChain = 'bsc' | 'mainnet' | 'base' | 'solana'
+export type BotChain = 'bsc' | 'mainnet' | 'base'
 
 export interface ParsedBuyIntent {
   chain: BotChain
@@ -19,8 +19,6 @@ const CHAIN_ALIASES: Record<string, BotChain> = {
   ethereum: 'mainnet',
   mainnet: 'mainnet',
   base: 'base',
-  sol: 'solana',
-  solana: 'solana',
 }
 
 function normalizeChain(s: string): BotChain | null {
@@ -36,11 +34,12 @@ export function parseBuyMessage(text: string): ParsedBuyIntent | null {
   const buyMatch = t.match(/^(?:买|buy)\s+(.+)$/i)
   const rest = buyMatch ? buyMatch[1].trim() : t
 
-  const chainFirst = rest.match(/^(bsc|bnb|eth|ethereum|mainnet|base|sol|solana)\s+(.+)$/i)
+  const chainFirst = rest.match(/^(bsc|bnb|eth|ethereum|mainnet|base)\s+(.+)$/i)
   let chain: BotChain | null = null
   let body = rest
   if (chainFirst) {
     chain = normalizeChain(chainFirst[1])
+    if (!chain) return null
     body = chainFirst[2].trim()
   }
   const buyPrefix = body.match(/^(?:买|buy)\s+(.+)$/i)
@@ -59,16 +58,19 @@ export function parseBuyMessage(text: string): ParsedBuyIntent | null {
   const amountNum = parseFloat(amount)
   if (!Number.isFinite(amountNum) || amountNum <= 0) return null
 
+  const payUpper = payToken.trim().toUpperCase()
+  const bt = buyToken.trim()
+  const looksLikeSolanaMint = bt.length >= 32 && bt.length <= 55 && !bt.startsWith('0x')
+
+  if (payUpper === 'SOL' || looksLikeSolanaMint) {
+    return null
+  }
+
   if (!chain) {
-    const payUpper = payToken.trim().toUpperCase()
-    const bt = buyToken.trim()
-    const looksLikeSolanaMint = bt.length >= 32 && bt.length <= 55 && !bt.startsWith('0x')
     if (payUpper === 'BNB') {
       chain = 'bsc'
     } else if (payUpper === 'ETH') {
       chain = 'mainnet'
-    } else if (payUpper === 'SOL' || looksLikeSolanaMint) {
-      chain = 'solana'
     } else if (/^0x[a-fA-F0-9]{40}$/.test(bt)) {
       chain = 'base'
     } else {
@@ -79,7 +81,7 @@ export function parseBuyMessage(text: string): ParsedBuyIntent | null {
   return {
     chain,
     amount,
-    payToken: payToken.trim().toUpperCase(),
+    payToken: payUpper,
     buyToken,
   }
 }

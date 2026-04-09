@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Connection } from '@solana/web3.js'
 import { ethers } from 'ethers'
 import { useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
-import { useSolanaWallet } from '../hooks/useSolanaWallet'
 import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { fetchEvmTokenByAddress, readTokenBalance } from '../lib/evm/balances'
 import { executeQuotedSwap } from '../lib/evm/executeSwap'
 import { isSupportedSwapNetwork, type SupportedSwapNetwork } from '../lib/evm/config'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { getSwapTokens, type EvmToken } from '../lib/evm/tokens'
-import { readSolanaBalance } from '../lib/solana/balances'
-import { executeJupiterSwap } from '../lib/solana/executeSwap'
-import { getSolanaQuoteWithFallback, type SolanaLiveQuote } from '../lib/solana/quote'
-import { fetchTokenByMint, isEvmAddress, isSolanaMint } from '../api/jupiter'
-import { SOLANA_TOKENS, type SolanaToken } from '../lib/solana/tokens'
+import { isEvmAddress } from '../api/jupiter'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 interface SwapHistoryItem {
@@ -35,11 +29,11 @@ interface SwapHistoryItem {
 
 type HistoryFilter = 'all' | 'pending' | 'success' | 'failed'
 
-type SwapToken = EvmToken | SolanaToken
+type SwapToken = EvmToken
 
 const QUICK_TRADE_PARAM_KEYS = ['from', 'to', 'fromAddr', 'toAddr', 'amount', 'chain'] as const
 
-/** URL ?chain= 与行情跳转统一：mainnet|bsc|base|polygon|solana（及常见别名） */
+/** URL ?chain= 与行情跳转统一：mainnet|bsc|base|polygon（及常见别名） */
 function parseSwapChainQuery(raw: string | null): Network | null {
   const k = (raw ?? '').trim().toLowerCase()
   if (!k) return null
@@ -47,7 +41,6 @@ function parseSwapChainQuery(raw: string | null): Network | null {
   if (k === 'bsc' || k === 'bnb') return 'bsc'
   if (k === 'base') return 'base'
   if (k === 'polygon' || k === 'matic') return 'polygon'
-  if (k === 'sol' || k === 'solana') return 'solana'
   return null
 }
 
@@ -60,23 +53,9 @@ const PLACEHOLDER_EVM: EvmToken = {
   tone: 'slate',
 }
 
-const PLACEHOLDER_SOLANA: SolanaToken = {
-  symbol: '--',
-  name: 'Unsupported',
-  mint: '',
-  address: '',
-  decimals: 9,
-  isNative: false,
-  tone: 'slate',
-}
-
-function isSolanaToken(t: SwapToken): t is SolanaToken {
-  return 'mint' in t && typeof (t as SolanaToken).mint === 'string'
-}
-
 /** 用于 localStorage 精确恢复（避免同名 symbol 歧义、自定义币不在默认列表） */
 function swapTokenStorageKey(t: SwapToken): string {
-  return isSolanaToken(t) ? t.mint : t.address.toLowerCase()
+  return t.address.toLowerCase()
 }
 
 const STABLECOIN_SYMBOLS = new Set(['USDC', 'USDT', 'USDbC', 'DAI'])
@@ -132,7 +111,7 @@ function getQuoteErrorMessage(error: unknown) {
     return '暂无可用路由或流动性不足。'
   }
   if (message === 'Failed to fetch' || message.toLowerCase().includes('failed to fetch')) {
-    return '网络请求失败。Sol 链需能访问 Jupiter/Raydium；EVM 链需能访问 Uniswap。国内可尝试 VPN 或配置 API Key。'
+    return '网络请求失败。EVM 链需能访问路由 API。国内可尝试 VPN 或配置 API Key。'
   }
   return '发起兑换失败，请检查网络、余额和滑点设置。'
 }
@@ -151,7 +130,6 @@ export function SwapPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { signer, address, network, balance, provider, refreshBalance, refreshNonce, switchNetwork } = useWallet()
   const { getPrice } = usePrices()
-  const { keypair: solanaKeypair, address: solanaAddress, refresh: refreshSolana } = useSolanaWallet()
   const { config } = usePageConfig('swap')
   const swapSelectionKey = `swapSelection:${network}`
   const swapSlippageKey = `swapSlippage:${network}`
@@ -164,7 +142,6 @@ export function SwapPage() {
   const [error, setError] = useState<string | null>(null)
   const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null)
   const [pickerQuery, setPickerQuery] = useState('')
-  const [customTokens, setCustomTokens] = useState<SolanaToken[]>([])
   const [customEvmTokens, setCustomEvmTokens] = useState<EvmToken[]>([])
   const [customTokenLoading, setCustomTokenLoading] = useState(false)
   const [recentSymbols, setRecentSymbols] = useState<string[]>([])
@@ -178,7 +155,7 @@ export function SwapPage() {
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [copiedHistoryId, setCopiedHistoryId] = useState<string | null>(null)
-  const [liveQuote, setLiveQuote] = useState<LiveQuote | SolanaLiveQuote | null>(null)
+  const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null)
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState<string | null>(null)
   const [quoteRefreshNonce, setQuoteRefreshNonce] = useState(0)
@@ -189,17 +166,15 @@ export function SwapPage() {
 
   const chainName = NETWORK_CONFIG[network].chainName
   const explorerTxBase = NETWORK_CONFIG[network].explorerTxBase
-  const isSolana = network === 'solana'
-  const quoteSupported = isSolana ? Boolean(solanaAddress) : isSupportedSwapNetwork(network)
+  const quoteSupported = isSupportedSwapNetwork(network)
   const tokenOptions = useMemo((): SwapToken[] => {
-    if (isSolana) return solanaAddress ? SOLANA_TOKENS : []
-    return quoteSupported && isSupportedSwapNetwork(network)
-      ? (getSwapTokens(network as import('../lib/evm/config').SupportedSwapNetwork) as SwapToken[])
+    return quoteSupported
+      ? getSwapTokens(network as SupportedSwapNetwork)
       : []
-  }, [isSolana, network, quoteSupported, solanaAddress])
+  }, [network, quoteSupported])
   const defaultFrom = tokenOptions[0]
   const defaultTo = tokenOptions.find((item) => item.symbol === 'USDC' || item.symbol === 'USDT') ?? tokenOptions[1] ?? tokenOptions[0]
-  const placeholder = isSolana ? PLACEHOLDER_SOLANA : PLACEHOLDER_EVM
+  const placeholder = PLACEHOLDER_EVM
   const [fromToken, setFromToken] = useState<SwapToken>(defaultFrom ?? placeholder)
   const [toToken, setToToken] = useState<SwapToken>(defaultTo ?? placeholder)
 
@@ -218,7 +193,7 @@ export function SwapPage() {
 
   useEffect(() => {
     if (quickTradeKeysPresent) return
-    const merged: SwapToken[] = [...tokenOptions, ...customTokens, ...customEvmTokens]
+    const merged: SwapToken[] = [...tokenOptions, ...customEvmTokens]
     const stored = window.localStorage.getItem(swapSelectionKey)
     const parsed = stored
       ? (JSON.parse(stored) as { from?: string; to?: string; fromKey?: string; toKey?: string })
@@ -227,11 +202,7 @@ export function SwapPage() {
     const byKey = (key?: string | null) => {
       if (!key?.trim()) return null
       const k = key.trim().toLowerCase()
-      return (
-        merged.find((item) =>
-          isSolanaToken(item) ? item.mint.toLowerCase() === k : item.address.toLowerCase() === k,
-        ) ?? null
-      )
+      return merged.find((item) => item.address.toLowerCase() === k) ?? null
     }
     const bySym = (sym?: string | null) => {
       if (!sym?.trim()) return null
@@ -251,7 +222,6 @@ export function SwapPage() {
   }, [
     quickTradeKeysPresent,
     customEvmTokens,
-    customTokens,
     defaultFrom,
     defaultTo,
     placeholder,
@@ -278,46 +248,12 @@ export function SwapPage() {
 
     const findByAddr = (addr: string, merged: SwapToken[]) => {
       const a = addr.toLowerCase()
-      return (
-        merged.find((t) =>
-          isSolanaToken(t) ? t.mint.toLowerCase() === a : t.address.toLowerCase() === a,
-        ) ?? null
-      )
+      return merged.find((t) => t.address.toLowerCase() === a) ?? null
     }
     const findBySym = (sym: string, merged: SwapToken[]) => {
       const s = sym.trim().toUpperCase()
       if (!s) return null
       return merged.find((t) => t.symbol.toUpperCase() === s) ?? null
-    }
-
-    const resolveSolanaMint = async (mint: string): Promise<SolanaToken | null> => {
-      if (cancelled || !isSolanaMint(mint)) return null
-      try {
-        const info = await fetchTokenByMint(mint.trim())
-        const token: SolanaToken = {
-          symbol: info?.symbol ?? mint.slice(0, 8),
-          name: info?.name ?? 'Unknown',
-          mint: mint.trim(),
-          address: mint.trim(),
-          decimals: info?.decimals ?? 6,
-          isNative: false,
-          tone: 'sky',
-        }
-        setCustomTokens((prev) => (prev.some((t) => t.mint === token.mint) ? prev : [...prev, token]))
-        return token
-      } catch {
-        const token: SolanaToken = {
-          symbol: mint.slice(0, 8),
-          name: 'Unknown',
-          mint: mint.trim(),
-          address: mint.trim(),
-          decimals: 6,
-          isNative: false,
-          tone: 'sky',
-        }
-        setCustomTokens((prev) => (prev.some((t) => t.mint === token.mint) ? prev : [...prev, token]))
-        return token
-      }
     }
 
     const resolveEvmAddr = async (addrRaw: string): Promise<EvmToken | null> => {
@@ -360,27 +296,23 @@ export function SwapPage() {
         return
       }
 
-      if (network === 'solana' && !solanaAddress) return
-
-      if (!isSolana) {
-        if (!isSupportedSwapNetwork(network)) {
-          setSearchParams({}, { replace: true })
-          return
-        }
+      if (!isSupportedSwapNetwork(network)) {
+        setSearchParams({}, { replace: true })
+        return
       }
 
       if (tokenOptions.length === 0) return
 
-      const merged: SwapToken[] = [...tokenOptions, ...customTokens, ...customEvmTokens]
+      const merged: SwapToken[] = [...tokenOptions, ...customEvmTokens]
 
       let nextFrom: SwapToken | null = fromAddrQ ? findByAddr(fromAddrQ, merged) : null
       let nextTo: SwapToken | null = toAddrQ ? findByAddr(toAddrQ, merged) : null
 
       if (fromAddrQ && !nextFrom) {
-        nextFrom = isSolana ? await resolveSolanaMint(fromAddrQ) : await resolveEvmAddr(fromAddrQ)
+        nextFrom = await resolveEvmAddr(fromAddrQ)
       }
       if (toAddrQ && !nextTo) {
-        nextTo = isSolana ? await resolveSolanaMint(toAddrQ) : await resolveEvmAddr(toAddrQ)
+        nextTo = await resolveEvmAddr(toAddrQ)
       }
 
       if (cancelled) return
@@ -414,13 +346,10 @@ export function SwapPage() {
     }
   }, [
     customEvmTokens,
-    customTokens,
-    isSolana,
     network,
     provider,
     searchParams,
     setSearchParams,
-    solanaAddress,
     swapSelectionKey,
     switchNetwork,
     tokenOptions,
@@ -524,25 +453,10 @@ export function SwapPage() {
     }
 
     let cancelled = false
-    if (isSolana && solanaAddress) {
+    if (provider && address) {
       void Promise.all([
-        readSolanaBalance(solanaAddress, fromToken as SolanaToken),
-        readSolanaBalance(solanaAddress, toToken as SolanaToken),
-      ])
-        .then(([a, b]) => {
-          if (cancelled) return
-          setFromTokenBalance(a)
-          setToTokenBalance(b)
-        })
-        .catch(() => {
-          if (cancelled) return
-          setFromTokenBalance(null)
-          setToTokenBalance(null)
-        })
-    } else if (provider && address) {
-      void Promise.all([
-        readTokenBalance(provider, address, fromToken as EvmToken),
-        readTokenBalance(provider, address, toToken as EvmToken),
+        readTokenBalance(provider, address, fromToken),
+        readTokenBalance(provider, address, toToken),
       ])
         .then(([nextFromBalance, nextToBalance]) => {
           if (cancelled) return
@@ -562,7 +476,7 @@ export function SwapPage() {
     return () => {
       cancelled = true
     }
-  }, [address, fromToken, isSolana, provider, quoteSupported, refreshNonce, solanaAddress, toToken])
+  }, [address, fromToken, provider, quoteSupported, refreshNonce, toToken])
 
   useEffect(() => {
     if (!quoteSupported) return
@@ -571,47 +485,6 @@ export function SwapPage() {
     if (pendingHashes.length === 0) return
 
     let cancelled = false
-
-    if (isSolana) {
-      const conn = new Connection(NETWORK_CONFIG.solana.rpcUrls[0])
-      const pollSolana = async () => {
-        const results = await Promise.all(
-          pendingHashes.map(async (sig) => {
-            try {
-              const status = await conn.getSignatureStatus(sig)
-              return { sig, status }
-            } catch {
-              return { sig, status: null }
-            }
-          }),
-        )
-        if (cancelled) return
-        const confirmed = results.filter((r) => {
-          const s = r.status && 'value' in r.status ? r.status.value : r.status
-          const st = s as { confirmationStatus?: string } | null
-          return st?.confirmationStatus === 'confirmed' || st?.confirmationStatus === 'finalized'
-        })
-        if (confirmed.length === 0) return
-        let shouldRefresh = false
-        persistHistory((current) =>
-          current.map((item) => {
-            if (item.status !== 'pending' || !item.txHash) return item
-            const m = confirmed.find((c) => c.sig === item.txHash)
-            if (!m) return item
-            shouldRefresh = true
-            const s = m.status && 'value' in m.status ? m.status.value : m.status
-            return { ...item, status: (s as { err?: unknown })?.err ? 'failed' : 'success' }
-          }),
-        )
-        if (shouldRefresh) refreshSolana()
-      }
-      void pollSolana()
-      const iv = setInterval(pollSolana, 5000)
-      return () => {
-        cancelled = true
-        clearInterval(iv)
-      }
-    }
 
     if (!provider) return
     const pollReceipts = async () => {
@@ -646,7 +519,7 @@ export function SwapPage() {
       cancelled = true
       clearInterval(interval)
     }
-  }, [historyItems, isSolana, persistHistory, provider, quoteSupported, refreshBalance, refreshSolana])
+  }, [historyItems, persistHistory, provider, quoteSupported, refreshBalance])
 
   useEffect(() => {
     if (!quoteSupported || !amountIn || !fromToken.symbol || !toToken.symbol || fromToken.symbol === toToken.symbol) {
@@ -654,9 +527,7 @@ export function SwapPage() {
       setQuoteLoading(false)
       setQuoteError(
         !quoteSupported
-          ? isSolana
-            ? '请先在钱包页创建或导入 Solana 钱包。'
-            : '当前网络暂未接入真实 EVM 兑换。'
+          ? '当前网络暂未接入真实 EVM 兑换。'
           : fromToken.symbol === toToken.symbol
             ? '请选择不同的兑换币种。'
             : null,
@@ -669,28 +540,12 @@ export function SwapPage() {
       setQuoteLoading(true)
       setQuoteError(null)
 
-      if (isSolana && isSolanaToken(fromToken) && isSolanaToken(toToken) && solanaAddress) {
-        const amountRaw = BigInt(Math.floor(Number(amountIn) * 10 ** fromToken.decimals)).toString()
-        const slippageBps = Math.round(Math.max(0.1, Number(slippage || '2')) * 100)
-        void getSolanaQuoteWithFallback(fromToken, toToken, amountRaw, slippageBps, solanaAddress)
-          .then((quote) => {
-            if (cancelled) return
-            setLiveQuote(quote)
-          })
-          .catch((quoteFailure) => {
-            if (cancelled) return
-            setLiveQuote(null)
-            setQuoteError(getQuoteErrorMessage(quoteFailure))
-          })
-          .finally(() => {
-            if (!cancelled) setQuoteLoading(false)
-          })
-      } else if (provider && !isSolana && isSupportedSwapNetwork(network)) {
+      if (provider && isSupportedSwapNetwork(network)) {
         void getBestLiveQuote({
           provider,
-          network: network as import('../lib/evm/config').SupportedSwapNetwork,
-          fromToken: fromToken as EvmToken,
-          toToken: toToken as EvmToken,
+          network: network as SupportedSwapNetwork,
+          fromToken,
+          toToken,
           amountIn,
           slippagePercent: Math.max(0.1, Number(slippage || '2')),
           swapperAddress: address ?? undefined,
@@ -716,7 +571,7 @@ export function SwapPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [address, amountIn, fromToken, isSolana, network, provider, quoteRefreshNonce, quoteSupported, slippage, solanaAddress, toToken])
+  }, [address, amountIn, fromToken, network, provider, quoteRefreshNonce, quoteSupported, slippage, toToken])
 
   const amountInNumber = Number(amountIn || '0')
   const fromTokenBalanceNumber = Number(fromTokenBalance ?? '0')
@@ -728,9 +583,7 @@ export function SwapPage() {
       : amountInNumber * (getPrice(fromToken.symbol, network) || 0)
   const routeHopCount = liveQuote ? Math.max(0, liveQuote.routeSymbols.length - 1) : 0
   const priceImpactPercent = liveQuote
-    ? 'priceImpactPct' in liveQuote
-      ? liveQuote.priceImpactPct
-      : Number((routeHopCount * 0.55 + (liveQuote.quoteMode === 'v2' ? 0.8 : 0.35)).toFixed(2))
+    ? Number((routeHopCount * 0.55 + (liveQuote.quoteMode === 'v2' ? 0.8 : 0.35)).toFixed(2))
     : 0
   const lpFeeUsd = liveQuote ? Math.max(0.01, fromUsdValue * (liveQuote.quoteMode === 'v2' ? 0.003 : 0.0005)) : 0
   const nativeSymbol = NETWORK_CONFIG[network].symbol
@@ -760,7 +613,7 @@ export function SwapPage() {
     !quoteError &&
     !quoteExpired &&
     !insufficientInputBalance &&
-    (isSolana ? (solanaAddress && solanaKeypair) : (address && signer)),
+    (address && signer),
   )
   const routeLabel = liveQuote?.routeLabel ?? `${fromToken.symbol} > ${toToken.symbol} · ${chainName}`
   const slippageValue = Math.max(0.1, Number(slippage || '2'))
@@ -790,7 +643,7 @@ export function SwapPage() {
         : liveQuote
           ? `已自动选择最优路由：${liveQuote.protocolLabel}。`
           : '输入数量后将自动拉取最优链上报价。'
-  const hasWallet = isSolana ? solanaAddress : address
+  const hasWallet = address
   const swapButtonTone =
     !hasWallet || !canSubmit ? 'disabled' : riskLevel === 'high' ? 'danger' : riskLevel === 'medium' ? 'warn' : 'normal'
   const stageCopy =
@@ -819,13 +672,7 @@ export function SwapPage() {
   const toBalanceAfter = toTokenBalanceNumber + estimatedOutNum
   const allTokenOptions = useMemo((): SwapToken[] => {
     const base = [...tokenOptions]
-    const seen = new Set(tokenOptions.map((t) => (isSolanaToken(t) ? t.mint : t.address.toLowerCase())))
-    for (const t of customTokens) {
-      if (!seen.has(t.mint)) {
-        seen.add(t.mint)
-        base.push(t)
-      }
-    }
+    const seen = new Set(tokenOptions.map((t) => t.address.toLowerCase()))
     for (const t of customEvmTokens) {
       const key = t.address.toLowerCase()
       if (!seen.has(key)) {
@@ -834,20 +681,23 @@ export function SwapPage() {
       }
     }
     return base
-  }, [customEvmTokens, customTokens, tokenOptions])
+  }, [customEvmTokens, tokenOptions])
 
   const filteredOptions = useMemo(() => {
     const query = pickerQuery.trim().toLowerCase()
     if (!query) return allTokenOptions
-    return allTokenOptions.filter((token) =>
-      token.symbol.toLowerCase().includes(query) ||
-      token.name.toLowerCase().includes(query) ||
-      (isSolanaToken(token) && token.mint.toLowerCase().includes(query)),
+    return allTokenOptions.filter(
+      (token) =>
+        token.symbol.toLowerCase().includes(query) ||
+        token.name.toLowerCase().includes(query) ||
+        token.address.toLowerCase().includes(query),
     )
   }, [allTokenOptions, pickerQuery])
 
-  const showAddByMint = isSolana && isSolanaMint(pickerQuery.trim()) && !allTokenOptions.some((t) => isSolanaToken(t) && t.mint === pickerQuery.trim())
-  const showAddByAddress = !isSolana && provider && isEvmAddress(pickerQuery.trim()) && !allTokenOptions.some((t) => !isSolanaToken(t) && t.address.toLowerCase() === pickerQuery.trim().toLowerCase())
+  const showAddByAddress =
+    provider &&
+    isEvmAddress(pickerQuery.trim()) &&
+    !allTokenOptions.some((t) => t.address.toLowerCase() === pickerQuery.trim().toLowerCase())
   const recentOptions = useMemo(
     () => recentSymbols.map((symbol) => allTokenOptions.find((token) => token.symbol === symbol)).filter(Boolean) as SwapToken[],
     [allTokenOptions, recentSymbols],
@@ -925,42 +775,6 @@ export function SwapPage() {
     setPickerTarget(null)
   }
 
-  const handleAddCustomToken = useCallback(async () => {
-    const mint = pickerQuery.trim()
-    if (!isSolanaMint(mint) || customTokenLoading) return
-    setCustomTokenLoading(true)
-    try {
-      const info = await fetchTokenByMint(mint)
-      const token: SolanaToken = {
-        symbol: info?.symbol ?? mint.slice(0, 8),
-        name: info?.name ?? 'Unknown',
-        mint,
-        address: mint,
-        decimals: info?.decimals ?? 6,
-        isNative: false,
-        tone: 'sky',
-      }
-      setCustomTokens((prev) => (prev.some((t) => t.mint === mint) ? prev : [...prev, token]))
-      handleSelectToken(token)
-      setPickerQuery('')
-    } catch {
-      const token: SolanaToken = {
-        symbol: mint.slice(0, 8),
-        name: 'Unknown',
-        mint,
-        address: mint,
-        decimals: 6,
-        isNative: false,
-        tone: 'sky',
-      }
-      setCustomTokens((prev) => (prev.some((t) => t.mint === mint) ? prev : [...prev, token]))
-      handleSelectToken(token)
-      setPickerQuery('')
-    } finally {
-      setCustomTokenLoading(false)
-    }
-  }, [pickerQuery, customTokenLoading])
-
   const handleAddCustomEvmToken = useCallback(async () => {
     const raw = pickerQuery.trim()
     const addr = raw.startsWith('0x') ? raw : `0x${raw}`
@@ -1025,21 +839,8 @@ export function SwapPage() {
     persistHistory((current) => [pendingRecord, ...current])
 
     try {
-      if (isSolana && solanaKeypair && solanaAddress && isSolanaToken(fromToken) && isSolanaToken(toToken)) {
-        setExecutionStage('swapping')
-        const result = await executeJupiterSwap(solanaKeypair, liveQuote as SolanaLiveQuote, solanaAddress)
-        setTxHash(result.swapHash)
-        persistHistory((current) =>
-          current.map((item) =>
-            item.id === historyId
-              ? { ...item, stage: 'swapping', txHash: result.swapHash }
-              : item,
-          ),
-        )
-        setAmountIn('')
-        refreshSolana()
-      } else if (signer && address) {
-        const result = await executeQuotedSwap(signer, address, liveQuote as LiveQuote, {
+      if (signer && address) {
+        const result = await executeQuotedSwap(signer, address, liveQuote, {
           onStageChange: (stage) => {
             setExecutionStage(stage)
             persistHistory((current) =>
@@ -1240,7 +1041,7 @@ export function SwapPage() {
           onClick={handlePrimaryAction}
         >
           {!hasWallet
-            ? (isSolana ? '请先在钱包页创建或导入 Solana 钱包' : '请先在钱包页创建或导入钱包')
+            ? '请先在钱包页创建或导入钱包'
             : loading
               ? executionStage === 'approving'
                 ? `授权 ${fromToken.symbol} 中…`
@@ -1339,15 +1140,15 @@ export function SwapPage() {
                 type="text"
                 value={pickerQuery}
                 onChange={(e) => setPickerQuery(e.target.value)}
-                placeholder={isSolana ? '搜索代币或粘贴 mint 地址' : '搜索代币或粘贴合约地址'}
+                placeholder="搜索代币或粘贴合约地址"
                 className="swap-token-picker-search-input"
               />
             </div>
-            {(showAddByMint || showAddByAddress) && (
+            {showAddByAddress && (
               <button
                 type="button"
                 className="swap-token-picker-row swap-token-picker-add"
-                onClick={() => void (showAddByMint ? handleAddCustomToken() : handleAddCustomEvmToken())}
+                onClick={() => void handleAddCustomEvmToken()}
                 disabled={customTokenLoading}
               >
                 {customTokenLoading ? '添加中…' : `添加 ${pickerQuery.trim().slice(0, 14)}… 并选择`}
@@ -1373,7 +1174,7 @@ export function SwapPage() {
             <div className="swap-token-picker-list">
               {filteredOptions.map((token) => (
                 <button
-                  key={isSolanaToken(token) ? token.mint : token.address}
+                  key={token.address}
                   type="button"
                   className={`swap-token-picker-row ${
                     (pickerTarget === 'from' ? fromToken.symbol : toToken.symbol) === token.symbol ? 'active' : ''
