@@ -9,7 +9,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 14px 16px 24px;
-  padding-bottom: calc(var(--bottom-nav-h) + 24px + var(--safe-bottom));
+  padding-bottom: calc(var(--bottom-nav-h) + 8px + var(--safe-bottom));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -489,9 +489,9 @@ button:disabled,
   align-items: stretch;
   justify-content: space-between;
   width: min(calc(100% - 24px), calc(var(--max-page-width) + 8px));
-  height: calc(var(--bottom-nav-h) - 8px);
-  margin-bottom: calc(10px + var(--safe-bottom));
-  padding: 6px;
+  height: calc(var(--bottom-nav-h) - 6px);
+  margin-bottom: calc(8px + var(--safe-bottom));
+  padding: 5px;
   border: 1px solid rgba(124, 140, 255, 0.14);
   border-radius: 28px;
   background:
@@ -508,7 +508,7 @@ button:disabled,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   border-radius: 22px;
   text-decoration: none;
   color: var(--text-soft);
@@ -525,7 +525,7 @@ button:disabled,
 .ave-tab::after {
   content: '';
   position: absolute;
-  top: 6px;
+  top: 5px;
   left: 50%;
   width: 18px;
   height: 2px;
@@ -678,8 +678,9 @@ button:disabled,
 }
 
 .ave-tab-label {
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 .home-overview {
@@ -1611,7 +1612,7 @@ button:disabled,
 /* ===== Ave.ai screenshot-aligned overrides ===== */
 .ave-app .app-main {
   padding-top: 8px;
-  padding-bottom: calc(var(--bottom-nav-h) + 10px + var(--safe-bottom));
+  padding-bottom: calc(var(--bottom-nav-h) + 8px + var(--safe-bottom));
 }
 
 .ave-header {
@@ -1988,7 +1989,7 @@ button:disabled,
   width: 100%;
   min-height: calc(var(--bottom-nav-h) + var(--safe-bottom));
   margin-bottom: 0;
-  padding: 8px 4px calc(8px + var(--safe-bottom));
+  padding: 3px 4px calc(3px + var(--safe-bottom));
   padding-left: max(4px, env(safe-area-inset-left));
   padding-right: max(4px, env(safe-area-inset-right));
   border: none;
@@ -2004,9 +2005,10 @@ button:disabled,
 }
 
 .ave-tab {
-  gap: 4px;
+  gap: 2px;
   border-radius: 0;
   color: #9ea6b5;
+  padding: 4px 0;
 }
 
 .ave-tab.active {
@@ -2019,12 +2021,13 @@ button:disabled,
 }
 
 .ave-tab-label {
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.15;
 }
 
 .ave-tab-icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   color: currentColor;
   display: inline-flex;
   align-items: center;
@@ -2038,8 +2041,8 @@ button:disabled,
 }
 
 .ave-tab-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   stroke: currentColor;
   stroke-width: 1.9;
   stroke-linecap: round;
@@ -3907,7 +3910,7 @@ button:disabled,
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(88px + var(--safe-bottom));
+  bottom: calc(var(--bottom-nav-h) + 28px + var(--safe-bottom));
   z-index: 35;
   min-height: 52px;
   border-radius: 18px;
@@ -5600,28 +5603,28 @@ button:disabled,
   }
 
   .ave-bottom-nav {
-    padding: 6px 6px calc(6px + var(--safe-bottom));
+    padding: 3px 6px calc(3px + var(--safe-bottom));
     padding-left: max(6px, env(safe-area-inset-left));
     padding-right: max(6px, env(safe-area-inset-right));
   }
 
   .ave-tab {
-    min-height: 36px;
+    min-height: 0;
     min-width: 0;
   }
 
   .ave-tab-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
   }
 
   .ave-tab-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
   }
 
   .ave-tab-label {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .detail-chip-row {
@@ -5677,11 +5680,11 @@ button:disabled,
   }
 
   .ave-bottom-nav {
-    padding: 6px 4px calc(6px + var(--safe-bottom));
+    padding: 3px 4px calc(3px + var(--safe-bottom));
   }
 
   .ave-tab-label {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .market-detail-card {
@@ -5728,7 +5731,7 @@ button:disabled,
 
 @media (max-width: 320px) {
   :root {
-    --bottom-nav-h: 56px;
+    --bottom-nav-h: 44px;
   }
 
   .ave-app .app-main {
@@ -5756,13 +5759,13 @@ button:disabled,
   }
 
   .ave-tab-icon {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
   }
 
   .ave-tab-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
   }
 
   .market-detail-price {
@@ -5793,8 +5796,9 @@ button:disabled,
     opacity: 0.85;
   }
 
+  /* 微信式底栏：勿再强制 48px，否则栏高被整体撑高 */
   .ave-tab {
-    min-height: 48px;
+    min-height: 0;
   }
 
   .ave-header-tab,
@@ -5813,7 +5817,7 @@ button:disabled,
 
 .bot-page .bot-chat-window {
   margin-top: 0;
-  height: calc(100svh - 56px);
+  height: calc(100svh - 56px - var(--bottom-nav-h) - 8px - var(--safe-bottom));
   max-height: none;
   border-radius: 0;
 }

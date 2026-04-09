@@ -21,7 +21,8 @@
   --radius: 22px;
   --radius-md: 18px;
   --radius-sm: 14px;
-  --bottom-nav-h: 56px;
+  /* 接近微信底部 Tab：约 48pt 量级内容区（另加 safe-area） */
+  --bottom-nav-h: 46px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
