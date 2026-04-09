@@ -1,12 +1,11 @@
-# 在 GitHub 云端构建 Debug APK，无需本机 Android Studio。
-# 使用方式：仓库 → Actions →「Build Android Debug APK」→ Run workflow → 完成后在下方 Artifacts 下载 clawdex-debug-apk.zip，解压得到 app-debug.apk 传到手机安装。
-# Action 版本与 Node：参见 https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+# 在 GitHub 云端构建 Debug APK。
+# 仓库 → Actions →「Build Android Debug APK」→ Run workflow → Artifacts 下载 clawdex-debug-apk.zip
+# Node：参见 https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 name: Build Android Debug APK
 
 on:
   workflow_dispatch:
 
-# 在官方 Action 全面默认 Node 24 前，强制子 Action 使用 Node 24，避免 Node 20 弃用提示
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -27,33 +26,42 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # 勿使用 cmdline-tools/latest/bin；v4 会把 sdkmanager 加入 PATH。
+      # 显式列出 tools / platform-tools / API 35，避免以前静默失败的 sdkmanager 步骤导致缺 platform
       - uses: android-actions/setup-android@v4
-
-      - name: Install API 35 (compileSdk)
-        run: |
-          echo y | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
+        with:
+          packages: 'tools platform-tools platforms;android-35 build-tools;35.0.0'
 
       - name: npm ci & Vite build
         run: |
+          set -eo pipefail
           npm ci
           npm run build
 
       - name: Capacitor sync
-        run: npx cap sync android
+        run: |
+          set -eo pipefail
+          npx cap sync android
+
+      - name: Gradle heap (CI)
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8/' android/gradle.properties
 
       - name: Assemble Debug APK
         working-directory: android
         run: |
-          set -euo pipefail
+          set -eo pipefail
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: List APK outputs
+        if: always()
         run: |
           find android/app/build/outputs -type f 2>/dev/null || true
           ls -la android/app/build/outputs/apk/debug/ 2>/dev/null || echo "debug apk dir missing"
 
       - uses: actions/upload-artifact@v6
+        if: success()
         with:
           name: clawdex-debug-apk
           path: android/app/build/outputs/apk/debug/
