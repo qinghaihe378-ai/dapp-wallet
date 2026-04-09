@@ -1,0 +1,49 @@
+# 在 GitHub 云端构建 Debug APK，无需本机 Android Studio。
+# 使用方式：仓库 → Actions →「Build Android Debug APK」→ Run workflow → 完成后在下方 Artifacts 下载 clawdex-debug-apk.zip，解压得到 app-debug.apk 传到手机安装。
+name: Build Android Debug APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install API 35 (compileSdk)
+        run: |
+          echo y | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
+
+      - name: npm ci & Vite build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Assemble Debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawdex-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
