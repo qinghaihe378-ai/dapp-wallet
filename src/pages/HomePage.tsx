@@ -20,6 +20,11 @@ const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 
+function hasTokenAvatar(image: string | undefined | null): boolean {
+  if (image == null || typeof image !== 'string') return false
+  return image.trim().length > 0
+}
+
 export function HomePage() {
   const { network } = useWallet()
   const { config } = usePageConfig('home')
@@ -59,7 +64,8 @@ export function HomePage() {
         (a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity)
       )
     }
-    return baseFiltered
+    // 热门：仅展示有头像（非空 image）的代币
+    return baseFiltered.filter((item) => hasTokenAvatar(item.image))
   }, [activeSection, baseFiltered])
 
   useEffect(() => {

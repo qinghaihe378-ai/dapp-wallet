@@ -13,10 +13,7 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-    </style>
-
-
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <!-- 无启动屏：首帧用纯色，避免白闪，与 Web 端深色背景接近 -->
+        <item name="android:windowBackground">@color/app_window_background</item>
     </style>
 </resources>
