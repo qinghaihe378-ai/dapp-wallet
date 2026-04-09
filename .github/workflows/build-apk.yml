@@ -21,10 +21,11 @@ jobs:
           node-version: '24'
           cache: npm
 
+      # Capacitor Android 子工程使用 Java 21（见 node_modules/@capacitor/android/capacitor/build.gradle）
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       # 勿使用 cmdline-tools/latest/bin；v4 会把 sdkmanager 加入 PATH。
       # 显式列出 tools / platform-tools / API 35，避免以前静默失败的 sdkmanager 步骤导致缺 platform
