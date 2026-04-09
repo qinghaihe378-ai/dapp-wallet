@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { COLLECTION_INTERVAL_MS } from '../api/markets'
+import { apiUrl } from '../lib/apiBase'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 interface HomeItem {
@@ -64,7 +65,7 @@ export function HomePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/market?chain=all')
+        const res = await fetch(apiUrl('/api/market?chain=all'))
         if (!res.ok) throw new Error('加载行情失败')
         const json = (await res.json()) as { items?: HomeItem[] }
         const data = json.items ?? []

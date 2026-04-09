@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { type ChainId, type MarketItem, COLLECTION_INTERVAL_MS, isContractAddress, searchByAddressOrQuery } from '../api/markets'
 import { usePageConfig } from '../hooks/usePageConfig'
+import { apiUrl } from '../lib/apiBase'
 
 function formatCompact(value: number) {
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`
@@ -49,7 +50,7 @@ export function MarketsPage() {
     try {
       if (!silent) setLoading(true)
       setError(null)
-      const res = await fetch('/api/market?chain=all')
+      const res = await fetch(apiUrl('/api/market?chain=all'))
       if (!res.ok) throw new Error('加载行情失败')
       const json = (await res.json()) as { items?: MarketItem[]; provider?: string }
       const data = json.items ?? []

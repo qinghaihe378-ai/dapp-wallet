@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { SUPPORTED_NETWORKS } from '../api/geckoterminal'
 import type { NewTokenItem } from '../api/geckoterminal'
 import { usePageConfig } from '../hooks/usePageConfig'
+import { apiUrl } from '../lib/apiBase'
 
 const REFRESH_INTERVAL_MS = 30_000
 const PRICE_REFRESH_INTERVAL_MS = 45_000
@@ -29,7 +30,7 @@ export function NewTokensPage() {
   const load = useCallback(async () => {
     setError(null)
     try {
-      const res = await fetch('/api/new-tokens')
+      const res = await fetch(apiUrl('/api/new-tokens'))
       if (!res.ok) throw new Error('加载新币失败')
       const data = (await res.json()) as { items?: NewTokenItem[] }
       const list = data.items ?? []

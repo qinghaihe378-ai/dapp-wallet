@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const apiKey = env.UNISWAP_API_KEY || env.VITE_UNISWAP_API_KEY
 
   return {
+    base: './',
     plugins: [react()],
     server: {
       proxy: {
