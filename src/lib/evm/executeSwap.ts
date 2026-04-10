@@ -19,6 +19,13 @@ export interface SwapExecutionCallbacks {
 
 const EXECUTION_DEADLINE_SECONDS = 60 * 15
 
+function buildRelaxedMinOuts(baseMinOut: bigint): bigint[] {
+  // 对税费代币，报价通常未计入 transfer tax，按阶梯放宽 minOut 提高成交概率
+  const q70 = (baseMinOut * 70n) / 100n
+  const q40 = (baseMinOut * 40n) / 100n
+  return Array.from(new Set([baseMinOut, q70, q40, 0n]))
+}
+
 export async function executeQuotedSwap(
   signer: ethers.Signer,
   recipient: string,
@@ -101,7 +108,7 @@ async function executeV2Swap(
     approveHash = await ensureAllowance(signer, tokenIn, quote.routerAddress, quote.amountInWei, callbacks?.onApproveBroadcast)
   }
 
-  let tx: ethers.TransactionResponse
+  let tx: ethers.TransactionResponse | null = null
   callbacks?.onStageChange?.('swapping')
   if (tokenIn.isNative) {
     try {
@@ -113,13 +120,24 @@ async function executeV2Swap(
         { value: quote.amountInWei },
       )
     } catch {
-      tx = await router.swapExactETHForTokensSupportingFeeOnTransferTokens(
-        quote.minimumAmountOutWei,
-        quote.pathAddresses,
-        recipient,
-        deadline,
-        { value: quote.amountInWei },
-      )
+      let lastError: unknown = null
+      const minOuts = buildRelaxedMinOuts(quote.minimumAmountOutWei)
+      for (const minOut of minOuts) {
+        try {
+          tx = await router.swapExactETHForTokensSupportingFeeOnTransferTokens(
+            minOut,
+            quote.pathAddresses,
+            recipient,
+            deadline,
+            { value: quote.amountInWei },
+          )
+          lastError = null
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+      if (lastError) throw lastError
     }
   } else if (tokenOut.isNative) {
     try {
@@ -131,13 +149,24 @@ async function executeV2Swap(
         deadline,
       )
     } catch {
-      tx = await router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-        quote.amountInWei,
-        quote.minimumAmountOutWei,
-        quote.pathAddresses,
-        recipient,
-        deadline,
-      )
+      let lastError: unknown = null
+      const minOuts = buildRelaxedMinOuts(quote.minimumAmountOutWei)
+      for (const minOut of minOuts) {
+        try {
+          tx = await router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            quote.amountInWei,
+            minOut,
+            quote.pathAddresses,
+            recipient,
+            deadline,
+          )
+          lastError = null
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+      if (lastError) throw lastError
     }
   } else {
     try {
@@ -149,14 +178,29 @@ async function executeV2Swap(
         deadline,
       )
     } catch {
-      tx = await router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        quote.amountInWei,
-        quote.minimumAmountOutWei,
-        quote.pathAddresses,
-        recipient,
-        deadline,
-      )
+      let lastError: unknown = null
+      const minOuts = buildRelaxedMinOuts(quote.minimumAmountOutWei)
+      for (const minOut of minOuts) {
+        try {
+          tx = await router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            quote.amountInWei,
+            minOut,
+            quote.pathAddresses,
+            recipient,
+            deadline,
+          )
+          lastError = null
+          break
+        } catch (error) {
+          lastError = error
+        }
+      }
+      if (lastError) throw lastError
     }
+  }
+
+  if (!tx) {
+    throw new Error('V2 兑换失败：未能生成交易')
   }
 
   return {
