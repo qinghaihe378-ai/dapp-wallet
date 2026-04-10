@@ -61,7 +61,11 @@ async function getManualHotTokens(): Promise<MarketItem[]> {
   }
 }
 
-/** 合并手动热门：同 id 以手动为准；手动项排在前面，便于首页露出 */
+/**
+ * 合并手动热门：同 id 时排在前面；行情（价/涨跌/市值）始终以链上缓存为准，
+ * 避免后台里填的静态价格覆盖实时数据。仅用手动项覆盖展示类字段（头像、名称、符号）。
+ * 若 Dex 列表中尚无该 id，则整段用手动配置（含后台填的价格作兜底）。
+ */
 function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
   if (manualItems.length === 0) return items
   const byId = new Map<string, MarketItem>()
@@ -69,7 +73,16 @@ function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
   const head: MarketItem[] = []
   for (const m of manualItems) {
     const base = byId.get(m.id)
-    head.push(base ? { ...base, ...m } : m)
+    if (base) {
+      head.push({
+        ...base,
+        image: m.image?.trim() ? m.image : base.image,
+        name: m.name?.trim() ? m.name : base.name,
+        symbol: m.symbol?.trim() ? m.symbol : base.symbol,
+      })
+    } else {
+      head.push(m)
+    }
     byId.delete(m.id)
   }
   return [...head, ...byId.values()]
