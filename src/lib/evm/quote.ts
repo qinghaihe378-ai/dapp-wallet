@@ -482,6 +482,13 @@ export async function getBestLiveQuote(request: QuoteRequest) {
     throw new Error(hint)
   }
 
+  // BSC 卖出（token -> 其他）时，税费币更适配 Pancake V2；
+  // V3 报价可能更高，但执行时因 transfer tax 导致回退。
+  if (request.network === 'bsc' && !request.fromToken.isNative) {
+    const v2Preferred = quotes.find((q) => q.protocolId === 'pancakeswap-v2')
+    if (v2Preferred) return v2Preferred
+  }
+
   return quotes.sort((left, right) => {
     if (right.amountOutWei > left.amountOutWei) return 1
     if (right.amountOutWei < left.amountOutWei) return -1
