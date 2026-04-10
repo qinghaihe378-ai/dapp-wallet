@@ -203,8 +203,6 @@ export function MarketDetailPage() {
             <div className="market-detail-actions">
               <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
               <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
-              <Link to="/swap" className="btn-ghost market-detail-action">高级交易</Link>
-              <Link to="/wallet" className="btn-ghost market-detail-action">查看钱包</Link>
             </div>
           </section>
           <div className="market-detail-chart">
@@ -305,8 +303,6 @@ export function MarketDetailPage() {
           <div className="market-detail-actions">
             <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
             <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
-            <Link to="/swap" className="btn-ghost market-detail-action">高级交易</Link>
-            <Link to="/wallet" className="btn-ghost market-detail-action">查看钱包</Link>
           </div>
         </section>
         <div className="market-detail-chart">
