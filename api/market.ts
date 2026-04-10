@@ -21,10 +21,12 @@ function normalizeManualHotTokens(raw: unknown): MarketItem[] {
     const obj = it as Record<string, unknown>
     const id = String(obj.id ?? '').trim()
     const symbol = String(obj.symbol ?? '').trim()
-    const name = String(obj.name ?? '').trim()
+    const nameRaw = String(obj.name ?? '').trim()
+    /** 与后台表单一致：未填名称时用 symbol，避免 Redis 有数据但行情合并丢弃 */
+    const name = nameRaw || symbol
     const image = String(obj.image ?? '').trim()
     const chain = String(obj.chain ?? '').trim().toLowerCase() as ChainId
-    if (!id || !symbol || !name || !image || !CHAINS.includes(chain)) continue
+    if (!id || !symbol || !image || !CHAINS.includes(chain)) continue
     const current_price = Number(obj.current_price ?? 0)
     const market_cap = Number(obj.market_cap ?? 0)
     const p24raw = obj.price_change_percentage_24h

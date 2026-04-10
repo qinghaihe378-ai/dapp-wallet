@@ -201,7 +201,7 @@ export function AdminPage() {
               ...r,
               id: String(r.id).trim(),
               symbol: String(r.symbol).trim(),
-              name: String(r.name).trim(),
+              name: String(r.name).trim() || String(r.symbol).trim(),
               image: String(r.image).trim(),
               current_price: Number(r.current_price) || 0,
               market_cap: Number(r.market_cap) || 0,
