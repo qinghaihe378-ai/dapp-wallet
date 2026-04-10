@@ -61,6 +61,13 @@ function swapTokenStorageKey(t: SwapToken): string {
 
 const STABLECOIN_SYMBOLS = new Set(['USDC', 'USDT', 'USDbC', 'DAI'])
 
+function isStablecoinSymbol(symbol: string): boolean {
+  const s = symbol.trim()
+  if (STABLECOIN_SYMBOLS.has(s)) return true
+  const u = s.toUpperCase()
+  return u === 'USDC' || u === 'USDT' || u === 'DAI' || u === 'USDBC' || s === 'USDbC'
+}
+
 /** 从 liveQuote 推导 USD 价值（路由隐含汇率，非预设） */
 function deriveUsdFromQuote(
   amountIn: number,
@@ -185,8 +192,25 @@ export function SwapPage() {
   /** 钱包未就绪时仍用公共 RPC 拉链上报价 */
   const swapQuoteProvider = provider ?? readOnlyProvider
 
-  const defaultFrom = tokenOptions[0]
-  const defaultTo = tokenOptions.find((item) => item.symbol === 'USDC' || item.symbol === 'USDT') ?? tokenOptions[1] ?? tokenOptions[0]
+  /** 默认：用当前链原生币买入；to 优先稳定币等非原生资产 */
+  const defaultFrom = useMemo(
+    () => tokenOptions.find((t) => t.isNative) ?? tokenOptions[0],
+    [tokenOptions],
+  )
+  const defaultTo = useMemo(() => {
+    if (!tokenOptions.length) return undefined
+    const natAddr = tokenOptions.find((t) => t.isNative)?.address.toLowerCase()
+    return (
+      tokenOptions.find(
+        (item) =>
+          !item.isNative &&
+          (item.symbol === 'USDC' || item.symbol === 'USDT' || item.symbol === 'USDbC'),
+      ) ??
+      tokenOptions.find((t) => !t.isNative && t.address.toLowerCase() !== natAddr) ??
+      tokenOptions.find((t) => !t.isNative) ??
+      tokenOptions[0]
+    )
+  }, [tokenOptions])
   const placeholder = PLACEHOLDER_EVM
   const [fromToken, setFromToken] = useState<SwapToken>(defaultFrom ?? placeholder)
   const [toToken, setToToken] = useState<SwapToken>(defaultTo ?? placeholder)
@@ -847,10 +871,19 @@ export function SwapPage() {
         }
 
         if (pickerTarget === 'from') {
-          if (resolved.symbol === toToken.symbol) {
-            setToToken(fromToken)
+          let nextTo = toToken
+          if (resolved.address.toLowerCase() === toToken.address.toLowerCase() || resolved.symbol === toToken.symbol) {
+            nextTo = fromToken
+          }
+          const nativeTok = tokenOptions.find((t) => t.isNative) ?? null
+          // 卖出非稳定「其他币」时，默认收到当前链原生币
+          if (nativeTok && !resolved.isNative && !isStablecoinSymbol(resolved.symbol)) {
+            if (nextTo.address.toLowerCase() !== nativeTok.address.toLowerCase()) {
+              nextTo = nativeTok
+            }
           }
           setFromToken(resolved)
+          setToToken(nextTo)
         }
 
         if (pickerTarget === 'to') {
