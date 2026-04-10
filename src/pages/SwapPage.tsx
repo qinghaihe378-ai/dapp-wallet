@@ -61,13 +61,6 @@ function swapTokenStorageKey(t: SwapToken): string {
 
 const STABLECOIN_SYMBOLS = new Set(['USDC', 'USDT', 'USDbC', 'DAI'])
 
-function isStablecoinSymbol(symbol: string): boolean {
-  const s = symbol.trim()
-  if (STABLECOIN_SYMBOLS.has(s)) return true
-  const u = s.toUpperCase()
-  return u === 'USDC' || u === 'USDT' || u === 'DAI' || u === 'USDBC' || s === 'USDbC'
-}
-
 /** 从 liveQuote 推导 USD 价值（路由隐含汇率，非预设） */
 function deriveUsdFromQuote(
   amountIn: number,
@@ -618,6 +611,18 @@ export function SwapPage() {
     liveQuote
       ? (deriveUsdFromQuote(amountInNumber, estimatedOutNum, fromToken.symbol, toToken.symbol) ?? amountInNumber * (getPrice(fromToken.symbol, network) || 0))
       : amountInNumber * (getPrice(fromToken.symbol, network) || 0)
+  /** 收到代币一侧的美元估值：稳定币用面值；否则与支出侧名义一致或按 to 单价估算 */
+  const receiveUsdHint =
+    liveQuote && estimatedOutNum > 0 && amountInNumber > 0
+      ? STABLECOIN_SYMBOLS.has(toToken.symbol)
+        ? estimatedOutNum
+        : fromUsdValue > 0
+          ? fromUsdValue
+          : (() => {
+              const pt = getPrice(toToken.symbol, network)
+              return pt > 0 ? estimatedOutNum * pt : null
+            })()
+      : null
   const routeHopCount = liveQuote ? Math.max(0, liveQuote.routeSymbols.length - 1) : 0
   const priceImpactPercent = liveQuote
     ? Number((routeHopCount * 0.55 + (liveQuote.quoteMode === 'v2' ? 0.8 : 0.35)).toFixed(2))
@@ -627,7 +632,7 @@ export function SwapPage() {
   const derivedNative = liveQuote && amountInNumber > 0
     ? deriveNativePriceFromQuote(amountInNumber, estimatedOutNum, fromToken.symbol, toToken.symbol, nativeSymbol)
     : null
-  const nativeTokenPriceUsd = derivedNative ?? (getPrice(nativeSymbol, network) || getPrice(fromToken.symbol, network) || 0)
+  const nativeTokenPriceUsd = derivedNative ?? (getPrice(nativeSymbol, network) || 0)
   const rawGasUsd = liveQuote && 'gasEstimateUsd' in liveQuote ? liveQuote.gasEstimateUsd ?? null : null
   const gasWei = liveQuote && 'gasEstimate' in liveQuote ? liveQuote.gasEstimate : null
   const networkFeeUsd =
@@ -871,19 +876,10 @@ export function SwapPage() {
         }
 
         if (pickerTarget === 'from') {
-          let nextTo = toToken
           if (resolved.address.toLowerCase() === toToken.address.toLowerCase() || resolved.symbol === toToken.symbol) {
-            nextTo = fromToken
-          }
-          const nativeTok = tokenOptions.find((t) => t.isNative) ?? null
-          // 卖出非稳定「其他币」时，默认收到当前链原生币
-          if (nativeTok && !resolved.isNative && !isStablecoinSymbol(resolved.symbol)) {
-            if (nextTo.address.toLowerCase() !== nativeTok.address.toLowerCase()) {
-              nextTo = nativeTok
-            }
+            setToToken(fromToken)
           }
           setFromToken(resolved)
-          setToToken(nextTo)
         }
 
         if (pickerTarget === 'to') {
@@ -1119,6 +1115,11 @@ export function SwapPage() {
             <div className="swap-amount-wrap">
               <div className="swap-lite-output">{quoteLoading ? '报价中…' : liveQuote?.estimatedOut ?? '0.0'}</div>
               <div className="swap-amount-hint">
+                {receiveUsdHint != null && receiveUsdHint > 0 ? (
+                  <span className="swap-amount-hint-usd">
+                    约 ${receiveUsdHint >= 1 ? receiveUsdHint.toFixed(2) : receiveUsdHint.toFixed(4)} ·{' '}
+                  </span>
+                ) : null}
                 {liveQuote ? `${liveQuote.protocolLabel}` : quoteSupported ? '等待真实报价' : '当前网络未接入'}
               </div>
             </div>
