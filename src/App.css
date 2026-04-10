@@ -3866,6 +3866,13 @@ button:disabled,
   font-weight: 600;
 }
 
+.swap-token-picker-loading {
+  padding: 12px 0;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
 .swap-token-picker-empty {
   padding: 18px 0 6px;
   text-align: center;

@@ -11,6 +11,7 @@ import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { getSwapTokens, type EvmToken } from '../lib/evm/tokens'
 import { parseEvmAddressInput } from '../api/jupiter'
 import { usePageConfig } from '../hooks/usePageConfig'
+import { dexMarketIdToTokenAddress, searchSwapPickerMarketItems } from '../api/markets'
 
 interface SwapHistoryItem {
   id: string
@@ -144,6 +145,9 @@ export function SwapPage() {
   const [pickerQuery, setPickerQuery] = useState('')
   const [customEvmTokens, setCustomEvmTokens] = useState<EvmToken[]>([])
   const [customTokenLoading, setCustomTokenLoading] = useState(false)
+  /** DexScreener 与首页同源，按当前链过滤后的补全列表 */
+  const [dexPickerTokens, setDexPickerTokens] = useState<EvmToken[]>([])
+  const [dexPickerLoading, setDexPickerLoading] = useState(false)
   const [recentSymbols, setRecentSymbols] = useState<string[]>([])
   const [slippageOpen, setSlippageOpen] = useState(false)
   const [slippage, setSlippage] = useState('2')
@@ -707,6 +711,54 @@ export function SwapPage() {
     )
   }, [allTokenOptions, pickerQuery])
 
+  const pickerListTokens = useMemo(() => {
+    const local = filteredOptions
+    const seen = new Set(local.map((t) => t.address.toLowerCase()))
+    const extra = dexPickerTokens.filter((t) => !seen.has(t.address.toLowerCase()))
+    return [...local, ...extra]
+  }, [dexPickerTokens, filteredOptions])
+
+  useEffect(() => {
+    if (!pickerTarget || !isSupportedSwapNetwork(network)) {
+      setDexPickerTokens([])
+      setDexPickerLoading(false)
+      return
+    }
+    const q = pickerQuery.trim()
+    if (q.length < 2) {
+      setDexPickerTokens([])
+      setDexPickerLoading(false)
+      return
+    }
+    let cancelled = false
+    setDexPickerLoading(true)
+    const timer = window.setTimeout(() => {
+      void searchSwapPickerMarketItems(q, network as 'mainnet' | 'base' | 'bsc')
+        .then((items) => {
+          if (cancelled) return
+          const mapped: EvmToken[] = items.map((it) => ({
+            symbol: (it.symbol || '?').slice(0, 32),
+            name: it.name || it.symbol,
+            address: dexMarketIdToTokenAddress(it.id),
+            decimals: 18,
+            isNative: false,
+            tone: 'sky',
+          }))
+          setDexPickerTokens(mapped)
+        })
+        .catch(() => {
+          if (!cancelled) setDexPickerTokens([])
+        })
+        .finally(() => {
+          if (!cancelled) setDexPickerLoading(false)
+        })
+    }, 400)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [network, pickerQuery, pickerTarget])
+
   const parsedPickerAddr = useMemo(() => parseEvmAddressInput(pickerQuery.trim()), [pickerQuery])
   const showAddByAddress =
     isSupportedSwapNetwork(network) &&
@@ -757,37 +809,77 @@ export function SwapPage() {
     window.open(`${explorerTxBase}${hash}`, '_blank', 'noopener,noreferrer')
   }
 
-  const recordRecentToken = (token: SwapToken) => {
+  const recordRecentToken = useCallback((token: SwapToken) => {
     setRecentSymbols((current) => {
       const next = [token.symbol, ...current.filter((item) => item !== token.symbol)].slice(0, 4)
       window.localStorage.setItem(`recentSwapTokens:${network}`, JSON.stringify(next))
       return next
     })
-  }
+  }, [network])
 
   const handleSwitchTokens = () => {
     setFromToken(toToken)
     setToToken(fromToken)
   }
 
-  const handleSelectToken = (token: SwapToken) => {
-    if (pickerTarget === 'from') {
-      if (token.symbol === toToken.symbol) {
-        setToToken(fromToken)
-      }
-      setFromToken(token)
-    }
+  const handleSelectToken = useCallback(
+    (token: SwapToken) => {
+      void (async () => {
+        const readP = provider ?? readOnlyProvider
+        let resolved = token
+        if (!token.isNative && readP) {
+          const inBuiltin = tokenOptions.some((t) => t.address.toLowerCase() === token.address.toLowerCase())
+          if (!inBuiltin) {
+            try {
+              const info = await fetchEvmTokenByAddress(readP, token.address)
+              if (info) {
+                resolved = {
+                  ...token,
+                  symbol: info.symbol || token.symbol,
+                  name: token.name && token.name !== token.symbol ? token.name : info.symbol || token.name,
+                  decimals: info.decimals,
+                }
+              }
+            } catch {
+              /* 仍使用列表中的占位 decimals */
+            }
+          }
+        }
 
-    if (pickerTarget === 'to') {
-      if (token.symbol === fromToken.symbol) {
-        setFromToken(toToken)
-      }
-      setToToken(token)
-    }
+        if (pickerTarget === 'from') {
+          if (resolved.symbol === toToken.symbol) {
+            setToToken(fromToken)
+          }
+          setFromToken(resolved)
+        }
 
-    recordRecentToken(token)
-    setPickerTarget(null)
-  }
+        if (pickerTarget === 'to') {
+          if (resolved.symbol === fromToken.symbol) {
+            setFromToken(toToken)
+          }
+          setToToken(resolved)
+        }
+
+        setCustomEvmTokens((prev) => {
+          if (prev.some((t) => t.address.toLowerCase() === resolved.address.toLowerCase())) return prev
+          if (tokenOptions.some((t) => t.address.toLowerCase() === resolved.address.toLowerCase())) return prev
+          return [...prev, resolved]
+        })
+
+        recordRecentToken(resolved)
+        setPickerTarget(null)
+      })()
+    },
+    [
+      fromToken,
+      pickerTarget,
+      provider,
+      readOnlyProvider,
+      toToken,
+      tokenOptions,
+      recordRecentToken,
+    ],
+  )
 
   const handleAddCustomEvmToken = useCallback(async () => {
     const norm = parseEvmAddressInput(pickerQuery.trim())
@@ -1186,7 +1278,10 @@ export function SwapPage() {
               </div>
             )}
             <div className="swap-token-picker-list">
-              {filteredOptions.map((token) => (
+              {dexPickerLoading && pickerQuery.trim().length >= 2 && (
+                <div className="swap-token-picker-loading">搜索链上代币…</div>
+              )}
+              {pickerListTokens.map((token) => (
                 <button
                   key={token.address}
                   type="button"
@@ -1196,16 +1291,24 @@ export function SwapPage() {
                   onClick={() => handleSelectToken(token)}
                 >
                   <span className={`swap-token-chip-icon swap-token-chip-icon-${token.tone}`} aria-hidden="true">
-                    {token.symbol[0]}
+                    {(token.symbol[0] ?? '?').toUpperCase()}
                   </span>
                   <div className="swap-token-picker-copy">
                     <div className="swap-token-picker-symbol">{token.symbol}</div>
-                    <div className="swap-token-picker-name">{token.symbol}</div>
+                    <div className="swap-token-picker-name">
+                      {token.isNative
+                        ? '原生代币'
+                        : token.name && token.name.toLowerCase() !== token.symbol.toLowerCase()
+                          ? token.name
+                          : `${token.address.slice(0, 6)}…${token.address.slice(-4)}`}
+                    </div>
                   </div>
                   <div className="swap-token-picker-price">{(() => { const p = getPrice(token.symbol, network); return p > 0 ? `$${p >= 1 ? p.toFixed(2) : p.toFixed(6)}` : '—'; })()}</div>
                 </button>
               ))}
-              {filteredOptions.length === 0 && <div className="swap-token-picker-empty">没有匹配的代币</div>}
+              {!dexPickerLoading && pickerListTokens.length === 0 && (
+                <div className="swap-token-picker-empty">没有匹配的代币，可粘贴完整合约地址后添加</div>
+              )}
             </div>
           </div>
         </>

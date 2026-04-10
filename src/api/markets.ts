@@ -424,6 +424,30 @@ export async function searchByAddressOrQuery(query: string): Promise<MarketItem[
   return items
 }
 
+/** Dex 行情项 id（如 ethereum:0x…）→ 小写 0x 合约地址 */
+export function dexMarketIdToTokenAddress(id: string): string {
+  const i = id.indexOf(':')
+  const raw = i >= 0 ? id.slice(i + 1).trim() : id.trim()
+  const lower = raw.toLowerCase()
+  if (!lower) return lower
+  return lower.startsWith('0x') ? lower : `0x${lower}`
+}
+
+/**
+ * 兑换选币器：与首页搜索同源（DexScreener），再按当前 EVM 网络过滤。
+ * 解决「首页能搜合约、兑换里只有内置列表」的差异。
+ */
+export async function searchSwapPickerMarketItems(
+  query: string,
+  network: 'mainnet' | 'base' | 'bsc',
+): Promise<MarketItem[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+  const items = await searchByAddressOrQuery(q)
+  const want: ChainId = network === 'mainnet' ? 'eth' : network === 'base' ? 'base' : 'bsc'
+  return items.filter((it) => it.chain === want)
+}
+
 /** 按 chainId:address 获取单个 DexScreener 代币 */
 export async function fetchDexTokenById(id: string): Promise<MarketItem | null> {
   const idx = id.indexOf(':')
