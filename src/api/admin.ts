@@ -12,6 +12,16 @@ export type PageConfig = {
   subtitle?: string
   notice?: string
   sections?: SectionConfig[]
+  manualHotTokens?: Array<{
+    id: string
+    symbol: string
+    name: string
+    image: string
+    current_price: number
+    price_change_percentage_24h: number | null
+    market_cap: number
+    chain: 'eth' | 'bsc' | 'base' | 'polygon'
+  }>
   updatedAt?: number
 }
 

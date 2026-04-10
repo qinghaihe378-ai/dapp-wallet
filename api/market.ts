@@ -7,9 +7,64 @@ const TTL_SECONDS = 12
 const FRESH_MS = 10_000
 
 const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'polygon']
+const HOME_PAGE_CONFIG_KEY = 'clawdex:pageConfig:home'
 
 function keyFor(chain: ChainId) {
   return `clawdex:markets:${chain}`
+}
+
+function normalizeManualHotTokens(raw: unknown): MarketItem[] {
+  if (!Array.isArray(raw)) return []
+  const out: MarketItem[] = []
+  for (const it of raw) {
+    if (!it || typeof it !== 'object') continue
+    const obj = it as Record<string, unknown>
+    const id = String(obj.id ?? '').trim()
+    const symbol = String(obj.symbol ?? '').trim()
+    const name = String(obj.name ?? '').trim()
+    const image = String(obj.image ?? '').trim()
+    const chain = String(obj.chain ?? '').trim().toLowerCase() as ChainId
+    if (!id || !symbol || !name || !image || !CHAINS.includes(chain)) continue
+    const current_price = Number(obj.current_price ?? 0)
+    const market_cap = Number(obj.market_cap ?? 0)
+    const p24raw = obj.price_change_percentage_24h
+    const price_change_percentage_24h =
+      p24raw == null || p24raw === '' ? null : Number(p24raw)
+    out.push({
+      id,
+      symbol,
+      name,
+      image,
+      chain,
+      current_price: Number.isFinite(current_price) ? current_price : 0,
+      price_change_percentage_24h:
+        price_change_percentage_24h == null || Number.isFinite(price_change_percentage_24h)
+          ? price_change_percentage_24h
+          : null,
+      market_cap: Number.isFinite(market_cap) ? market_cap : 0,
+      coingeckoId: undefined,
+    })
+  }
+  return out
+}
+
+async function getManualHotTokens(): Promise<MarketItem[]> {
+  const raw = await redis.get(HOME_PAGE_CONFIG_KEY)
+  if (!raw) return []
+  try {
+    const cfg = JSON.parse(raw) as { manualHotTokens?: unknown }
+    return normalizeManualHotTokens(cfg?.manualHotTokens)
+  } catch {
+    return []
+  }
+}
+
+function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
+  if (manualItems.length === 0) return items
+  const map = new Map<string, MarketItem>()
+  for (const item of items) map.set(item.id, item)
+  for (const item of manualItems) map.set(item.id, item)
+  return Array.from(map.values())
 }
 
 async function readCachedAll() {
@@ -84,26 +139,41 @@ export default async function handler(req: any, res: any) {
       }
       await Promise.allSettled(writes)
 
+      const manualItems = await getManualHotTokens()
+
       if (chain === 'all') {
-        const items = CHAINS.flatMap((c) => byChain.get(c) ?? [])
+        const items = mergeManualItems(CHAINS.flatMap((c) => byChain.get(c) ?? []), manualItems)
         res.status(200).json({ updatedAt: now, provider, chain: 'all', items } satisfies MarketPayload)
         return
       }
 
-      res.status(200).json({ updatedAt: now, provider, chain, items: byChain.get(chain) ?? [] } satisfies MarketPayload)
+      const chainItems = mergeManualItems(byChain.get(chain) ?? [], manualItems.filter((x) => x.chain === chain))
+      res.status(200).json({ updatedAt: now, provider, chain, items: chainItems } satisfies MarketPayload)
     } catch (e) {
       // 第三方 API 失败：尽量返回 Redis 里的旧缓存，不让前端一直报“加载失败”
       if (chain === 'all') {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         if (okCount > 0) {
-          res.status(200).json({ updatedAt, provider: `${provider} (stale)`, chain: 'all', items: allItems } satisfies MarketPayload)
+          const manualItems = await getManualHotTokens()
+          res.status(200).json({
+            updatedAt,
+            provider: `${provider} (stale)`,
+            chain: 'all',
+            items: mergeManualItems(allItems, manualItems),
+          } satisfies MarketPayload)
           return
         }
       } else {
         const cached = await redis.get(keyFor(chain))
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
-          res.status(200).json({ ...payload, provider: `${payload.provider} (stale)` } satisfies MarketPayload)
+          const manualItems = await getManualHotTokens()
+          const merged = mergeManualItems(payload.items ?? [], manualItems.filter((x) => x.chain === chain))
+          res.status(200).json({
+            ...payload,
+            provider: `${payload.provider} (stale)`,
+            items: merged,
+          } satisfies MarketPayload)
           return
         }
       }

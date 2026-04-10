@@ -55,6 +55,7 @@ export function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [config, setConfig] = useState<PageConfig>({ title: '', subtitle: '', notice: '', sections: [] })
+  const [manualHotTokensText, setManualHotTokensText] = useState('[]')
 
   const defaults = useMemo(() => PAGES.find((p) => p.id === pageId)?.defaultSections ?? [], [pageId])
 
@@ -71,6 +72,7 @@ export function AdminPage() {
         sections: normalizeSections(c.sections, defaults),
         updatedAt: c.updatedAt,
       })
+      setManualHotTokensText(JSON.stringify((c as PageConfig).manualHotTokens ?? [], null, 2))
     } catch (e) {
       setError(e instanceof Error ? e.message : '加载失败')
     } finally {
@@ -109,11 +111,16 @@ export function AdminPage() {
       setSaving(true)
       setError(null)
       const sections = normalizeSections(config.sections, defaults)
+      const manualHotTokens =
+        pageId === 'home'
+          ? JSON.parse(manualHotTokensText || '[]')
+          : (config.manualHotTokens ?? [])
       const next: PageConfig = {
         title: config.title?.trim() || undefined,
         subtitle: config.subtitle?.trim() || undefined,
         notice: config.notice?.trim() || undefined,
         sections,
+        manualHotTokens,
       }
       const res = await setAdminPageConfig(pageId, next)
       const c = res.config
@@ -122,8 +129,10 @@ export function AdminPage() {
         subtitle: c.subtitle ?? '',
         notice: c.notice ?? '',
         sections: normalizeSections(c.sections, defaults),
+        manualHotTokens: c.manualHotTokens ?? [],
         updatedAt: c.updatedAt,
       })
+      setManualHotTokensText(JSON.stringify(c.manualHotTokens ?? [], null, 2))
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存失败')
     } finally {
@@ -212,6 +221,17 @@ export function AdminPage() {
                 style={{ padding: 12, borderRadius: 12 }}
               />
             </label>
+            {pageId === 'home' && (
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span className="tip">热门代币手动白名单（JSON 数组）</span>
+                <textarea
+                  value={manualHotTokensText}
+                  onChange={(e) => setManualHotTokensText(e.target.value)}
+                  placeholder={`[\n  {\n    "id": "bsc:0x...\",\n    "symbol": "XXX",\n    "name": "Token Name",\n    "image": "https://...png",\n    "current_price": 0.00123,\n    "price_change_percentage_24h": 12.3,\n    "market_cap": 1234567,\n    "chain": "bsc"\n  }\n]`}
+                  style={{ minHeight: 180, padding: 12, borderRadius: 12, fontFamily: 'monospace' }}
+                />
+              </label>
+            )}
           </div>
 
           <div className="card" style={{ padding: 12 }}>
