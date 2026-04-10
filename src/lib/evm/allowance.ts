@@ -39,8 +39,22 @@ export async function ensureAllowance(
   }
 
   const contract = new ethers.Contract(token.address, ERC20_ABI, signer)
-  const tx = await contract.approve(spender, ethers.MaxUint256)
-  onBroadcast?.(tx.hash)
-  const receipt = await tx.wait()
-  return receipt?.hash ?? tx.hash
+  try {
+    const tx = await contract.approve(spender, ethers.MaxUint256)
+    onBroadcast?.(tx.hash)
+    const receipt = await tx.wait()
+    return receipt?.hash ?? tx.hash
+  } catch (err) {
+    // 一些 ERC20（常见于 BSC）要求先把 allowance 归零后才能重新授权
+    if (current > 0n) {
+      const resetTx = await contract.approve(spender, 0)
+      onBroadcast?.(resetTx.hash)
+      await resetTx.wait()
+      const tx = await contract.approve(spender, ethers.MaxUint256)
+      onBroadcast?.(tx.hash)
+      const receipt = await tx.wait()
+      return receipt?.hash ?? tx.hash
+    }
+    throw err
+  }
 }
