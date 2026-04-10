@@ -221,6 +221,7 @@ export function SwapPage() {
     }
   }, [swapSelectionKey])
 
+  /** 仅在网络/内置列表变化时从 localStorage 恢复币对；勿依赖 customEvmTokens，否则选币向列表添加代币时会先于持久化 effect 读到旧存储，把「支付山寨币卖出」覆盖回默认原生买币。 */
   useEffect(() => {
     if (quickTradeKeysPresent) return
     const merged: SwapToken[] = [...tokenOptions, ...customEvmTokens]
@@ -249,15 +250,8 @@ export function SwapPage() {
     setPickerQuery('')
     setLiveQuote(null)
     setQuoteError(null)
-  }, [
-    quickTradeKeysPresent,
-    customEvmTokens,
-    defaultFrom,
-    defaultTo,
-    placeholder,
-    swapSelectionKey,
-    tokenOptions,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customEvmTokens 见上方注释
+  }, [quickTradeKeysPresent, defaultFrom, defaultTo, placeholder, swapSelectionKey, tokenOptions])
 
   /** 行情「快捷交易」：先切换目标链，再按地址/符号预填（避免在错误网络上匹配 token） */
   useEffect(() => {
