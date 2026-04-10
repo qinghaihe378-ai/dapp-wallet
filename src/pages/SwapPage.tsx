@@ -9,7 +9,7 @@ import { executeQuotedSwap } from '../lib/evm/executeSwap'
 import { isSupportedSwapNetwork, type SupportedSwapNetwork } from '../lib/evm/config'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { getSwapTokens, type EvmToken } from '../lib/evm/tokens'
-import { isEvmAddress } from '../api/jupiter'
+import { parseEvmAddressInput } from '../api/jupiter'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 interface SwapHistoryItem {
@@ -172,6 +172,15 @@ export function SwapPage() {
       ? getSwapTokens(network as SupportedSwapNetwork)
       : []
   }, [network, quoteSupported])
+
+  const readOnlyProvider = useMemo(() => {
+    if (!isSupportedSwapNetwork(network)) return null
+    return new ethers.JsonRpcProvider(NETWORK_CONFIG[network].rpcUrls[0])
+  }, [network])
+
+  /** 钱包未就绪时仍用公共 RPC 拉链上报价 */
+  const swapQuoteProvider = provider ?? readOnlyProvider
+
   const defaultFrom = tokenOptions[0]
   const defaultTo = tokenOptions.find((item) => item.symbol === 'USDC' || item.symbol === 'USDT') ?? tokenOptions[1] ?? tokenOptions[0]
   const placeholder = PLACEHOLDER_EVM
@@ -257,8 +266,8 @@ export function SwapPage() {
     }
 
     const resolveEvmAddr = async (addrRaw: string): Promise<EvmToken | null> => {
-      if (cancelled || !isEvmAddress(addrRaw) || !isSupportedSwapNetwork(network)) return null
-      const addrNorm = addrRaw.trim().startsWith('0x') ? addrRaw.trim().toLowerCase() : `0x${addrRaw.trim().toLowerCase()}`
+      const addrNorm = parseEvmAddressInput(addrRaw)
+      if (cancelled || !addrNorm || !isSupportedSwapNetwork(network)) return null
       const readProvider =
         provider ?? new ethers.JsonRpcProvider(NETWORK_CONFIG[network as SupportedSwapNetwork].rpcUrls[0])
       const info = await fetchEvmTokenByAddress(readProvider, addrNorm)
@@ -540,9 +549,9 @@ export function SwapPage() {
       setQuoteLoading(true)
       setQuoteError(null)
 
-      if (provider && isSupportedSwapNetwork(network)) {
+      if (swapQuoteProvider && isSupportedSwapNetwork(network)) {
         void getBestLiveQuote({
-          provider,
+          provider: swapQuoteProvider,
           network: network as SupportedSwapNetwork,
           fromToken,
           toToken,
@@ -571,7 +580,7 @@ export function SwapPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [address, amountIn, fromToken, network, provider, quoteRefreshNonce, quoteSupported, slippage, toToken])
+  }, [address, amountIn, fromToken, network, quoteRefreshNonce, quoteSupported, slippage, swapQuoteProvider, toToken])
 
   const amountInNumber = Number(amountIn || '0')
   const fromTokenBalanceNumber = Number(fromTokenBalance ?? '0')
@@ -670,6 +679,7 @@ export function SwapPage() {
   const quoteSecondsLeft = liveQuote ? Math.max(0, Math.ceil((liveQuote.expiresAt - currentTime) / 1000)) : 0
   const fromBalanceAfter = Math.max(0, fromTokenBalanceNumber - amountInNumber)
   const toBalanceAfter = toTokenBalanceNumber + estimatedOutNum
+
   const allTokenOptions = useMemo((): SwapToken[] => {
     const base = [...tokenOptions]
     const seen = new Set(tokenOptions.map((t) => t.address.toLowerCase()))
@@ -684,20 +694,27 @@ export function SwapPage() {
   }, [customEvmTokens, tokenOptions])
 
   const filteredOptions = useMemo(() => {
-    const query = pickerQuery.trim().toLowerCase()
-    if (!query) return allTokenOptions
+    const raw = pickerQuery.trim()
+    if (!raw) return allTokenOptions
+    const qLower = raw.toLowerCase()
+    const parsedAddr = parseEvmAddressInput(raw)
+    if (parsedAddr) {
+      const exact = allTokenOptions.filter((t) => t.address.toLowerCase() === parsedAddr)
+      if (exact.length > 0) return exact
+    }
     return allTokenOptions.filter(
       (token) =>
-        token.symbol.toLowerCase().includes(query) ||
-        token.name.toLowerCase().includes(query) ||
-        token.address.toLowerCase().includes(query),
+        token.symbol.toLowerCase().includes(qLower) ||
+        token.name.toLowerCase().includes(qLower) ||
+        token.address.toLowerCase().includes(qLower),
     )
   }, [allTokenOptions, pickerQuery])
 
+  const parsedPickerAddr = useMemo(() => parseEvmAddressInput(pickerQuery.trim()), [pickerQuery])
   const showAddByAddress =
-    provider &&
-    isEvmAddress(pickerQuery.trim()) &&
-    !allTokenOptions.some((t) => t.address.toLowerCase() === pickerQuery.trim().toLowerCase())
+    isSupportedSwapNetwork(network) &&
+    parsedPickerAddr != null &&
+    !allTokenOptions.some((t) => t.address.toLowerCase() === parsedPickerAddr)
   const recentOptions = useMemo(
     () => recentSymbols.map((symbol) => allTokenOptions.find((token) => token.symbol === symbol)).filter(Boolean) as SwapToken[],
     [allTokenOptions, recentSymbols],
@@ -776,39 +793,39 @@ export function SwapPage() {
   }
 
   const handleAddCustomEvmToken = useCallback(async () => {
-    const raw = pickerQuery.trim()
-    const addr = raw.startsWith('0x') ? raw : `0x${raw}`
-    if (!provider || !isEvmAddress(raw) || customTokenLoading) return
+    const norm = parseEvmAddressInput(pickerQuery.trim())
+    const readProvider = provider ?? readOnlyProvider
+    if (!norm || !readProvider || customTokenLoading) return
     setCustomTokenLoading(true)
     try {
-      const info = await fetchEvmTokenByAddress(provider, addr)
+      const info = await fetchEvmTokenByAddress(readProvider, norm)
       const token: EvmToken = {
-        symbol: info?.symbol ?? addr.slice(0, 12),
+        symbol: info?.symbol ?? norm.slice(0, 12),
         name: info?.symbol ?? 'Unknown',
-        address: addr,
+        address: norm,
         decimals: info?.decimals ?? 18,
         isNative: false,
         tone: 'sky',
       }
-      setCustomEvmTokens((prev) => (prev.some((t) => t.address.toLowerCase() === addr.toLowerCase()) ? prev : [...prev, token]))
+      setCustomEvmTokens((prev) => (prev.some((t) => t.address.toLowerCase() === norm) ? prev : [...prev, token]))
       handleSelectToken(token)
       setPickerQuery('')
     } catch {
       const token: EvmToken = {
-        symbol: addr.slice(0, 12),
+        symbol: norm.slice(0, 12),
         name: 'Unknown',
-        address: addr,
+        address: norm,
         decimals: 18,
         isNative: false,
         tone: 'sky',
       }
-      setCustomEvmTokens((prev) => (prev.some((t) => t.address.toLowerCase() === addr.toLowerCase()) ? prev : [...prev, token]))
+      setCustomEvmTokens((prev) => (prev.some((t) => t.address.toLowerCase() === norm) ? prev : [...prev, token]))
       handleSelectToken(token)
       setPickerQuery('')
     } finally {
       setCustomTokenLoading(false)
     }
-  }, [pickerQuery, customTokenLoading, provider])
+  }, [pickerQuery, customTokenLoading, provider, readOnlyProvider, handleSelectToken])
 
   const handleSwap = async () => {
     if (!amountIn || !liveQuote) return

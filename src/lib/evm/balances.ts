@@ -1,4 +1,5 @@
 import { decodeBytes32String, ethers } from 'ethers'
+import { parseEvmAddressInput } from '../../api/jupiter'
 import { ERC20_ABI, ERC20_ABI_BYTES32_SYMBOL, ERC20_ABI_DECIMALS_ONLY } from './abis'
 import type { SupportedSwapNetwork } from './config'
 import { getWalletTrackedTokens, type EvmToken } from './tokens'
@@ -57,9 +58,8 @@ export async function fetchEvmTokenByAddress(
   provider: ethers.Provider,
   address: string,
 ): Promise<{ symbol: string; decimals: number } | null> {
-  const addr = address.trim()
-  if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) return null
-  const normalized = addr.toLowerCase()
+  const normalized = parseEvmAddressInput(address)
+  if (!normalized) return null
   return fetchEvmTokenByAddressWithProvider(provider, normalized)
 }
 
