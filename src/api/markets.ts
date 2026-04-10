@@ -390,8 +390,23 @@ export function isContractAddress(q: string): boolean {
   return s.startsWith('0x') && s.length === 42
 }
 
+/** URL / 手动配置里 id 前缀 → 内部 ChainId（Dex 返回多为 ethereum: 地址） */
+function dexIdPrefixToChain(prefix: string): ChainId | null {
+  const p = prefix.trim().toLowerCase()
+  if (p === 'eth' || p === 'ethereum' || p === 'mainnet') return 'eth'
+  if (p === 'bsc' || p === 'bnb' || p === 'binance') return 'bsc'
+  if (p === 'base') return 'base'
+  if (p === 'polygon' || p === 'matic' || p === 'polygon_pos') return 'polygon'
+  return null
+}
+
+export type SearchByAddressOptions = {
+  /** 为 true 时包含无 USD 价的池子，供详情页匹配手动热门等场景 */
+  allowZeroPrice?: boolean
+}
+
 /** 按合约地址或关键词搜索（DexScreener） */
-export async function searchByAddressOrQuery(query: string): Promise<MarketItem[]> {
+export async function searchByAddressOrQuery(query: string, options?: SearchByAddressOptions): Promise<MarketItem[]> {
   const q = query.trim()
   if (!q) return []
   const res = await axios.get<{ pairs?: DexScreenerPair[] }>(
@@ -405,7 +420,7 @@ export async function searchByAddressOrQuery(query: string): Promise<MarketItem[
     const key = `${p.chainId}:${p.baseToken.address}`
     if (seen.has(key)) continue
     const price = parseFloat(p.priceUsd ?? '0') || 0
-    if (price <= 0) continue
+    if (!options?.allowZeroPrice && price <= 0) continue
     const chain = DEXSCREENER_CHAIN_MAP[p.chainId]
     if (!chain) continue
     seen.add(key)
@@ -452,7 +467,19 @@ export async function searchSwapPickerMarketItems(
 export async function fetchDexTokenById(id: string): Promise<MarketItem | null> {
   const idx = id.indexOf(':')
   if (idx === -1) return null
-  const address = id.slice(idx + 1)
-  const items = await searchByAddressOrQuery(address)
-  return items.find((item) => item.id === id) ?? null
+  const prefix = id.slice(0, idx)
+  const wantChain = dexIdPrefixToChain(prefix)
+  const addrNorm = dexMarketIdToTokenAddress(id)
+  if (!addrNorm.startsWith('0x') || addrNorm.length !== 42) return null
+
+  const items = await searchByAddressOrQuery(addrNorm, { allowZeroPrice: true })
+
+  const byChain = wantChain
+    ? items.filter((item) => item.chain === wantChain && dexMarketIdToTokenAddress(item.id) === addrNorm)
+    : items.filter((item) => dexMarketIdToTokenAddress(item.id) === addrNorm)
+
+  if (byChain.length > 0) return byChain[0]
+
+  const loose = items.find((item) => dexMarketIdToTokenAddress(item.id) === addrNorm)
+  return loose ?? null
 }
