@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { adminLogin, adminLogout, getAdminPageConfig, setAdminPageConfig, type PageConfig, type PageId, type SectionConfig } from '../api/admin'
+import {
+  adminLogin,
+  adminLogout,
+  getAdminPageConfig,
+  setAdminPageConfig,
+  type ManualHotToken,
+  type PageConfig,
+  type PageId,
+  type SectionConfig,
+} from '../api/admin'
 
 const PAGES: Array<{ id: PageId; label: string; defaultSections: string[] }> = [
   { id: 'home', label: '首页', defaultSections: ['banner', 'tabs', 'market', 'quickNote'] },
@@ -36,6 +45,64 @@ function normalizeSections(input: unknown, defaults: string[]): SectionConfig[] 
   return list.map((s, idx) => ({ ...s, order: idx }))
 }
 
+function emptyManualHotRow(): ManualHotToken {
+  return {
+    id: '',
+    symbol: '',
+    name: '',
+    image: '',
+    current_price: 0,
+    price_change_percentage_24h: null,
+    market_cap: 0,
+    chain: 'bsc',
+  }
+}
+
+/** 压缩为 JPEG Data URL，控制 Redis 配置体积 */
+async function compressImageToDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('请选择图片文件')
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('单张图片请勿超过 5MB')
+  }
+  try {
+    const bitmap = await createImageBitmap(file)
+    const maxDim = 256
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height, 1))
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('无法处理图片')
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    let q = 0.88
+    let dataUrl = canvas.toDataURL('image/jpeg', q)
+    const maxLen = 450_000
+    while (dataUrl.length > maxLen && q > 0.45) {
+      q -= 0.06
+      dataUrl = canvas.toDataURL('image/jpeg', q)
+    }
+    if (dataUrl.length > 600_000) {
+      throw new Error('压缩后仍过大，请换一张更小的图片')
+    }
+    return dataUrl
+  } catch {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result))
+      r.onerror = () => reject(new Error('读取图片失败'))
+      r.readAsDataURL(file)
+    })
+    if (dataUrl.length > 600_000) {
+      throw new Error('当前环境无法压缩图片，文件过大，请换一张更小的图')
+    }
+    return dataUrl
+  }
+}
+
 function move(list: SectionConfig[], idx: number, dir: -1 | 1) {
   const j = idx + dir
   if (j < 0 || j >= list.length) return list
@@ -55,7 +122,9 @@ export function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [config, setConfig] = useState<PageConfig>({ title: '', subtitle: '', notice: '', sections: [] })
-  const [manualHotTokensText, setManualHotTokensText] = useState('[]')
+  const [manualHotRows, setManualHotRows] = useState<ManualHotToken[]>([])
+  const [showManualJson, setShowManualJson] = useState(false)
+  const [manualJsonDraft, setManualJsonDraft] = useState('[]')
 
   const defaults = useMemo(() => PAGES.find((p) => p.id === pageId)?.defaultSections ?? [], [pageId])
 
@@ -72,7 +141,9 @@ export function AdminPage() {
         sections: normalizeSections(c.sections, defaults),
         updatedAt: c.updatedAt,
       })
-      setManualHotTokensText(JSON.stringify((c as PageConfig).manualHotTokens ?? [], null, 2))
+      const mh = (c as PageConfig).manualHotTokens
+      setManualHotRows(Array.isArray(mh) ? mh : [])
+      setManualJsonDraft(JSON.stringify(Array.isArray(mh) ? mh : [], null, 2))
     } catch (e) {
       setError(e instanceof Error ? e.message : '加载失败')
     } finally {
@@ -103,6 +174,8 @@ export function AdminPage() {
     } finally {
       setLoggedIn(false)
       setConfig({ title: '', subtitle: '', notice: '', sections: [] })
+      setManualHotRows([])
+      setManualJsonDraft('[]')
     }
   }
 
@@ -111,10 +184,36 @@ export function AdminPage() {
       setSaving(true)
       setError(null)
       const sections = normalizeSections(config.sections, defaults)
-      const manualHotTokens =
-        pageId === 'home'
-          ? JSON.parse(manualHotTokensText || '[]')
-          : (config.manualHotTokens ?? [])
+      let manualHotTokens: ManualHotToken[] | undefined
+      if (pageId === 'home') {
+        if (showManualJson) {
+          try {
+            const parsed = JSON.parse(manualJsonDraft || '[]') as unknown
+            if (!Array.isArray(parsed)) throw new Error('手动热门须为 JSON 数组')
+            manualHotTokens = parsed as ManualHotToken[]
+          } catch (e) {
+            if (e instanceof SyntaxError) throw new Error('手动热门 JSON 格式错误')
+            throw e
+          }
+        } else {
+          manualHotTokens = manualHotRows
+            .map((r) => ({
+              ...r,
+              id: String(r.id).trim(),
+              symbol: String(r.symbol).trim(),
+              name: String(r.name).trim(),
+              image: String(r.image).trim(),
+              current_price: Number(r.current_price) || 0,
+              market_cap: Number(r.market_cap) || 0,
+              price_change_percentage_24h:
+                r.price_change_percentage_24h == null ? null : Number(r.price_change_percentage_24h),
+              chain: r.chain,
+            }))
+            .filter((r) => r.id && r.symbol && r.image)
+        }
+      } else {
+        manualHotTokens = config.manualHotTokens ?? []
+      }
       const next: PageConfig = {
         title: config.title?.trim() || undefined,
         subtitle: config.subtitle?.trim() || undefined,
@@ -132,7 +231,9 @@ export function AdminPage() {
         manualHotTokens: c.manualHotTokens ?? [],
         updatedAt: c.updatedAt,
       })
-      setManualHotTokensText(JSON.stringify(c.manualHotTokens ?? [], null, 2))
+      const mh = c.manualHotTokens ?? []
+      setManualHotRows(Array.isArray(mh) ? mh : [])
+      setManualJsonDraft(JSON.stringify(Array.isArray(mh) ? mh : [], null, 2))
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存失败')
     } finally {
@@ -222,15 +323,228 @@ export function AdminPage() {
               />
             </label>
             {pageId === 'home' && (
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span className="tip">热门代币手动白名单（JSON 数组）</span>
-                <textarea
-                  value={manualHotTokensText}
-                  onChange={(e) => setManualHotTokensText(e.target.value)}
-                  placeholder={`[\n  {\n    "id": "bsc:0x...\",\n    "symbol": "XXX",\n    "name": "Token Name",\n    "image": "https://...png",\n    "current_price": 0.00123,\n    "price_change_percentage_24h": 12.3,\n    "market_cap": 1234567,\n    "chain": "bsc"\n  }\n]`}
-                  style={{ minHeight: 180, padding: 12, borderRadius: 12, fontFamily: 'monospace' }}
-                />
-              </label>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <span className="tip">热门代币手动白名单（可上传头像，或填图片链接）</span>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => setManualHotRows((rows) => [...rows, emptyManualHotRow()])}
+                    >
+                      添加一行
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => {
+                        if (showManualJson) {
+                          try {
+                            const parsed = JSON.parse(manualJsonDraft || '[]') as unknown
+                            if (!Array.isArray(parsed)) throw new Error('须为 JSON 数组')
+                            setManualHotRows(parsed as ManualHotToken[])
+                            setShowManualJson(false)
+                            setError(null)
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : 'JSON 无效')
+                          }
+                        } else {
+                          setManualJsonDraft(JSON.stringify(manualHotRows, null, 2))
+                          setShowManualJson(true)
+                        }
+                      }}
+                    >
+                      {showManualJson ? '关闭 JSON 并应用' : '高级：编辑 JSON'}
+                    </button>
+                  </div>
+                </div>
+
+                {!showManualJson && (
+                  <div style={{ display: 'grid', gap: 14 }}>
+                    {manualHotRows.length === 0 && (
+                      <p className="tip" style={{ margin: 0 }}>暂无条目，点击「添加一行」，填写 id（如 bsc:0x…）、上传头像后保存。</p>
+                    )}
+                    {manualHotRows.map((row, idx) => (
+                      <div
+                        key={`hot-${idx}`}
+                        style={{
+                          border: '1px solid var(--border, rgba(255,255,255,.12))',
+                          borderRadius: 12,
+                          padding: 12,
+                          display: 'grid',
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700 }}>代币 #{idx + 1}</span>
+                          <button
+                            type="button"
+                            className="btn-ghost"
+                            onClick={() => setManualHotRows((rows) => rows.filter((_, i) => i !== idx))}
+                          >
+                            删除此行
+                          </button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">id（链:合约）</span>
+                            <input
+                              value={row.id}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, id: v } : r)))
+                              }}
+                              placeholder="bsc:0x..."
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">chain</span>
+                            <select
+                              value={row.chain}
+                              onChange={(e) => {
+                                const chain = e.target.value as ManualHotToken['chain']
+                                setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, chain } : r)))
+                              }}
+                              style={{ padding: 10, borderRadius: 10 }}
+                            >
+                              <option value="eth">eth</option>
+                              <option value="bsc">bsc</option>
+                              <option value="base">base</option>
+                              <option value="polygon">polygon</option>
+                            </select>
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">symbol</span>
+                            <input
+                              value={row.symbol}
+                              onChange={(e) => setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, symbol: e.target.value } : r)))}
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">name</span>
+                            <input
+                              value={row.name}
+                              onChange={(e) => setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))}
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">current_price</span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={row.current_price}
+                              onChange={(e) =>
+                                setManualHotRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, current_price: Number(e.target.value) } : r)),
+                                )
+                              }
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">24h 涨跌 %</span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={row.price_change_percentage_24h ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setManualHotRows((rows) =>
+                                  rows.map((r, i) =>
+                                    i === idx
+                                      ? { ...r, price_change_percentage_24h: v === '' ? null : Number(v) }
+                                      : r,
+                                  ),
+                                )
+                              }}
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                          <label style={{ display: 'grid', gap: 4 }}>
+                            <span className="tip">market_cap</span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={row.market_cap}
+                              onChange={(e) =>
+                                setManualHotRows((rows) =>
+                                  rows.map((r, i) => (i === idx ? { ...r, market_cap: Number(e.target.value) } : r)),
+                                )
+                              }
+                              style={{ padding: 10, borderRadius: 10 }}
+                            />
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+                          <label style={{ display: 'grid', gap: 6 }}>
+                            <span className="tip">头像（上传或下方填 URL）</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0]
+                                e.target.value = ''
+                                if (!f) return
+                                void (async () => {
+                                  try {
+                                    const dataUrl = await compressImageToDataUrl(f)
+                                    setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, image: dataUrl } : r)))
+                                  } catch (err) {
+                                    setError(err instanceof Error ? err.message : '图片处理失败')
+                                  }
+                                })()
+                              }}
+                            />
+                          </label>
+                          {row.image ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <img
+                                src={row.image}
+                                alt=""
+                                style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1px solid var(--border, rgba(255,255,255,.12))' }}
+                              />
+                              <button
+                                type="button"
+                                className="btn-ghost"
+                                onClick={() => setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, image: '' } : r)))}
+                              >
+                                清除头像
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span className="tip">image（https 链接；上传后会自动填入 Base64）</span>
+                          <input
+                            value={row.image.startsWith('data:') ? '' : row.image}
+                            readOnly={row.image.startsWith('data:')}
+                            placeholder="https://... 或上传图片"
+                            onChange={(e) => setManualHotRows((rows) => rows.map((r, i) => (i === idx ? { ...r, image: e.target.value.trim() } : r)))}
+                            style={{ padding: 10, borderRadius: 10 }}
+                          />
+                          {row.image.startsWith('data:') && (
+                            <span className="tip">已使用上传图片（Base64），无需填链接。</span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showManualJson && (
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span className="tip">手动编辑 JSON（与表单二选一保存；开启时以本框为准）</span>
+                    <textarea
+                      value={manualJsonDraft}
+                      onChange={(e) => setManualJsonDraft(e.target.value)}
+                      style={{ minHeight: 220, padding: 12, borderRadius: 12, fontFamily: 'monospace' }}
+                    />
+                  </label>
+                )}
+              </div>
             )}
           </div>
 

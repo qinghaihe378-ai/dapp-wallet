@@ -7,21 +7,24 @@ export type SectionConfig = {
   props?: Record<string, unknown>
 }
 
+export type ManualHotToken = {
+  id: string
+  symbol: string
+  name: string
+  /** 支持 https URL 或 data:image/* Base64（上传头像） */
+  image: string
+  current_price: number
+  price_change_percentage_24h: number | null
+  market_cap: number
+  chain: 'eth' | 'bsc' | 'base' | 'polygon'
+}
+
 export type PageConfig = {
   title?: string
   subtitle?: string
   notice?: string
   sections?: SectionConfig[]
-  manualHotTokens?: Array<{
-    id: string
-    symbol: string
-    name: string
-    image: string
-    current_price: number
-    price_change_percentage_24h: number | null
-    market_cap: number
-    chain: 'eth' | 'bsc' | 'base' | 'polygon'
-  }>
+  manualHotTokens?: ManualHotToken[]
   updatedAt?: number
 }
 

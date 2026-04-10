@@ -26,6 +26,8 @@ Vercel 环境变量新增：
 - **`ADMIN_PASSWORD`**：后台登录密码
 - **`ADMIN_SECRET`**：会话签名密钥（随机字符串，建议至少 32 位）
 
+修改本地 `.env` **不会**自动同步到线上：若你访问的是已部署站点（或 App 内嵌了 `VITE_API_BASE` 指向线上），必须在 **Vercel → 项目 → Settings → Environment Variables** 里更新上述变量并 **Redeploy**，否则仍会提示「密码错误」。
+
 访问：
 
 - **`/admin`**
