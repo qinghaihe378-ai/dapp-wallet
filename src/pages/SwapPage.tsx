@@ -106,7 +106,7 @@ function getQuoteErrorMessage(error: unknown) {
     return '授权失败，请重新尝试。'
   }
   if (message.toLowerCase().includes('call_exception') || message.toLowerCase().includes('execution reverted')) {
-    return '链上执行被回退，可能是池子价格变化过快。'
+    return '链上执行失败（常见于滑点过紧或成交前池价波动，卖出山寨币时更易发生）。请将滑点调至 3%～5%、减小单笔数量，或等待报价刷新后再试。'
   }
   if (message.toLowerCase().includes('no route') || message.toLowerCase().includes('insufficient liquidity')) {
     return '暂无可用路由或流动性不足。'
@@ -969,7 +969,23 @@ export function SwapPage() {
 
     try {
       if (signer && address) {
-        const result = await executeQuotedSwap(signer, address, liveQuote, {
+        if (!swapQuoteProvider || !isSupportedSwapNetwork(network)) {
+          throw new Error('无法连接链上节点以确认最新报价')
+        }
+        const slippagePercent = Math.max(0.1, Number(slippage || '2'))
+        const freshQuote = await getBestLiveQuote({
+          provider: swapQuoteProvider,
+          network: network as SupportedSwapNetwork,
+          fromToken,
+          toToken,
+          amountIn,
+          slippagePercent,
+          swapperAddress: address,
+          useExtendedPaths: true,
+        })
+        setLiveQuote(freshQuote)
+
+        const result = await executeQuotedSwap(signer, address, freshQuote, {
           onStageChange: (stage) => {
             setExecutionStage(stage)
             persistHistory((current) =>

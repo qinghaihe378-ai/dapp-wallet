@@ -5,6 +5,7 @@
 
 import { ethers } from 'ethers'
 import { formatDisplayAmount } from '../lib/evm/format'
+import { minimumOutFromQuoted } from '../lib/evm/slippage'
 import type { SupportedSwapNetwork } from '../lib/evm/config'
 import type { EvmToken } from '../lib/evm/tokens'
 
@@ -242,9 +243,7 @@ export async function fetchUniswapQuote(
   const amountOutWei = BigInt(outAmount)
   // autoSlippage 时 API 可能返回 q.slippage（百分比），否则用用户配置
   const slippagePercent = q.slippage ?? input.slippagePercent
-  const slippageBps = Math.round(slippagePercent * 100)
-  const minimumAmountOutWei =
-    amountOutWei - (amountOutWei * BigInt(slippageBps)) / 10000n
+  const minimumAmountOutWei = minimumOutFromQuoted(amountOutWei, slippagePercent)
 
   const routeSymbols: string[] = []
   const pathAddresses: string[] = []

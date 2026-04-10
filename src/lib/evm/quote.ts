@@ -4,6 +4,7 @@ import { fetchUniswapQuote, getLastUniswapApiError, hasUniswapApiKey, type Unisw
 import { V2_ROUTER_ABI, V3_QUOTER_ABI } from './abis'
 import { EVM_CHAIN_CONFIG, type DexProtocolConfig, type DexProtocolId, type SupportedSwapNetwork } from './config'
 import { formatDisplayAmount } from './format'
+import { minimumOutFromQuoted } from './slippage'
 import type { EvmToken } from './tokens'
 import { getSwapTokens, toWrappedTokenAddress } from './tokens'
 
@@ -249,8 +250,7 @@ async function quoteByProtocol(
     return null
   }
 
-  const minimumAmountOutWei =
-    best.amountOutWei - (best.amountOutWei * BigInt(Math.round(request.slippagePercent * 100))) / 10000n
+  const minimumAmountOutWei = minimumOutFromQuoted(best.amountOutWei, request.slippagePercent)
   const gasEstimateUsd =
     best.gasEstimate != null
       ? Number(ethers.formatEther(best.gasEstimate)) * NATIVE_PRICE_USD[request.network]
@@ -356,9 +356,7 @@ async function quoteFromGeckoPools(request: QuoteRequest): Promise<LiveQuote | n
       }
       if (!quoted) continue
 
-      const slippageBps = Math.round(request.slippagePercent * 100)
-      const minimumAmountOutWei =
-        quoted.amountOutWei - (quoted.amountOutWei * BigInt(slippageBps)) / 10000n
+      const minimumAmountOutWei = minimumOutFromQuoted(quoted.amountOutWei, request.slippagePercent)
 
       const live: LiveQuote = {
         protocolId: protocol.id,
