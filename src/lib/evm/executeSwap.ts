@@ -104,29 +104,59 @@ async function executeV2Swap(
   let tx: ethers.TransactionResponse
   callbacks?.onStageChange?.('swapping')
   if (tokenIn.isNative) {
-    tx = await router.swapExactETHForTokens(
-      quote.minimumAmountOutWei,
-      quote.pathAddresses,
-      recipient,
-      deadline,
-      { value: quote.amountInWei },
-    )
+    try {
+      tx = await router.swapExactETHForTokens(
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+        { value: quote.amountInWei },
+      )
+    } catch {
+      tx = await router.swapExactETHForTokensSupportingFeeOnTransferTokens(
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+        { value: quote.amountInWei },
+      )
+    }
   } else if (tokenOut.isNative) {
-    tx = await router.swapExactTokensForETH(
-      quote.amountInWei,
-      quote.minimumAmountOutWei,
-      quote.pathAddresses,
-      recipient,
-      deadline,
-    )
+    try {
+      tx = await router.swapExactTokensForETH(
+        quote.amountInWei,
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+      )
+    } catch {
+      tx = await router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        quote.amountInWei,
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+      )
+    }
   } else {
-    tx = await router.swapExactTokensForTokens(
-      quote.amountInWei,
-      quote.minimumAmountOutWei,
-      quote.pathAddresses,
-      recipient,
-      deadline,
-    )
+    try {
+      tx = await router.swapExactTokensForTokens(
+        quote.amountInWei,
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+      )
+    } catch {
+      tx = await router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        quote.amountInWei,
+        quote.minimumAmountOutWei,
+        quote.pathAddresses,
+        recipient,
+        deadline,
+      )
+    }
   }
 
   return {
