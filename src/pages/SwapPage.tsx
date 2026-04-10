@@ -675,10 +675,7 @@ export function SwapPage() {
         : executionStage === 'swapping'
           ? '交易已广播，等待链上返回哈希'
           : null
-  const confirmRouteSymbols = liveQuote?.routeSymbols ?? [fromToken.symbol, toToken.symbol]
   const quoteSecondsLeft = liveQuote ? Math.max(0, Math.ceil((liveQuote.expiresAt - currentTime) / 1000)) : 0
-  const fromBalanceAfter = Math.max(0, fromTokenBalanceNumber - amountInNumber)
-  const toBalanceAfter = toTokenBalanceNumber + estimatedOutNum
 
   const allTokenOptions = useMemo((): SwapToken[] => {
     const base = [...tokenOptions]
@@ -1354,78 +1351,30 @@ export function SwapPage() {
       {confirmOpen && liveQuote && (
         <>
           <button type="button" className="swap-token-picker-backdrop" onClick={() => setConfirmOpen(false)} aria-label="关闭兑换确认" />
-          <div className="swap-token-picker-sheet">
+          <div className="swap-token-picker-sheet swap-confirm-sheet-compact">
             <div className="swap-token-picker-handle" />
             <div className="swap-token-picker-head">
               <div className="swap-token-picker-title">确认兑换</div>
-              <div className="swap-token-picker-sub">{liveQuote.protocolLabel} · {chainName}</div>
-            </div>
-            <div className="swap-confirm-card">
-              <div className="swap-confirm-topline">
-                <div className={`swap-confirm-badge ${quoteExpired ? 'swap-confirm-badge-expired' : ''}`}>
-                  {quoteExpired ? '报价已过期' : `报价剩余 ${quoteSecondsLeft}s`}
-                </div>
-                <div className="swap-confirm-badge">{liveQuote.quoteMode.toUpperCase()} 路由</div>
-              </div>
-              <div className="swap-confirm-main">
-                <div className="swap-confirm-side">
-                  <div className="swap-confirm-caption">支付</div>
-                  <div className="swap-confirm-amount">{amountInNumber.toFixed(4)}</div>
-                  <div className="swap-confirm-symbol">{fromToken.symbol}</div>
-                </div>
-                <div className="swap-confirm-arrow">↓</div>
-                <div className="swap-confirm-side swap-confirm-side-receive">
-                  <div className="swap-confirm-caption">预计收到</div>
-                  <div className="swap-confirm-amount">{liveQuote.estimatedOut}</div>
-                  <div className="swap-confirm-symbol">{toToken.symbol}</div>
-                </div>
-              </div>
-              <div className="swap-confirm-route">
-                {confirmRouteSymbols.map((symbol, index) => (
-                  <span key={`${symbol}-${index}`} className="swap-confirm-route-chip">
-                    {symbol}
-                  </span>
-                ))}
+              <div className="swap-token-picker-sub">
+                {quoteExpired ? '报价已过期' : `报价剩余 ${quoteSecondsLeft}s`} · {liveQuote.protocolLabel} · {chainName}
               </div>
             </div>
-            <div className="swap-info-list">
+            <div className="swap-info-list swap-confirm-info-minimal">
               <div className="swap-info-item">
                 <div className="swap-info-label">最少收到</div>
                 <div className="swap-info-value">{liveQuote.minimumReceived} {toToken.symbol}</div>
               </div>
               <div className="swap-info-item">
-                <div className="swap-info-label">当前滑点</div>
-                <div className="swap-info-value">{slippage}%</div>
+                <div className="swap-info-label">路由</div>
+                <div className="swap-info-value swap-info-value-route">{routeLabel}</div>
               </div>
               <div className="swap-info-item">
-                <div className="swap-info-label">价格影响</div>
-                <div className={`swap-info-value ${priceImpactPercent > 1 ? 'down' : ''}`}>{priceImpactPercent.toFixed(2)}%</div>
-              </div>
-              <div className="swap-info-item">
-                <div className="swap-info-label">预估网络费</div>
+                <div className="swap-info-label">网络费用</div>
                 <div className="swap-info-value">{networkFeeUsd != null ? `$${networkFeeUsd.toFixed(4)}` : '--'}</div>
               </div>
-              <div className="swap-info-item">
-                <div className="swap-info-label">路由</div>
-                <div className="swap-info-value">{routeLabel}</div>
-              </div>
-              <div className="swap-info-item">
-                <div className="swap-info-label">成交后余额</div>
-                <div className="swap-info-value">
-                  {fromBalanceAfter.toFixed(4)} {fromToken.symbol} / {toBalanceAfter.toFixed(4)} {toToken.symbol}
-                </div>
-              </div>
-              {fromToken.isNative && (
-                <div className="swap-info-item">
-                  <div className="swap-info-label">已预留 gas</div>
-                  <div className="swap-info-value">{gasReserveNative.toFixed(4)} {fromToken.symbol}</div>
-                </div>
-              )}
             </div>
-            <div className="swap-info-copy">
-              {quoteExpired
-                ? '当前确认卡片中的报价已经失效，请先刷新报价，再决定是否提交。'
-                : '确认后将按当前实时链上报价发起交易。如果区块价格发生波动，系统会按最少收到和滑点限制保护成交结果。'}
+            <div className="swap-info-copy swap-confirm-copy-short">
+              {quoteExpired ? '报价已失效，请刷新后再确认。' : '确认后将发起链上交易。'}
             </div>
             <div className="swap-sheet-actions">
               <button

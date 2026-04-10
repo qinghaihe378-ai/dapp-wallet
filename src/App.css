@@ -3721,6 +3721,30 @@ button:disabled,
   box-shadow: 0 -12px 40px rgba(1, 6, 18, 0.5);
 }
 
+/* 确认兑换：仅三项信息，降低高度避免被挡 */
+.swap-confirm-sheet-compact {
+  max-height: min(72vh, 520px);
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.swap-confirm-info-minimal {
+  margin-top: 8px;
+}
+
+.swap-info-value-route {
+  font-size: 12px;
+  text-align: right;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.swap-confirm-copy-short {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .swap-token-picker-handle {
   width: 40px;
   height: 4px;
