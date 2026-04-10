@@ -59,12 +59,18 @@ async function getManualHotTokens(): Promise<MarketItem[]> {
   }
 }
 
+/** 合并手动热门：同 id 以手动为准；手动项排在前面，便于首页露出 */
 function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
   if (manualItems.length === 0) return items
-  const map = new Map<string, MarketItem>()
-  for (const item of items) map.set(item.id, item)
-  for (const item of manualItems) map.set(item.id, item)
-  return Array.from(map.values())
+  const byId = new Map<string, MarketItem>()
+  for (const item of items) byId.set(item.id, item)
+  const head: MarketItem[] = []
+  for (const m of manualItems) {
+    const base = byId.get(m.id)
+    head.push(base ? { ...base, ...m } : m)
+    byId.delete(m.id)
+  }
+  return [...head, ...byId.values()]
 }
 
 async function readCachedAll() {
@@ -104,13 +110,15 @@ export default async function handler(req: any, res: any) {
     const chain = chainParam === 'all' ? 'all' : (CHAINS.includes(chainParam) ? chainParam : 'all')
 
     if (!refresh) {
+      const manualItems = await getManualHotTokens()
       if (chain !== 'all') {
         const cached = await redis.get(keyFor(chain))
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
           const age = Date.now() - (payload.updatedAt || 0)
           if (age >= 0 && age < FRESH_MS) {
-            res.status(200).json(payload)
+            const merged = mergeManualItems(payload.items ?? [], manualItems.filter((x) => x.chain === chain))
+            res.status(200).json({ ...payload, items: merged })
             return
           }
         }
@@ -118,7 +126,8 @@ export default async function handler(req: any, res: any) {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         const age = Date.now() - (updatedAt || 0)
         if (okCount === CHAINS.length && age >= 0 && age < FRESH_MS) {
-          res.status(200).json({ updatedAt, provider, chain: 'all', items: allItems } satisfies MarketPayload)
+          const merged = mergeManualItems(allItems, manualItems)
+          res.status(200).json({ updatedAt, provider, chain: 'all', items: merged } satisfies MarketPayload)
           return
         }
       }
