@@ -1,5 +1,11 @@
 import { Redis } from 'ioredis'
-import { fetchOnchainMarketsWithFallback, groupByChain, type ChainId, type MarketItem } from '../src/api/markets.js'
+import {
+  dexMarketIdToTokenAddress,
+  fetchOnchainMarketsWithFallback,
+  groupByChain,
+  type ChainId,
+  type MarketItem,
+} from '../src/api/markets.js'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 // 让前端 10 秒轮询真正生效：缓存只保留短时间
@@ -61,18 +67,61 @@ async function getManualHotTokens(): Promise<MarketItem[]> {
   }
 }
 
+/** id 前缀 → 与手动配置 chain 一致的 ChainId（Dex 常用 ethereum: 地址） */
+function idPrefixToChain(prefix: string): ChainId | null {
+  const p = prefix.trim().toLowerCase()
+  if (p === 'eth' || p === 'ethereum' || p === 'mainnet') return 'eth'
+  if (p === 'bsc' || p === 'bnb' || p === 'binance') return 'bsc'
+  if (p === 'base') return 'base'
+  if (p === 'polygon' || p === 'matic' || p === 'polygon_pos') return 'polygon'
+  return null
+}
+
 /**
- * 合并手动热门：同 id 时排在前面；行情（价/涨跌/市值）始终以链上缓存为准，
- * 避免后台里填的静态价格覆盖实时数据。仅用手动项覆盖展示类字段（头像、名称、符号）。
- * 若 Dex 列表中尚无该 id，则整段用手动配置（含后台填的价格作兜底）。
+ * 链 + 合约小写，用于对齐「eth:」与「ethereum:」等不同 id 写法。
+ */
+function canonicalMergeKey(id: string, fallbackChain?: ChainId): string | null {
+  const addr = dexMarketIdToTokenAddress(id)
+  if (!addr.startsWith('0x') || addr.length !== 42) return null
+  const colon = id.indexOf(':')
+  let chain: ChainId | null = colon > 0 ? idPrefixToChain(id.slice(0, colon)) : null
+  if (!chain && fallbackChain && CHAINS.includes(fallbackChain)) {
+    chain = fallbackChain
+  }
+  if (!chain || !CHAINS.includes(chain)) return null
+  return `${chain}:${addr}`
+}
+
+function indexItemsByCanonicalKey(items: MarketItem[]) {
+  const byCk = new Map<string, MarketItem>()
+  const unindexed = new Map<string, MarketItem>()
+  for (const item of items) {
+    const ck = canonicalMergeKey(item.id)
+    if (ck) {
+      const prev = byCk.get(ck)
+      if (!prev || (item.market_cap ?? 0) > (prev.market_cap ?? 0)) {
+        byCk.set(ck, item)
+      }
+    } else {
+      unindexed.set(item.id, item)
+    }
+  }
+  return { byCk, unindexed }
+}
+
+/**
+ * 合并手动热门：同一代币（链+合约）排在前面；价/涨跌/市值以链上缓存为准。
+ * 用手动项覆盖头像/名称/符号。Dex id 常为 ethereum:0x…，后台常为 eth:0x…，故按 canonical key 匹配。
+ * 若缓存中尚无该代币，则整段用手动配置（含后台静态价兜底）。
  */
 function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
   if (manualItems.length === 0) return items
-  const byId = new Map<string, MarketItem>()
-  for (const item of items) byId.set(item.id, item)
+  const { byCk, unindexed } = indexItemsByCanonicalKey(items)
   const head: MarketItem[] = []
   for (const m of manualItems) {
-    const base = byId.get(m.id)
+    const ck = canonicalMergeKey(m.id, m.chain)
+    let base = ck ? byCk.get(ck) : undefined
+    if (!base) base = unindexed.get(m.id)
     if (base) {
       head.push({
         ...base,
@@ -80,12 +129,13 @@ function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
         name: m.name?.trim() ? m.name : base.name,
         symbol: m.symbol?.trim() ? m.symbol : base.symbol,
       })
+      if (ck) byCk.delete(ck)
+      unindexed.delete(base.id)
     } else {
       head.push(m)
     }
-    byId.delete(m.id)
   }
-  return [...head, ...byId.values()]
+  return [...head, ...byCk.values(), ...unindexed.values()]
 }
 
 async function readCachedAll() {
