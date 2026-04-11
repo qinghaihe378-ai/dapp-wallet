@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWallet } from '../components/WalletProvider'
+import { deploySimpleERC20 } from '../lib/bot/deploySimpleERC20'
 import { parseBuyMessage, type BotChain } from '../lib/bot/parseBuyMessage'
+import { parseDeployErc20Message, type ParsedDeployErc20Intent } from '../lib/bot/parseDeployErc20'
 import { isSupportedSwapNetwork } from '../lib/evm/config'
 import { fetchEvmTokenByAddress } from '../lib/evm/balances'
 import { getSwapTokens, getTokenBySymbol, type EvmToken } from '../lib/evm/tokens'
@@ -15,12 +17,26 @@ const SLIPPAGE_BPS = 200
 
 type ChatMessage =
   | { role: 'user'; content: string }
-  | { role: 'bot'; content: string; isError?: boolean; txHash?: string; txChain?: BotChain }
+  | {
+      role: 'bot'
+      content: string
+      isError?: boolean
+      txHash?: string
+      txChain?: BotChain
+      /** 自建 ERC20 部署成功后的合约地址 */
+      contractAddress?: string
+    }
+
+function explorerAddressUrl(chain: BotChain, address: string): string {
+  const txBase = NETWORK_CONFIG[chain].explorerTxBase ?? ''
+  const addrBase = txBase.replace(/\/?tx\/?$/i, '/address/')
+  return `${addrBase}${address}`
+}
 
 const WELCOME_MSG: ChatMessage = {
   role: 'bot',
   content:
-    '发送购买指令即可买币，自动选最优路由。\n格式示例：买 0.1 BNB 的 USDT  base 买 0.1 ETH 的 USDC  eth 买 0.1 ETH 的 USDT\n支付 ETH 时请写明链名（base 或 eth），支持 BSC、ETH、Base。',
+    '【买币】买 0.1 BNB 的 USDT；base 买 0.1 ETH 的 USDC（支付 ETH 请写 base 或 eth）。支持 BSC / ETH / Base。\n【发币·自建 ERC20】bsc 发币 名称 我的币 符号 MTK 总量 1000000（全部代币铸给当前钱包；需该链原生币付 Gas）。',
 }
 
 function getQuoteErrorMessage(error: unknown): string {
@@ -39,7 +55,9 @@ export function BotPage() {
   const { config } = usePageConfig('bot')
   const [messages, setMessages] = useState<ChatMessage[]>(() => [WELCOME_MSG])
   const [input, setInput] = useState('')
-  const [status, setStatus] = useState<'idle' | 'parsing' | 'switching' | 'quoting' | 'executing' | 'done' | 'error'>('idle')
+  const [status, setStatus] = useState<
+    'idle' | 'parsing' | 'switching' | 'quoting' | 'executing' | 'deploying' | 'done' | 'error'
+  >('idle')
   const [, setTxHash] = useState<string | null>(null)
   const [, setTxChain] = useState<BotChain | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -48,10 +66,14 @@ export function BotPage() {
     fromToken: EvmToken
     toToken: EvmToken
   } | null>(null)
+  const [pendingDeploy, setPendingDeploy] = useState<ParsedDeployErc20Intent | null>(null)
 
-  const addBotReply = useCallback((content: string, opts?: { isError?: boolean; txHash?: string; txChain?: BotChain }) => {
-    setMessages((prev) => [...prev, { role: 'bot', content, ...opts }])
-  }, [])
+  const addBotReply = useCallback(
+    (content: string, opts?: { isError?: boolean; txHash?: string; txChain?: BotChain; contractAddress?: string }) => {
+      setMessages((prev) => [...prev, { role: 'bot', content, ...opts }])
+    },
+    [],
+  )
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,6 +127,39 @@ export function BotPage() {
       .finally(() => setPendingBuy(null))
   }, [pendingBuy, status, network, provider, address, runEvmBuy, refreshBalance, addBotReply])
 
+  useEffect(() => {
+    if (!pendingDeploy || status !== 'switching') return
+    if (network !== pendingDeploy.chain) return
+    if (!signer || !address) {
+      setStatus('error')
+      addBotReply('请先创建或导入 EVM 钱包', { isError: true })
+      setPendingDeploy(null)
+      return
+    }
+    setStatus('deploying')
+    void deploySimpleERC20(signer, {
+      name: pendingDeploy.name,
+      symbol: pendingDeploy.symbol,
+      totalSupplyHuman: pendingDeploy.totalSupplyHuman,
+    })
+      .then(({ contractAddress, txHash }) => {
+        setTxHash(txHash)
+        setTxChain(pendingDeploy.chain)
+        setStatus('done')
+        addBotReply(`部署成功\n合约地址：${contractAddress}`, {
+          txHash,
+          txChain: pendingDeploy.chain,
+          contractAddress,
+        })
+        refreshBalance()
+      })
+      .catch((e) => {
+        setStatus('error')
+        addBotReply(getQuoteErrorMessage(e), { isError: true })
+      })
+      .finally(() => setPendingDeploy(null))
+  }, [pendingDeploy, status, network, signer, address, refreshBalance, addBotReply])
+
   const handleSend = useCallback(async () => {
     const text = input.trim()
     if (!text) return
@@ -113,10 +168,61 @@ export function BotPage() {
     setTxHash(null)
     setTxChain(null)
 
+    const deployIntent = parseDeployErc20Message(text)
+    if (deployIntent) {
+      setStatus('parsing')
+      if (!isSupportedSwapNetwork(deployIntent.chain)) {
+        setStatus('error')
+        addBotReply(`暂不支持链: ${deployIntent.chain}`, { isError: true })
+        return
+      }
+      if (!address) {
+        setStatus('error')
+        addBotReply('请先创建或导入 EVM 钱包', { isError: true })
+        return
+      }
+      const targetNet = deployIntent.chain
+      if (network !== targetNet) {
+        setPendingDeploy(deployIntent)
+        setStatus('switching')
+        await switchNetwork(targetNet)
+        return
+      }
+      if (!signer) {
+        setStatus('error')
+        addBotReply('请先创建或导入 EVM 钱包', { isError: true })
+        return
+      }
+      setStatus('deploying')
+      try {
+        const { contractAddress, txHash } = await deploySimpleERC20(signer, {
+          name: deployIntent.name,
+          symbol: deployIntent.symbol,
+          totalSupplyHuman: deployIntent.totalSupplyHuman,
+        })
+        setTxHash(txHash)
+        setTxChain(targetNet)
+        setStatus('done')
+        addBotReply(`部署成功\n合约地址：${contractAddress}`, {
+          txHash,
+          txChain: targetNet,
+          contractAddress,
+        })
+        refreshBalance()
+      } catch (e) {
+        setStatus('error')
+        addBotReply(getQuoteErrorMessage(e), { isError: true })
+      }
+      return
+    }
+
     const intent = parseBuyMessage(text)
     if (!intent) {
       setStatus('error')
-      addBotReply('无法解析或包含不支持的链（仅 BSC / ETH / Base）。格式：买 0.1 BNB 的 USDT；支付 ETH 时请写 base 或 eth，如 base 买 0.1 ETH 的 USDC', { isError: true })
+      addBotReply(
+        '无法识别指令。\n发币（自建 ERC20）：bsc 发币 名称 我的币 符号 MTK 总量 1000000\n买币：买 0.1 BNB 的 USDT；base 买 0.1 ETH 的 USDC',
+        { isError: true },
+      )
       return
     }
 
@@ -191,7 +297,7 @@ export function BotPage() {
       )}
       <div className="ave-section bot-chat-section" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="bot-chat-window">
-          <div className="bot-chat-header">购买助手</div>
+          <div className="bot-chat-header">交易助手</div>
           <div className="bot-chat-messages">
             {messages.map((msg, i) => (
               <div key={i} className={`bot-chat-msg ${msg.role}`}>
@@ -216,6 +322,14 @@ export function BotPage() {
                         </a>
                       </>
                     )}
+                    {msg.role === 'bot' && msg.contractAddress && msg.txChain && (
+                      <>
+                        {' '}
+                        <a href={explorerAddressUrl(msg.txChain, msg.contractAddress)} target="_blank" rel="noopener noreferrer">
+                          查看合约
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -229,16 +343,18 @@ export function BotPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder="买 0.1 BNB 的 USDT"
-              disabled={status === 'quoting' || status === 'executing' || status === 'switching'}
+              placeholder="买 0.1 BNB 的 USDT 或 bsc 发币 名称 我的币 符号 MTK 总量 1000000"
+              disabled={status === 'quoting' || status === 'executing' || status === 'deploying' || status === 'switching'}
             />
             <button
               type="button"
               className="bot-chat-send"
               onClick={handleSend}
-              disabled={!input.trim() || status === 'quoting' || status === 'executing' || status === 'switching'}
+              disabled={
+                !input.trim() || status === 'quoting' || status === 'executing' || status === 'deploying' || status === 'switching'
+              }
             >
-              {status === 'quoting' || status === 'executing' || status === 'switching' ? '…' : '发送'}
+              {status === 'quoting' || status === 'executing' || status === 'deploying' || status === 'switching' ? '…' : '发送'}
             </button>
           </div>
         </div>
