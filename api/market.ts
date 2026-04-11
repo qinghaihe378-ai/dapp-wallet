@@ -3,6 +3,7 @@ import {
   dexMarketIdToTokenAddress,
   fetchOnchainMarketsWithFallback,
   groupByChain,
+  searchByAddressOrQuery,
   type ChainId,
   type MarketItem,
 } from '../src/api/markets.js'
@@ -14,6 +15,12 @@ const FRESH_MS = 10_000
 
 const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'polygon']
 const HOME_PAGE_CONFIG_KEY = 'clawdex:pageConfig:home'
+/** 手动热门未进榜单时，Dex 单价缓存（秒），多客户端共用，减轻 DexScreener 压力 */
+const MANUAL_SPOT_TTL_SEC = 20
+
+function manualSpotRedisKey(ck: string) {
+  return `clawdex:manualHotSpot:${ck}`
+}
 
 function keyFor(chain: ChainId) {
   return `clawdex:markets:${chain}`
@@ -138,6 +145,80 @@ function mergeManualItems(items: MarketItem[], manualItems: MarketItem[]) {
   return [...head, ...byCk.values(), ...unindexed.values()]
 }
 
+/** 与详情页同源：按合约拉 DexScreener，带 Redis 短缓存 */
+async function dexSpotForManual(m: MarketItem): Promise<MarketItem | null> {
+  const ck = canonicalMergeKey(m.id, m.chain)
+  if (!ck) return null
+  const addr = dexMarketIdToTokenAddress(m.id)
+  if (!addr.startsWith('0x') || addr.length !== 42) return null
+  const cacheKey = manualSpotRedisKey(ck)
+  try {
+    const raw = await redis.get(cacheKey)
+    if (raw) {
+      const parsed = JSON.parse(raw) as MarketItem
+      if (parsed && typeof parsed.current_price === 'number') return parsed
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const rows = await searchByAddressOrQuery(addr, { allowZeroPrice: true })
+    const hit =
+      rows.find((it) => it.chain === m.chain && dexMarketIdToTokenAddress(it.id) === addr) ??
+      rows.find((it) => dexMarketIdToTokenAddress(it.id) === addr)
+    if (hit) {
+      await redis.set(cacheKey, JSON.stringify(hit), 'EX', MANUAL_SPOT_TTL_SEC)
+      return hit
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+/**
+ * 手动热门前几项与 manualSlice 一一对应。未命中链上榜单的项用 Dex 现价覆盖（与详情页一致）。
+ */
+async function enrichManualOnlyPrices(
+  merged: MarketItem[],
+  manualSlice: MarketItem[],
+  allCachedItems: MarketItem[],
+): Promise<MarketItem[]> {
+  if (manualSlice.length === 0) return merged
+  const { byCk, unindexed } = indexItemsByCanonicalKey(allCachedItems)
+  const missIndices: number[] = []
+  for (let i = 0; i < manualSlice.length; i++) {
+    const m = manualSlice[i]
+    const ck = canonicalMergeKey(m.id, m.chain)
+    let base = ck ? byCk.get(ck) : undefined
+    if (!base) base = unindexed.get(m.id)
+    if (!base) missIndices.push(i)
+  }
+  if (missIndices.length === 0) return merged
+
+  const out = [...merged]
+  await Promise.all(
+    missIndices.map(async (i) => {
+      const m = manualSlice[i]
+      const live = await dexSpotForManual(m)
+      if (!live || i >= out.length) return
+      out[i] = {
+        ...live,
+        image: m.image?.trim() ? m.image : live.image,
+        name: m.name?.trim() ? m.name : live.name,
+        symbol: m.symbol?.trim() ? m.symbol : live.symbol,
+      }
+    }),
+  )
+  return out
+}
+
+function sendMarketPayload(res: any, payload: MarketPayload) {
+  res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.status(200).json(payload)
+}
+
 async function readCachedAll() {
   const keys = CHAINS.map((c) => keyFor(c))
   const cachedAll = await redis.mget(keys)
@@ -182,8 +263,11 @@ export default async function handler(req: any, res: any) {
           const payload = JSON.parse(cached) as MarketPayload
           const age = Date.now() - (payload.updatedAt || 0)
           if (age >= 0 && age < FRESH_MS) {
-            const merged = mergeManualItems(payload.items ?? [], manualItems.filter((x) => x.chain === chain))
-            res.status(200).json({ ...payload, items: merged })
+            const manualSlice = manualItems.filter((x) => x.chain === chain)
+            const cachedList = payload.items ?? []
+            let merged = mergeManualItems(cachedList, manualSlice)
+            merged = await enrichManualOnlyPrices(merged, manualSlice, cachedList)
+            sendMarketPayload(res, { ...payload, items: merged })
             return
           }
         }
@@ -191,8 +275,9 @@ export default async function handler(req: any, res: any) {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         const age = Date.now() - (updatedAt || 0)
         if (okCount === CHAINS.length && age >= 0 && age < FRESH_MS) {
-          const merged = mergeManualItems(allItems, manualItems)
-          res.status(200).json({ updatedAt, provider, chain: 'all', items: merged } satisfies MarketPayload)
+          let merged = mergeManualItems(allItems, manualItems)
+          merged = await enrichManualOnlyPrices(merged, manualItems, allItems)
+          sendMarketPayload(res, { updatedAt, provider, chain: 'all', items: merged } satisfies MarketPayload)
           return
         }
       }
@@ -216,24 +301,31 @@ export default async function handler(req: any, res: any) {
       const manualItems = await getManualHotTokens()
 
       if (chain === 'all') {
-        const items = mergeManualItems(CHAINS.flatMap((c) => byChain.get(c) ?? []), manualItems)
-        res.status(200).json({ updatedAt: now, provider, chain: 'all', items } satisfies MarketPayload)
+        const flat = CHAINS.flatMap((c) => byChain.get(c) ?? [])
+        let items = mergeManualItems(flat, manualItems)
+        items = await enrichManualOnlyPrices(items, manualItems, flat)
+        sendMarketPayload(res, { updatedAt: now, provider, chain: 'all', items } satisfies MarketPayload)
         return
       }
 
-      const chainItems = mergeManualItems(byChain.get(chain) ?? [], manualItems.filter((x) => x.chain === chain))
-      res.status(200).json({ updatedAt: now, provider, chain, items: chainItems } satisfies MarketPayload)
+      const manualSlice = manualItems.filter((x) => x.chain === chain)
+      const chainList = byChain.get(chain) ?? []
+      let chainItems = mergeManualItems(chainList, manualSlice)
+      chainItems = await enrichManualOnlyPrices(chainItems, manualSlice, chainList)
+      sendMarketPayload(res, { updatedAt: now, provider, chain, items: chainItems } satisfies MarketPayload)
     } catch (e) {
       // 第三方 API 失败：尽量返回 Redis 里的旧缓存，不让前端一直报“加载失败”
       if (chain === 'all') {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         if (okCount > 0) {
           const manualItems = await getManualHotTokens()
-          res.status(200).json({
+          let items = mergeManualItems(allItems, manualItems)
+          items = await enrichManualOnlyPrices(items, manualItems, allItems)
+          sendMarketPayload(res, {
             updatedAt,
             provider: `${provider} (stale)`,
             chain: 'all',
-            items: mergeManualItems(allItems, manualItems),
+            items,
           } satisfies MarketPayload)
           return
         }
@@ -242,8 +334,11 @@ export default async function handler(req: any, res: any) {
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
           const manualItems = await getManualHotTokens()
-          const merged = mergeManualItems(payload.items ?? [], manualItems.filter((x) => x.chain === chain))
-          res.status(200).json({
+          const manualSlice = manualItems.filter((x) => x.chain === chain)
+          const cachedList = payload.items ?? []
+          let merged = mergeManualItems(cachedList, manualSlice)
+          merged = await enrichManualOnlyPrices(merged, manualSlice, cachedList)
+          sendMarketPayload(res, {
             ...payload,
             provider: `${payload.provider} (stale)`,
             items: merged,

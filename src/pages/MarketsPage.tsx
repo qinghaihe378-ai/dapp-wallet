@@ -50,7 +50,7 @@ export function MarketsPage() {
     try {
       if (!silent) setLoading(true)
       setError(null)
-      const res = await fetch(apiUrl('/api/market?chain=all'))
+      const res = await fetch(apiUrl('/api/market?chain=all'), { cache: 'no-store' })
       if (!res.ok) throw new Error('加载行情失败')
       const json = (await res.json()) as { items?: MarketItem[]; provider?: string }
       const data = json.items ?? []
