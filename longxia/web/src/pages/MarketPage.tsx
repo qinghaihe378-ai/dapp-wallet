@@ -383,7 +383,7 @@ export default function MarketPage() {
         {isLoading && <div className="text-sm text-neutral-400">加载中…</div>}
         {error && <div className="text-sm text-red-400">{String(error)}</div>}
 
-        <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70">
+        <div className="w-2/3 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70 md:w-full">
           <div className="hidden grid-cols-[1fr,120px,120px,90px] gap-3 border-b border-neutral-800 px-4 py-3 text-xs text-neutral-400 md:grid">
             <div>代币</div>
             <div className="text-right">价格</div>
@@ -396,7 +396,7 @@ export default function MarketPage() {
               return (
                 <div
                   key={t.token}
-                  className="mx-auto w-[66.666%] rounded-xl border border-neutral-800 bg-neutral-950/40 px-4 py-3 md:mx-0 md:w-full"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-950/40 px-4 py-3"
                 >
                   <div className="md:hidden">
                     <div className="flex items-start justify-between gap-3">
