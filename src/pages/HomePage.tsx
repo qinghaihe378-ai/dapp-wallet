@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { COLLECTION_INTERVAL_MS } from '../api/markets'
 import { apiUrl } from '../lib/apiBase'
+import { getLobsterLaunchUrl } from '../lib/lobsterLaunchUrl'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 interface HomeItem {
@@ -123,6 +124,8 @@ export function HomePage() {
     window.localStorage.setItem(homeSectionKey, activeSection)
   }, [activeSection, homeSectionKey])
 
+  const lobsterLaunchUrl = useMemo(() => getLobsterLaunchUrl(), [])
+
   const sections = useMemo(() => {
     const defaults = [
       { id: 'banner', enabled: true, order: 0 },
@@ -165,6 +168,16 @@ export function HomePage() {
               <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
               <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
               <Link to="/new-tokens" className="ave-header-tab home-section-tab-link">新币</Link>
+              {lobsterLaunchUrl ? (
+                <a
+                  href={lobsterLaunchUrl}
+                  className="ave-header-tab home-section-tab-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  龙虾发射
+                </a>
+              ) : null}
             </div>
           )
         }

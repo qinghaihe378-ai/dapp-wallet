@@ -30,3 +30,11 @@ android/build
 android/.gradle
 android/local.properties
 android/*/build
+
+# longxia（龙虾）子项目：本机缓存与构建产物（根规则已忽略 node_modules / dist / .env）
+longxia/.home
+longxia/contracts/.home
+longxia/contracts/cache
+longxia/contracts/artifacts
+longxia/contracts/typechain-types
+longxia/web/tsconfig.tsbuildinfo
