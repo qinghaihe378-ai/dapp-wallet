@@ -23,7 +23,7 @@
 .ave-app .app-main.app-main-longxia-embed {
   display: flex;
   flex-direction: column;
-  padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+  padding: var(--safe-top) 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
   overflow: hidden;
 }
 
