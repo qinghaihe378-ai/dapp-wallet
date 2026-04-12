@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom"
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
+import { useAccount, useConnect, useDisconnect } from "wagmi"
 import { bsc } from "wagmi/chains"
 
-import { testnetChain } from "./wagmi"
 import CreateTokenPage from "./pages/CreateTokenPage"
 import MarketPage from "./pages/MarketPage"
 import TokenPage from "./pages/TokenPage"
@@ -23,18 +22,31 @@ function shortAddr(addr?: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`
 }
 
+function getInjectedProvider(): any {
+  const w = window as unknown as any
+  const eth = w?.ethereum
+  const multi = Array.isArray(eth?.providers) ? eth.providers : []
+  const candidates = [
+    ...multi,
+    eth,
+    w?.okxwallet,
+    w?.tokenpocket,
+    w?.tpwallet,
+    w?.bitkeep?.ethereum,
+    w?.web3?.currentProvider
+  ].filter(Boolean)
+  return candidates.find((p: any) => typeof p?.request === "function") || null
+}
+
 function Header() {
-  const { address, chain } = useAccount()
-  const { connect, connectors, isPending } = useConnect()
+  const { address } = useAccount()
+  const { connect, connectors, isPending, error: connectError } = useConnect()
   const { disconnect } = useDisconnect()
-  const { switchChain } = useSwitchChain()
-  const [open, setOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const triedAuto = useRef(false)
+  const [injectedReady, setInjectedReady] = useState(false)
+  const [noProviderHint, setNoProviderHint] = useState<string | null>(null)
 
-  const hasInjected = Boolean(
-    (window as unknown as { ethereum?: { request?: (args: { method: string }) => Promise<unknown> } })?.ethereum?.request
-  )
   const isInIframe = (() => {
     try {
       return window.self !== window.top
@@ -43,98 +55,7 @@ function Header() {
     }
   })()
 
-  function connectorLabel(id: string, name: string) {
-    if (id === "coinbaseWallet") return "Coinbase Wallet"
-    if (id === "injected") return "内置钱包"
-    return name
-  }
-
-  const walletModal = open
-    ? createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-          role="presentation"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-950 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="选择钱包"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">选择钱包</div>
-              <button
-                type="button"
-                className="rounded-md border border-neutral-800 px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-900"
-                onClick={() => setOpen(false)}
-              >
-                关闭
-              </button>
-            </div>
-            <div className="mt-3 space-y-2">
-              {connectors.some((c) => c.id === "injected") && hasInjected ? (
-                <button
-                  type="button"
-                  className="w-full rounded-xl border border-neutral-800 px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-900 disabled:opacity-60"
-                  disabled={isPending}
-                  onClick={() => {
-                    const c = connectors.find((x) => x.id === "injected")
-                    if (!c) return
-                    setOpen(false)
-                    connect({ connector: c })
-                  }}
-                >
-                  内置钱包
-                </button>
-              ) : isInIframe ? (
-                <button
-                  type="button"
-                  className="w-full rounded-xl border border-neutral-800 px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-900"
-                  onClick={() => {
-                    setOpen(false)
-                    const url = window.location.href
-                    const opened = window.open(url, "_blank", "noopener,noreferrer")
-                    if (!opened) {
-                      window.location.href = url
-                    }
-                  }}
-                >
-                  内置钱包（全屏打开后连接）
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="w-full rounded-xl border border-neutral-800 px-3 py-2 text-left text-sm text-neutral-200 opacity-60"
-                  disabled
-                >
-                  内置钱包（未检测到）
-                </button>
-              )}
-
-              {connectors
-                .filter((c) => c.id !== "injected")
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className="w-full rounded-xl border border-neutral-800 px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-900 disabled:opacity-60"
-                    disabled={isPending}
-                    onClick={() => {
-                      setOpen(false)
-                      connect({ connector: c })
-                    }}
-                  >
-                    {connectorLabel(c.id, c.name)}
-                  </button>
-                ))}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    : null
+  const hasInjected = injectedReady
 
   const mobileMenu = menuOpen
     ? createPortal(
@@ -176,27 +97,6 @@ function Header() {
                 持仓
               </Link>
             </div>
-            {address ? (
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-xl border border-neutral-800 px-3 py-2 text-sm text-neutral-200">{chain?.name ?? "Unknown"}</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-neutral-800 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
-                    onClick={() => switchChain({ chainId: bsc.id })}
-                  >
-                    BSC
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-xl border border-neutral-800 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
-                    onClick={() => switchChain({ chainId: testnetChain.id })}
-                  >
-                    Testnet
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>,
         document.body
@@ -204,23 +104,97 @@ function Header() {
     : null
 
   useEffect(() => {
+    let cancelled = false
+    let tries = 0
+    const poll = () => {
+      if (cancelled) return
+      const p = getInjectedProvider()
+      const ok = !!p?.request
+      setInjectedReady(ok)
+      tries += 1
+      if (ok || tries >= 20) return
+      window.setTimeout(poll, 400)
+    }
+    poll()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     if (address) return
+    if (!injectedReady) return
     if (triedAuto.current) return
-    triedAuto.current = true
 
     const injectedConnector = connectors.find((c) => c.id === "injected")
-    const eth = (window as unknown as { ethereum?: { request?: (args: { method: string }) => Promise<unknown> } }).ethereum
-    if (!injectedConnector || !eth?.request) return
+    if (!injectedConnector) return
 
-    eth
+    const p = getInjectedProvider()
+    if (!p?.request) return
+
+    triedAuto.current = true
+    void p
       .request({ method: "eth_accounts" })
-      .then((accounts) => {
+      .then((accounts: unknown) => {
         if (Array.isArray(accounts) && accounts.length > 0) {
-          connect({ connector: injectedConnector })
+          connect({ connector: injectedConnector, chainId: bsc.id })
         }
       })
       .catch(() => undefined)
-  }, [address, connectors, connect])
+  }, [address, connect, connectors, injectedReady])
+
+  useEffect(() => {
+    const p = getInjectedProvider()
+    if (!p?.on || !p?.removeListener) return
+
+    const injectedConnector = connectors.find((c) => c.id === "injected")
+    if (!injectedConnector) return
+
+    const handleAccountsChanged = (accounts: unknown) => {
+      const list = Array.isArray(accounts) ? (accounts as unknown[]) : []
+      const first = typeof list[0] === "string" ? (list[0] as string) : null
+      if (!first) {
+        disconnect()
+        return
+      }
+      if (!address) {
+        connect({ connector: injectedConnector, chainId: bsc.id })
+      }
+    }
+
+    p.on("accountsChanged", handleAccountsChanged)
+    return () => {
+      p.removeListener("accountsChanged", handleAccountsChanged)
+    }
+  }, [address, connect, connectors, disconnect])
+
+  const requestTopOpen = () => {
+    const url = window.location.href
+    try {
+      window.parent?.postMessage({ type: "LONGXIA_OPEN_TOP", url }, "*")
+    } catch {
+    }
+  }
+
+  const connectInjected = () => {
+    const injectedConnector = connectors.find((c) => c.id === "injected")
+    if (!injectedConnector) return
+
+    const p = getInjectedProvider()
+    if (p?.request) {
+      setNoProviderHint(null)
+      void p
+        .request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] })
+        .catch(() => undefined)
+        .finally(() => connect({ connector: injectedConnector, chainId: bsc.id }))
+      return
+    }
+    if (isInIframe) {
+      requestTopOpen()
+      return
+    }
+    setNoProviderHint("未检测到钱包注入，请用钱包 App 的 DApp 浏览器打开本页")
+  }
 
   return (
     <div className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/70 backdrop-blur" style={{ paddingTop: 'var(--safe-top)' }}>
@@ -258,47 +232,40 @@ function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-          {address && (
-            <>
-              <div className="hidden rounded-md border border-neutral-800 px-2 py-1 text-xs text-neutral-200 md:block">
-                {chain?.name ?? "Unknown"}
-              </div>
-              <button
-                className="hidden rounded-md border border-neutral-800 px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-900 md:block"
-                onClick={() => switchChain({ chainId: bsc.id })}
-              >
-                BSC
-              </button>
-              <button
-                className="hidden rounded-md border border-neutral-800 px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-900 md:block"
-                onClick={() => switchChain({ chainId: testnetChain.id })}
-              >
-                Testnet
-              </button>
-            </>
-          )}
-
-          {!address ? (
-            <>
-              <button
-                className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-60"
-                disabled={isPending}
-                onClick={() => setOpen(true)}
-              >
-                连接钱包
-              </button>
-              {walletModal}
-            </>
-          ) : (
+          {address ? (
             <button
+              type="button"
               className="rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
               onClick={() => disconnect()}
             >
               {shortAddr(address)}
             </button>
+          ) : (
+            <button
+              type="button"
+              className="rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-900 disabled:opacity-60"
+              disabled={isPending || (!hasInjected && !isInIframe)}
+              onClick={() => {
+                if (!hasInjected && isInIframe) {
+                  requestTopOpen()
+                  return
+                }
+                connectInjected()
+              }}
+            >
+              {hasInjected ? "连接钱包" : isInIframe ? "全屏打开" : "等待钱包"}
+            </button>
           )}
         </div>
       </div>
+      {connectError && (
+        <div className="mx-auto max-w-7xl px-4 pb-2 text-xs text-red-400 md:px-6">
+          {String(connectError).includes("ProviderNotFoundError") ? "未检测到钱包注入 Provider（请用钱包 App 的 DApp 浏览器打开，且不要内嵌）" : String(connectError)}
+        </div>
+      )}
+      {noProviderHint && !connectError && (
+        <div className="mx-auto max-w-7xl px-4 pb-2 text-xs text-neutral-400 md:px-6">{noProviderHint}</div>
+      )}
       {mobileMenu}
     </div>
   )
@@ -307,9 +274,9 @@ function Header() {
 export default function App() {
   return (
     <BrowserRouter basename={routerBasename()}>
-      <div className="min-h-screen bg-[radial-gradient(900px_circle_at_10%_0%,rgba(59,130,246,0.10),transparent_55%),radial-gradient(800px_circle_at_95%_15%,rgba(168,85,247,0.08),transparent_55%)]">
+      <div className="min-h-[100svh] bg-[radial-gradient(900px_circle_at_10%_0%,rgba(59,130,246,0.10),transparent_55%),radial-gradient(800px_circle_at_95%_15%,rgba(168,85,247,0.08),transparent_55%)]">
         <Header />
-        <div className="mx-auto max-w-7xl px-4 py-5 pb-10 md:px-6">
+        <div className="mx-auto max-w-7xl px-4 py-5 pb-[calc(2.5rem+var(--safe-bottom))] md:px-6">
           <Routes>
             <Route path="/" element={<MarketPage />} />
             <Route path="/create" element={<CreateTokenPage />} />

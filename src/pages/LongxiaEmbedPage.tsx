@@ -1,8 +1,36 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { getLongxiaIframeSrc } from '../lib/longxiaIframeSrc'
 
 export function LongxiaEmbedPage() {
   const src = useMemo(() => getLongxiaIframeSrc(), [])
+
+  useEffect(() => {
+    let allowedOrigin: string | null = null
+    try {
+      allowedOrigin = new URL(src).origin
+    } catch {
+      allowedOrigin = null
+    }
+
+    const handler = (event: MessageEvent) => {
+      const data = event.data as any
+      if (!data || data.type !== 'LONGXIA_OPEN_TOP') return
+      if (!allowedOrigin) return
+      if (event.origin !== allowedOrigin) return
+      const nextUrl = typeof data.url === 'string' ? data.url : ''
+      if (!nextUrl) return
+      try {
+        const u = new URL(nextUrl)
+        if (u.origin !== allowedOrigin) return
+        window.location.href = u.href
+      } catch {
+        return
+      }
+    }
+
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [src])
 
   return (
     <div className="longxia-embed-page">

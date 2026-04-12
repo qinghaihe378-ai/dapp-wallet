@@ -66,7 +66,7 @@ export default function PortfolioPage() {
   if (!factory) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4 text-sm text-neutral-300">
-        请先配置 web/.env 的 VITE_FACTORY_ADDRESS_BSC / VITE_FACTORY_ADDRESS_BSC_TESTNET
+        当前仅支持 BSC 主网，请切换到 BSC（ChainId 56）
       </div>
     )
   }
