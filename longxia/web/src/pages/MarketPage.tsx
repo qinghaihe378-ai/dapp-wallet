@@ -358,7 +358,7 @@ export default function MarketPage() {
           <div>
             <div className="text-2xl font-semibold tracking-wide">新创建</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="mr-1 flex items-center gap-2">
             <button
               type="button"
               className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900 lg:hidden"
