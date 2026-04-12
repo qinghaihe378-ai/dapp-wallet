@@ -78,6 +78,11 @@ export function LongxiaEmbedPage() {
                 send({ result: ethers.toQuantity(balance) })
                 return
               }
+              case 'wallet_requestPermissions': {
+                if (!address) throw new Error('请先在主站钱包页创建、导入或连接钱包')
+                send({ result: [{ caveats: [{ value: [address] }] }] })
+                return
+              }
               case 'personal_sign': {
                 if (!signer) throw new Error('未连接主站钱包')
                 const raw = params[0]
@@ -88,6 +93,28 @@ export function LongxiaEmbedPage() {
                 return
               }
               default:
+                if (signer?.provider && typeof (signer.provider as any).send === 'function') {
+                  const allow = new Set([
+                    'eth_blockNumber',
+                    'eth_getBlockByNumber',
+                    'eth_getBlockByHash',
+                    'eth_getTransactionCount',
+                    'eth_estimateGas',
+                    'eth_gasPrice',
+                    'eth_maxPriorityFeePerGas',
+                    'eth_feeHistory',
+                    'eth_call',
+                    'eth_getCode',
+                    'eth_getLogs',
+                    'eth_getTransactionByHash',
+                    'eth_getTransactionReceipt'
+                  ])
+                  if (allow.has(data.method)) {
+                    const result = await (signer.provider as any).send(data.method, params)
+                    send({ result })
+                    return
+                  }
+                }
                 throw new Error(`暂不支持的方法: ${data.method}`)
             }
           } catch (error) {

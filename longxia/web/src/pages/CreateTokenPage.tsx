@@ -89,14 +89,18 @@ export default function CreateTokenPage() {
     buybackSharePercent
   ])
 
-  const disabled = useMemo(() => {
-    if (!factory) return true
-    if (!address) return true
-    if (!name.trim() || !symbol.trim()) return true
-    if (!creationFee) return true
-    if (!taxConfig.ok) return true
-    return isPending || isConfirming
-  }, [factory, address, name, symbol, creationFee, taxConfig.ok, isPending, isConfirming])
+  const disabledReason = useMemo(() => {
+    if (!factory) return "未检测到 Factory（请确认当前链为 BSC 56）"
+    if (!address) return "请先连接钱包"
+    if (!name.trim() || !symbol.trim()) return "请填写名称与符号"
+    if (creationFee === undefined) return "读取创建费用失败"
+    if (!taxConfig.ok) return taxConfig.reason
+    if (isPending) return "提交中…"
+    if (isConfirming) return "确认中…"
+    return null
+  }, [factory, address, name, symbol, creationFee, taxConfig, isPending, isConfirming])
+
+  const disabled = Boolean(disabledReason)
 
   return (
     <div className="space-y-3">
@@ -333,6 +337,9 @@ export default function CreateTokenPage() {
             {isPending ? "提交中…" : isConfirming ? "确认中…" : "创建代币"}
           </button>
 
+          {disabledReason && !isPending && !isConfirming ? (
+            <div className="mt-2 text-sm text-neutral-400">{disabledReason}</div>
+          ) : null}
           {error && <div className="text-sm text-red-400">{error.message}</div>}
         </div>
       </div>
