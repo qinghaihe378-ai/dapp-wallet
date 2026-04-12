@@ -99,161 +99,159 @@ export default function CreateTokenPage() {
   }, [factory, address, name, symbol, creationFee, taxConfig.ok, isPending, isConfirming])
 
   return (
-    <div className="space-y-4">
-        <div>
-          <div className="text-2xl font-semibold tracking-wide text-center">创建你的代币</div>
-        </div>
+    <div className="space-y-3">
+      <div className="text-2xl font-semibold tracking-wide">创建你的代币</div>
 
-        <div>
-          <input
-            ref={logoInputRef}
-            className="hidden"
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (!f) return
-              if (!f.type.startsWith("image/")) {
-                setLogo("")
-                setLogoError("请选择图片文件")
-                if (logoInputRef.current) logoInputRef.current.value = ""
-                return
-              }
-              if (f.size > 1024 * 1024) {
-                setLogo("")
-                setLogoError("图片过大，请选择 1MB 以内")
-                if (logoInputRef.current) logoInputRef.current.value = ""
-                return
-              }
-              const r = new FileReader()
-              r.onload = () => {
-                const v = typeof r.result === "string" ? r.result : ""
-                setLogo(v)
-                setLogoError(null)
-              }
-              r.onerror = () => {
-                setLogo("")
-                setLogoError("读取图片失败")
-              }
-              r.readAsDataURL(f)
-            }}
-          />
-          <div
-            className="group relative mt-1 aspect-square w-full max-w-[512px] overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 hover:border-neutral-600 sm:mx-0 mx-auto"
-            role="button"
-            tabIndex={0}
-            onClick={() => logoInputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") logoInputRef.current?.click()
-            }}
-          >
-            {logo ? (
-              <img src={logo} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
-                点击上传封面（512×512，1MB以内）
-              </div>
-            )}
-            {logo ? (
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100">
-                <div className="text-xs text-neutral-200">点击更换</div>
-                <button
-                  type="button"
-                  className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-200 hover:bg-black/60"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setLogo("")
-                    setLogoError(null)
-                    if (logoInputRef.current) logoInputRef.current.value = ""
-                  }}
-                >
-                  清除
-                </button>
-              </div>
-            ) : null}
+      <div>
+        <input
+          ref={logoInputRef}
+          className="hidden"
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (!f) return
+            if (!f.type.startsWith("image/")) {
+              setLogo("")
+              setLogoError("请选择图片文件")
+              if (logoInputRef.current) logoInputRef.current.value = ""
+              return
+            }
+            if (f.size > 1024 * 1024) {
+              setLogo("")
+              setLogoError("图片过大，请选择 1MB 以内")
+              if (logoInputRef.current) logoInputRef.current.value = ""
+              return
+            }
+            const r = new FileReader()
+            r.onload = () => {
+              const v = typeof r.result === "string" ? r.result : ""
+              setLogo(v)
+              setLogoError(null)
+            }
+            r.onerror = () => {
+              setLogo("")
+              setLogoError("读取图片失败")
+            }
+            r.readAsDataURL(f)
+          }}
+        />
+        <div
+          className="group relative mt-1 aspect-square w-full overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 hover:border-neutral-600"
+          role="button"
+          tabIndex={0}
+          onClick={() => logoInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") logoInputRef.current?.click()
+          }}
+        >
+          {logo ? (
+            <img src={logo} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm text-neutral-500">
+              点击上传封面（512×512，1MB以内）
+            </div>
+          )}
+          {logo ? (
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="text-xs text-neutral-200">点击更换</div>
+              <button
+                type="button"
+                className="rounded-md border border-neutral-700 bg-black/40 px-3 py-1.5 text-xs text-neutral-200 hover:bg-black/60"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setLogo("")
+                  setLogoError(null)
+                  if (logoInputRef.current) logoInputRef.current.value = ""
+                }}
+              >
+                清除
+              </button>
+            </div>
+          ) : null}
+        </div>
+        {logoError && <div className="mt-2 text-sm text-red-400">{logoError}</div>}
+      </div>
+
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+        <div className="grid gap-3">
+          <div>
+            <div className="text-sm text-neutral-300">名称</div>
+            <input
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例如：龙虾 Inu"
+            />
           </div>
-          {logoError && <div className="mt-2 text-sm text-red-400">{logoError}</div>}
-        </div>
-
-        <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-          <div className="grid gap-3">
-            <div>
-              <div className="text-sm text-neutral-300">名称</div>
-              <input
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="例如：龙虾 Inu"
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">符号</div>
-              <input
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="例如：龙虾"
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">描述</div>
-              <textarea
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="一句话介绍"
-                rows={3}
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">Telegram 链接（可选）</div>
-              <input
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={telegram}
-                onChange={(e) => setTelegram(e.target.value)}
-                placeholder="https://t.me/xxx"
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">Twitter 链接（可选）</div>
-              <input
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={twitter}
-                onChange={(e) => setTwitter(e.target.value)}
-                placeholder="https://twitter.com/xxx 或 https://x.com/xxx"
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">Website 链接（可选）</div>
-              <input
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">打满线</div>
-              <select
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={targetRaiseOption}
-                onChange={(e) => setTargetRaiseOption(e.target.value === "6" ? "6" : "16.5")}
-              >
-                <option value="16.5">16.5 BNB</option>
-                <option value="6">6 BNB</option>
-              </select>
-            </div>
-            <div>
-              <div className="text-sm text-neutral-300">机制</div>
-              <select
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
-                value={String(templateId)}
-                onChange={(e) => setTemplateId((Number(e.target.value) === 1 ? 1 : 0) as 0 | 1)}
-              >
-                <option value="0">基础版（无税）</option>
-                <option value="1">税费版（分红/销毁/回流）</option>
-              </select>
-            </div>
+          <div>
+            <div className="text-sm text-neutral-300">符号</div>
+            <input
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              placeholder="例如：龙虾"
+            />
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">描述</div>
+            <textarea
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="一句话介绍"
+              rows={3}
+            />
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">Telegram 链接（可选）</div>
+            <input
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={telegram}
+              onChange={(e) => setTelegram(e.target.value)}
+              placeholder="https://t.me/xxx"
+            />
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">Twitter 链接（可选）</div>
+            <input
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={twitter}
+              onChange={(e) => setTwitter(e.target.value)}
+              placeholder="https://twitter.com/xxx 或 https://x.com/xxx"
+            />
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">Website 链接（可选）</div>
+            <input
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">打满线</div>
+            <select
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={targetRaiseOption}
+              onChange={(e) => setTargetRaiseOption(e.target.value === "6" ? "6" : "16.5")}
+            >
+              <option value="16.5">16.5 BNB</option>
+              <option value="6">6 BNB</option>
+            </select>
+          </div>
+          <div>
+            <div className="text-sm text-neutral-300">机制</div>
+            <select
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+              value={String(templateId)}
+              onChange={(e) => setTemplateId((Number(e.target.value) === 1 ? 1 : 0) as 0 | 1)}
+            >
+              <option value="0">基础版（无税）</option>
+              <option value="1">税费版（分红/销毁/回流）</option>
+            </select>
+          </div>
             {templateId === 1 ? (
               <div className="rounded-xl border border-neutral-800 p-3">
                 <div className="text-sm font-medium text-neutral-200">税费参数</div>
@@ -336,8 +334,8 @@ export default function CreateTokenPage() {
           </button>
 
           {error && <div className="text-sm text-red-400">{error.message}</div>}
-          </div>
         </div>
+      </div>
 
         {txHash && (
           <TxWatcher
