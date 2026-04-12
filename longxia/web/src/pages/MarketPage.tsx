@@ -358,7 +358,7 @@ export default function MarketPage() {
           <div>
             <div className="text-2xl font-semibold tracking-wide">新创建</div>
           </div>
-          <div className="mr-32 flex items-center gap-2 md:mr-0">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900 lg:hidden"
@@ -383,7 +383,7 @@ export default function MarketPage() {
         {isLoading && <div className="text-sm text-neutral-400">加载中…</div>}
         {error && <div className="text-sm text-red-400">{String(error)}</div>}
 
-        <div className="mr-32 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70 md:mr-0">
+        <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70">
           <div className="hidden grid-cols-[1fr,120px,120px,90px] gap-3 border-b border-neutral-800 px-4 py-3 text-xs text-neutral-400 md:grid">
             <div>代币</div>
             <div className="text-right">价格</div>
@@ -394,7 +394,10 @@ export default function MarketPage() {
             {rows.map((t) => {
               const p = pct(t.marketBnb, t.targetRaise)
               return (
-                <div key={t.token} className="rounded-xl border border-neutral-800 bg-neutral-950/40 px-4 py-3">
+                <div
+                  key={t.token}
+                  className="mx-auto w-[66.666%] rounded-xl border border-neutral-800 bg-neutral-950/40 px-4 py-3 md:mx-0 md:w-full"
+                >
                   <div className="md:hidden">
                     <div className="flex items-start justify-between gap-3">
                       <Link to={`/token/${t.token}`} className="flex min-w-0 items-center gap-3">
