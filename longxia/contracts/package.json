@@ -1,0 +1,31 @@
+{
+  "name": "contracts",
+  "private": true,
+  "scripts": {
+    "build": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",
+    "test": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat test",
+    "deploy:testnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bscTestnet scripts/deploy.ts",
+    "deploy:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/deploy.ts",
+    "create:token:testnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bscTestnet scripts/createToken.ts",
+    "create:token:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/createToken.ts",
+    "buy:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/buyFromMarket.ts",
+    "sell:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/sellFromMarket.ts",
+    "setconfig:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/setConfig.ts",
+    "verify:testnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bscTestnet scripts/verifyFactory.ts",
+    "verify:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/verifyFactory.ts",
+    "verify:token:testnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bscTestnet scripts/verifyTokenMarket.ts",
+    "verify:token:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/verifyTokenMarket.ts",
+    "watch:verify:testnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bscTestnet scripts/watchVerify.ts",
+    "watch:verify:mainnet": "CI=1 HOME=$PWD/.home XDG_CONFIG_HOME=$PWD/.xdg XDG_CACHE_HOME=$PWD/.xdg-cache HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat run --network bsc scripts/watchVerify.ts"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.23.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2"
+  }
+}

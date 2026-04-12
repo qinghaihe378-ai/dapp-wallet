@@ -1,0 +1,14 @@
+{
+  "name": "flapsh-clone",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm -w contracts run build && npm -w web run build",
+    "test": "npm -w contracts test",
+    "lint": "npm -w web run lint",
+    "format": "npm -w web run format"
+  }
+}

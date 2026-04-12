@@ -1,0 +1,20 @@
+node_modules
+.env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+dist
+out
+cache
+coverage
+artifacts
+typechain-types
+.DS_Store
+.vite
+*.log
+
+# 本机 Hardhat / IDE 写入的 HOME 映射目录，勿提交（无尾斜杠以匹配任意层级同名目录）
+.home
+contracts/.home
+web/tsconfig.tsbuildinfo
