@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom"
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi"
-import { bsc, bscTestnet } from "wagmi/chains"
+import { bsc } from "wagmi/chains"
 
+import { testnetChain } from "./wagmi"
 import CreateTokenPage from "./pages/CreateTokenPage"
 import MarketPage from "./pages/MarketPage"
 import TokenPage from "./pages/TokenPage"
@@ -189,7 +190,7 @@ function Header() {
                   <button
                     type="button"
                     className="rounded-xl border border-neutral-800 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
-                    onClick={() => switchChain({ chainId: bscTestnet.id })}
+                    onClick={() => switchChain({ chainId: testnetChain.id })}
                   >
                     Testnet
                   </button>
@@ -270,7 +271,7 @@ function Header() {
               </button>
               <button
                 className="hidden rounded-md border border-neutral-800 px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-900 md:block"
-                onClick={() => switchChain({ chainId: bscTestnet.id })}
+                onClick={() => switchChain({ chainId: testnetChain.id })}
               >
                 Testnet
               </button>

@@ -16,9 +16,14 @@ async function main() {
   const net = await deployer.provider!.getNetwork()
   const chainId = net.chainId
 
-  const treasury = requireEnv("TREASURY_ADDRESS")
-  const wbnb = requireEnv(chainId === 56n ? "WBNB_BSC" : "WBNB_BSC_TESTNET")
-  const router = requireEnv(chainId === 56n ? "PANCAKE_V2_ROUTER_BSC" : "PANCAKE_V2_ROUTER_BSC_TESTNET")
+  const isMainnet = chainId === 56n
+  const treasury = process.env.TREASURY_ADDRESS || deployer.address
+  const wbnb =
+    process.env[isMainnet ? "WBNB_BSC" : "WBNB_BSC_TESTNET"] ||
+    (isMainnet ? "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c" : "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd")
+  const router =
+    process.env[isMainnet ? "PANCAKE_V2_ROUTER_BSC" : "PANCAKE_V2_ROUTER_BSC_TESTNET"] ||
+    (isMainnet ? "0x10ED43C718714eb63d5aA57B78B54704E256024E" : "0x9ac64cc6e4415144c455bd8e4837fea55603e5c3")
 
   const TaxDeployer = await ethers.getContractFactory("TaxTokenDeployer")
   const taxDeployer = await TaxDeployer.deploy()

@@ -10,7 +10,11 @@ dotenvConfig({ path: path.resolve(__dirname, "../.env") })
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
 
 const networks: HardhatUserConfig["networks"] = {
-  hardhat: { chainId: 31337 }
+  hardhat: { chainId: 31337 },
+  localhost: {
+    url: "http://127.0.0.1:8545",
+    chainId: 31337
+  }
 }
 
 if (process.env.BNB_RPC_URL) {

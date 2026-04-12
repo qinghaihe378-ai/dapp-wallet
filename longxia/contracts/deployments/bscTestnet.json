@@ -1,0 +1,11 @@
+{
+  "chainId": "97",
+  "deployer": "0xB39e0a82827d97a4deFa5bd44A1D881f5Cd2224c",
+  "factory": "0xd0C042eFc846D752f9bE26FB6e0E0D8C666F468C",
+  "locker": "0x67386490855B9234506d8e79Bd03747Eb8be646c",
+  "treasury": "0xB39e0a82827d97a4deFa5bd44A1D881f5Cd2224c",
+  "wbnb": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+  "router": "0x9ac64cc6e4415144c455bd8e4837fea55603e5c3",
+  "taxDeployer": "0x3C1D5BbC2777Bc7769dbEF9A2f4aEDcf62c467fF",
+  "deployedAt": "2026-04-12T13:46:42.715Z"
+}
