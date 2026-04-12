@@ -1,6 +1,7 @@
 import { http, createConfig } from "wagmi"
 import { bsc } from "wagmi/chains"
 import { injected } from "wagmi/connectors"
+import { getPreferredInjectedProvider } from "./embeddedWalletBridge"
 
 const connectors = [
   injected({
@@ -9,19 +10,7 @@ const connectors = [
       id: "injected",
       name: "Injected",
       provider(window) {
-        const w = window as unknown as any
-        const eth = w?.ethereum
-        const multi = Array.isArray(eth?.providers) ? eth.providers : []
-        const candidates = [
-          ...multi,
-          eth,
-          w?.okxwallet,
-          w?.tokenpocket,
-          w?.tpwallet,
-          w?.bitkeep?.ethereum,
-          w?.web3?.currentProvider
-        ].filter(Boolean)
-        return candidates.find((p: any) => typeof p?.request === "function")
+        return getPreferredInjectedProvider(window as any) as any
       }
     }
   })

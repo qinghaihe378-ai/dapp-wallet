@@ -4,6 +4,7 @@ import { BrowserRouter, Link, Route, Routes } from "react-router-dom"
 import { useAccount, useConnect, useDisconnect } from "wagmi"
 import { bsc } from "wagmi/chains"
 
+import { getPreferredInjectedProvider } from "./embeddedWalletBridge"
 import CreateTokenPage from "./pages/CreateTokenPage"
 import MarketPage from "./pages/MarketPage"
 import TokenPage from "./pages/TokenPage"
@@ -23,19 +24,7 @@ function shortAddr(addr?: string) {
 }
 
 function getInjectedProvider(): any {
-  const w = window as unknown as any
-  const eth = w?.ethereum
-  const multi = Array.isArray(eth?.providers) ? eth.providers : []
-  const candidates = [
-    ...multi,
-    eth,
-    w?.okxwallet,
-    w?.tokenpocket,
-    w?.tpwallet,
-    w?.bitkeep?.ethereum,
-    w?.web3?.currentProvider
-  ].filter(Boolean)
-  return candidates.find((p: any) => typeof p?.request === "function") || null
+  return getPreferredInjectedProvider(window)
 }
 
 function Header() {
