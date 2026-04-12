@@ -358,7 +358,7 @@ export default function MarketPage() {
           <div>
             <div className="text-2xl font-semibold tracking-wide">新创建</div>
           </div>
-          <div className="mr-32 flex items-center gap-2">
+          <div className="mr-32 flex items-center gap-2 md:mr-0">
             <button
               type="button"
               className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900 lg:hidden"
@@ -383,7 +383,7 @@ export default function MarketPage() {
         {isLoading && <div className="text-sm text-neutral-400">加载中…</div>}
         {error && <div className="text-sm text-red-400">{String(error)}</div>}
 
-        <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70">
+        <div className="mr-32 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/70 md:mr-0">
           <div className="hidden grid-cols-[1fr,120px,120px,90px] gap-3 border-b border-neutral-800 px-4 py-3 text-xs text-neutral-400 md:grid">
             <div>代币</div>
             <div className="text-right">价格</div>
