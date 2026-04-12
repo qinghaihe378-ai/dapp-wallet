@@ -1,10 +1,15 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build:with-longxia",
   "redirects": [
     { "source": "/dmin", "destination": "/admin", "permanent": false },
     { "source": "/dmin/(.*)", "destination": "/admin", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/longxia", "destination": "/longxia/index.html" },
+    { "source": "/longxia/", "destination": "/longxia/index.html" },
+    { "source": "/longxia/:path*", "destination": "/longxia/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useWallet } from './WalletProvider'
 import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { type MarketItem, searchByAddressOrQuery } from '../api/markets'
+import { getLongxiaIframeSrc } from '../lib/longxiaIframeSrc'
 
 const NETWORKS: Network[] = ['mainnet', 'bsc', 'base']
 
@@ -33,6 +34,7 @@ export function AppHeader() {
     if (location.pathname === '/bot') return 'bot'
     if (location.pathname === '/new-tokens') return 'track'
     if (location.pathname === '/profile') return 'profile'
+    if (location.pathname === '/lobster') return 'longxia'
     return 'detail'
   }, [location.pathname])
 
@@ -336,6 +338,27 @@ export function AppHeader() {
           <button type="button" className="ave-header-tab active">追踪</button>
           <button type="button" className="ave-header-tab">新池</button>
           <button type="button" className="ave-header-tab">雷达</button>
+        </div>
+      </header>
+    )
+  }
+
+  if (headerMode === 'longxia') {
+    const openFull = getLongxiaIframeSrc()
+    return (
+      <header className="ave-header ave-header-detail">
+        <div className="ave-header-left">
+          <Link to="/" className="ave-back-btn" aria-label="返回首页">
+            ‹
+          </Link>
+        </div>
+        <div className="ave-header-center">
+          <span className="ave-header-page">龙虾 · BSC 发币</span>
+        </div>
+        <div className="ave-header-right">
+          <a href={openFull} target="_blank" rel="noopener noreferrer" className="ave-header-action">
+            全屏
+          </a>
         </div>
       </header>
     )

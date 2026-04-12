@@ -19,6 +19,45 @@
   z-index: 130;
 }
 
+/* 站内嵌入龙虾 iframe：减少内边距，让 iframe 尽量占满可视区 */
+.ave-app .app-main.app-main-longxia-embed {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+  overflow: hidden;
+}
+
+.longxia-embed-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.longxia-embed-hint {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-soft);
+}
+
+.longxia-embed-hint code {
+  font-size: 11px;
+}
+
+.longxia-embed-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: var(--bg);
+}
+
 
 .page {
   width: 100%;
@@ -1662,6 +1701,25 @@ button:disabled,
   line-height: 1;
 }
 
+.ave-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-h);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.ave-header-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .ave-home-search-wrap {
   flex: 1;
   min-width: 0;
@@ -2469,6 +2527,13 @@ button:disabled,
   padding: 0;
   cursor: pointer;
   text-decoration: none;
+}
+
+.home-lobster-tab-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .home-section-tabs .active,
@@ -4816,6 +4881,27 @@ button:disabled,
   background: rgba(41, 98, 255, 0.25);
 }
 
+.wallet-address-connect {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wallet-address-connect:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.wallet-address-connect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* TP 风格：收款/转账弹窗 */
 .wallet-action-sheet {
   position: fixed;
@@ -6040,4 +6126,3 @@ button:disabled,
   opacity: 0.5;
   cursor: not-allowed;
 }
-

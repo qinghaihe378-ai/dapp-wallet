@@ -87,7 +87,7 @@ function WalletQuickIcon({ kind }: { kind: WalletQuickAction }) {
 }
 
 export function WalletPage() {
-  const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance } = useWallet()
+  const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance, canUseInjected, connectInjected } = useWallet()
   const { getPrice } = usePrices()
   const walletValuesVisibleKey = `walletValuesVisible:${network}`
   const walletHideSmallKey = `walletHideSmall:${network}`
@@ -319,7 +319,16 @@ export function WalletPage() {
                 <span className="wallet-address-copy-icon">复制</span>
               </button>
             ) : (
-              <button type="button" className="wallet-address-create" onClick={() => setShowSetup(true)}>创建钱包</button>
+              <div className="wallet-address-actions">
+                {canUseInjected && (
+                  <button type="button" className="wallet-address-connect" onClick={() => void connectInjected()} disabled={connecting}>
+                    {connecting ? '处理中…' : '连接内置钱包'}
+                  </button>
+                )}
+                <button type="button" className="wallet-address-create" onClick={() => setShowSetup(true)}>
+                  创建/导入
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -402,7 +411,7 @@ export function WalletPage() {
           </button>
           {showSetup && (
             <div className="wallet-setup-inline">
-              <button type="button" className="btn-primary" onClick={() => void createWallet()} disabled={connecting}>
+              <button type="button" className="btn-ghost" onClick={() => void createWallet()} disabled={connecting}>
                 {connecting ? '处理中…' : '创建钱包'}
               </button>
               <textarea

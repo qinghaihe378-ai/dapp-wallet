@@ -11,6 +11,7 @@ import { SwapPage } from './pages/SwapPage'
 import { WalletPage } from './pages/WalletPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { AdminPage } from './pages/AdminPage'
+import { LongxiaEmbedPage } from './pages/LongxiaEmbedPage'
 import './App.css'
 
 const tabs = [
@@ -20,6 +21,7 @@ const tabs = [
   { to: '/swap', label: '交易', icon: 'swap' },
   { to: '/wallet', label: '钱包', icon: 'wallet' },
 ]
+
 
 function TabIcon({ name }: { name: string }) {
   switch (name) {
@@ -69,6 +71,13 @@ function TabIcon({ name }: { name: string }) {
           <path d="M15.25 12H18.75V14.25H15.25C14.6287 14.25 14.125 13.7463 14.125 13.125V13.125C14.125 12.5037 14.6287 12 15.25 12Z" />
         </svg>
       )
+    case 'lobster':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+          <path d="M12 5.5c-2.5 0-4.5 2-4.5 4.5 0 1.2.5 2.3 1.3 3.1L8 18l4-1.5 4 1.5-1-5c.8-.8 1.3-1.9 1.3-3.1 0-2.5-2-4.5-4.5-4.5z" />
+          <path d="M9.5 10h5M10 7.5h4" />
+        </svg>
+      )
     default:
       return null
   }
@@ -77,17 +86,26 @@ function TabIcon({ name }: { name: string }) {
 function AppContent() {
   const location = useLocation()
   const isBot = location.pathname === '/bot'
+  const isLobsterEmbed = location.pathname === '/lobster'
   const hideNav = location.pathname === '/admin'
+  const hideHeader = location.pathname === '/admin' || isLobsterEmbed
   return (
     <>
-      <AppHeader />
-      <main className={'app-main' + (isBot ? ' app-main-bot' : '')}>
+      {!hideHeader && <AppHeader />}
+      <main
+        className={
+          'app-main' +
+          (isBot ? ' app-main-bot' : '') +
+          (isLobsterEmbed ? ' app-main-longxia-embed' : '')
+        }
+      >
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/market" element={<MarketsPage />} />
               <Route path="/market/:coinId" element={<MarketDetailPage />} />
               <Route path="/new-tokens" element={<NewTokensPage />} />
               <Route path="/profile" element={<PersonalCenterPage />} />
+              <Route path="/lobster" element={<LongxiaEmbedPage />} />
               <Route path="/bot" element={<BotPage />} />
               <Route path="/swap" element={<SwapPage />} />
               <Route path="/wallet" element={<WalletPage />} />

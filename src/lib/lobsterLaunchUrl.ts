@@ -8,6 +8,12 @@ export function getLobsterLaunchUrl(): string | undefined {
   const t = raw.trim()
   if (!t) return undefined
   try {
+    if (t.startsWith('/')) {
+      if (typeof window === 'undefined') return undefined
+      const u = new URL(t, window.location.origin)
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined
+      return u.href
+    }
     const u = new URL(t)
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined
     return u.href

@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:longxia-web": "npm install --prefix longxia/web && env VITE_LONGXIA_BASE=/longxia/ npm run build --prefix longxia/web && node scripts/copy-longxia-dist.mjs && node scripts/write-dist-serve-json.mjs",
+    "build:with-longxia": "npm run build && npm run build:longxia-web",
+    "preview:dist": "npx --yes serve@14 dist -l 3000",
+    "preview:full": "npm run build:with-longxia && npm run preview:dist",
     "compile:erc20": "node scripts/compile-simple-erc20.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "bash scripts/deploy-github.sh",
     "android:sync": "cap sync android",
     "android:open": "cap open android",
-    "android:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run build:with-longxia && cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",

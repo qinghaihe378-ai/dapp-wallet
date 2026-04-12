@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { COLLECTION_INTERVAL_MS } from '../api/markets'
 import { apiUrl } from '../lib/apiBase'
+import { getLongxiaIframeSrc } from '../lib/longxiaIframeSrc'
 import { getLobsterLaunchUrl } from '../lib/lobsterLaunchUrl'
 import { usePageConfig } from '../hooks/usePageConfig'
 
@@ -125,6 +126,8 @@ export function HomePage() {
   }, [activeSection, homeSectionKey])
 
   const lobsterLaunchUrl = useMemo(() => getLobsterLaunchUrl(), [])
+  /** 与钱包内 iframe 同源；未配置外链时首页「全屏」新标签打开独立龙虾页 */
+  const lobsterStandaloneUrl = useMemo(() => getLongxiaIframeSrc(), [])
 
   const sections = useMemo(() => {
     const defaults = [
@@ -175,9 +178,15 @@ export function HomePage() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  龙虾发射
+                  发射台
                 </a>
-              ) : null}
+              ) : (
+                <span className="home-lobster-tab-group">
+                  <Link to="/lobster" className="ave-header-tab home-section-tab-link">
+                    发射台
+                  </Link>
+                </span>
+              )}
             </div>
           )
         }

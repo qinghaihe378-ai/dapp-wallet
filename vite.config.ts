@@ -8,8 +8,14 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: './',
+    cacheDir: 'node_modules/.vite-dapp-wallet',
     plugins: [react()],
     server: {
+      port: 5173,
+      strictPort: false,
+      watch: {
+        usePolling: true,
+      },
       proxy: {
         '/api/uniswap': {
           target: 'https://trade-api.gateway.uniswap.org',
