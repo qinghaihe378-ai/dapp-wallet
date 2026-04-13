@@ -259,26 +259,85 @@ export function WalletPage() {
     setSendError(null)
     setSendLoading(true)
     try {
+      const withTimeout = async <T,>(promise: Promise<T>, ms: number, message: string) => {
+        let timer: number | undefined
+        try {
+          return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+              timer = window.setTimeout(() => reject(new Error(message)), ms)
+            }),
+          ])
+        } finally {
+          if (timer !== undefined) window.clearTimeout(timer)
+        }
+      }
+
       const token = getTokenBySymbol(network, sendTokenSymbol)
       if (!token) {
         setSendError(`未找到代币 ${sendTokenSymbol}`)
         return
       }
+      let txHash: string | null = null
       if (token.isNative) {
-        const tx = await signer.sendTransaction({
-          to,
-          value: ethers.parseEther(amount),
-        })
-        await tx.wait()
+        flashPanelNotice('等待签名…')
+        const tx = await withTimeout(
+          signer.sendTransaction({
+            to,
+            value: ethers.parseEther(amount),
+          }),
+          60_000,
+          '等待签名超时，请检查是否弹出钱包确认'
+        )
+        txHash = tx.hash
+        flashPanelNotice('已提交')
+        setQuickSheetOpen(false)
+        void (async () => {
+          try {
+            const receipt = await Promise.race([
+              tx.wait(),
+              new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 45_000)),
+            ])
+            if (!receipt) {
+              flashPanelNotice('已提交，等待确认')
+              return
+            }
+            flashPanelNotice('转账成功')
+            void refreshBalance()
+          } catch {
+            flashPanelNotice('已提交，请在浏览器确认状态')
+          }
+        })()
       } else {
         const contract = new ethers.Contract(token.address, ERC20_ABI, signer)
         const amountWei = ethers.parseUnits(amount, token.decimals)
-        const tx = await contract.transfer(to, amountWei)
-        await tx.wait()
+        flashPanelNotice('等待签名…')
+        const tx = await withTimeout(
+          contract.transfer(to, amountWei),
+          60_000,
+          '等待签名超时，请检查是否弹出钱包确认'
+        )
+        txHash = tx.hash
+        flashPanelNotice('已提交')
+        setQuickSheetOpen(false)
+        void (async () => {
+          try {
+            const receipt = await Promise.race([
+              tx.wait(),
+              new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 45_000)),
+            ])
+            if (!receipt) {
+              flashPanelNotice('已提交，等待确认')
+              return
+            }
+            flashPanelNotice('转账成功')
+            void refreshBalance()
+          } catch {
+            flashPanelNotice('已提交，请在浏览器确认状态')
+          }
+        })()
       }
-      flashPanelNotice('转账成功')
-      setQuickSheetOpen(false)
-      void refreshBalance()
+      void txHash
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('ACTION_REJECTED') || msg.toLowerCase().includes('user rejected')) {
@@ -504,7 +563,7 @@ export function WalletPage() {
                 {address ? (
                   <>
                     <div className="wallet-receive-qr-wrap">
-                      <QRCodeSVG value={address} size={180} level="M" includeMargin />
+                      <QRCodeSVG value={address} size={132} level="M" includeMargin />
                     </div>
                     <div className="wallet-receive-address">{address}</div>
                     <button type="button" className="wallet-receive-copy-btn" onClick={() => void handleCopyAddress().then(() => flashPanelNotice('已复制'))}>

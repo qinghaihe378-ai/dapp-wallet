@@ -4912,22 +4912,27 @@ button:disabled,
 
 .wallet-action-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  top: 50%;
+  bottom: auto;
+  right: auto;
+  transform: translate(-50%, -50%);
   z-index: 41;
-  border-radius: 20px 20px 0 0;
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(320px, calc(100vh - 220px));
+  border-radius: 16px;
   background: #161b22;
-  padding: 12px 20px calc(24px + var(--safe-bottom));
+  padding: 12px 14px 14px;
+  overflow-y: auto;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-bottom: none;
 }
 
 .wallet-action-sheet-handle {
-  width: 36px;
+  display: none;
+  width: 32px;
   height: 4px;
-  margin: 0 auto 16px;
+  margin: 0 auto 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
 }
@@ -4936,11 +4941,11 @@ button:disabled,
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .wallet-action-sheet-title {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: #f4f7fc;
   letter-spacing: -0.02em;
@@ -4963,19 +4968,19 @@ button:disabled,
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 10px 0 20px;
+  gap: 14px;
+  padding: 6px 0 12px;
 }
 
 .wallet-receive-qr-wrap {
-  padding: 16px;
+  padding: 10px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .wallet-receive-address {
-  font-size: 11px;
+  font-size: 10px;
   color: #94a3b8;
   word-break: break-all;
   text-align: center;
@@ -4988,12 +4993,12 @@ button:disabled,
 .wallet-receive-copy-btn {
   width: 100%;
   max-width: 200px;
-  height: 48px;
+  height: 40px;
   border: none;
   border-radius: 10px;
   background: #2962ff;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -5011,8 +5016,8 @@ button:disabled,
 .wallet-send-sheet {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 0 10px;
+  gap: 12px;
+  padding: 0 0 6px;
 }
 
 .wallet-send-token-row {
@@ -5031,13 +5036,13 @@ button:disabled,
 .wallet-send-token-select {
   flex: 1;
   max-width: 140px;
-  height: 44px;
+  height: 38px;
   padding: 0 14px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   color: #f0f6fc;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -5049,13 +5054,13 @@ button:disabled,
 .wallet-send-input {
   width: 100%;
   box-sizing: border-box;
-  height: 46px;
+  height: 40px;
   padding: 0 16px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   color: #f0f6fc;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .wallet-send-input:focus {
@@ -5075,16 +5080,16 @@ button:disabled,
 
 .wallet-send-submit {
   width: 100%;
-  height: 48px;
+  height: 40px;
   border: none;
   border-radius: 10px;
   background: #2962ff;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .wallet-send-submit:hover:not(:disabled) {
