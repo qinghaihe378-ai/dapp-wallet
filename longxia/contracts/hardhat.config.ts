@@ -9,6 +9,9 @@ dotenvConfig({ path: path.resolve(__dirname, "../.env") })
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
 
+const BSC_RPC_URL = process.env.BNB_RPC_URL ?? process.env.BSC_RPC_URL ?? process.env.BNB_MAINNET_RPC_URL
+const BSC_TESTNET_RPC_URL = process.env.BNB_TESTNET_RPC_URL ?? process.env.BSC_TESTNET_RPC_URL
+
 const networks: HardhatUserConfig["networks"] = {
   hardhat: { chainId: 31337 },
   localhost: {
@@ -17,17 +20,17 @@ const networks: HardhatUserConfig["networks"] = {
   }
 }
 
-if (process.env.BNB_RPC_URL) {
+if (BSC_RPC_URL) {
   networks.bsc = {
-    url: process.env.BNB_RPC_URL,
+    url: BSC_RPC_URL,
     chainId: 56,
     accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : []
   }
 }
 
-if (process.env.BNB_TESTNET_RPC_URL) {
+if (BSC_TESTNET_RPC_URL) {
   networks.bscTestnet = {
-    url: process.env.BNB_TESTNET_RPC_URL,
+    url: BSC_TESTNET_RPC_URL,
     chainId: 97,
     accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : []
   }

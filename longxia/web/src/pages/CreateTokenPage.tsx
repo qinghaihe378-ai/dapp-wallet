@@ -89,6 +89,20 @@ export default function CreateTokenPage() {
     buybackSharePercent
   ])
 
+  const logoForTx = useMemo(() => {
+    const v = logo.trim()
+    if (!v) return ""
+    if (v.startsWith("data:")) return ""
+    return v
+  }, [logo])
+
+  const logoHint = useMemo(() => {
+    const v = logo.trim()
+    if (!v) return null
+    if (v.startsWith("data:")) return "封面为本地图片预览，不会上链；如需上链请填写图片 URL（https://... 或 ipfs://...）"
+    return null
+  }, [logo])
+
   const disabledReason = useMemo(() => {
     if (!factory) return "未检测到 Factory（请确认当前链为 BSC 56）"
     if (!address) return "请先连接钱包"
@@ -312,7 +326,7 @@ export default function CreateTokenPage() {
                     name.trim(),
                     symbol.trim(),
                     description.trim(),
-                    logo.trim(),
+                    logoForTx,
                     telegram.trim(),
                     twitter.trim(),
                     website.trim(),
@@ -337,6 +351,7 @@ export default function CreateTokenPage() {
             {isPending ? "提交中…" : isConfirming ? "确认中…" : "创建代币"}
           </button>
 
+          {logoHint ? <div className="mt-2 text-sm text-amber-300">{logoHint}</div> : null}
           {disabledReason && !isPending && !isConfirming ? (
             <div className="mt-2 text-sm text-neutral-400">{disabledReason}</div>
           ) : null}

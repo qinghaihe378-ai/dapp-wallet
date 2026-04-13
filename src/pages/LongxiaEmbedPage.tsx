@@ -118,7 +118,14 @@ export function LongxiaEmbedPage() {
                 throw new Error(`暂不支持的方法: ${data.method}`)
             }
           } catch (error) {
-            send({ error: { message: error instanceof Error ? error.message : String(error) } })
+            const e = error as any
+            const message =
+              (typeof e?.shortMessage === 'string' && e.shortMessage) ||
+              (typeof e?.info?.error?.message === 'string' && e.info.error.message) ||
+              (typeof e?.error?.message === 'string' && e.error.message) ||
+              (typeof e?.message === 'string' && e.message) ||
+              String(error)
+            send({ error: { message } })
           }
         })()
         return
