@@ -6,6 +6,7 @@ import { useChainId, usePublicClient } from "wagmi"
 import { getFactoryAddress } from "../contracts/addresses"
 import { bondingCurveMarketAbi, erc20Abi, memeTokenFactoryAbi } from "../contracts/abi"
 import { formatBn } from "../lib/format"
+import { logoFallbackClass, logoFallbackText, normalizeLogoUrl } from "../lib/logo"
 
 type TokenRow = {
   token: `0x${string}`
@@ -402,10 +403,16 @@ export default function MarketPage() {
                     <div className="flex items-start justify-between gap-3">
                       <Link to={`/token/${t.token}`} className="flex min-w-0 items-center gap-3">
                         <div className="h-10 w-10 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
-                          {t.logo ? (
-                            <img src={t.logo} alt="" className="h-full w-full object-cover" />
+                          {normalizeLogoUrl(t.logo) ? (
+                            <img src={normalizeLogoUrl(t.logo)} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <div className="h-full w-full" />
+                            <div
+                              className={`flex h-full w-full items-center justify-center text-xs font-semibold text-white ${logoFallbackClass(
+                                t.token
+                              )}`}
+                            >
+                              {logoFallbackText(t.symbol, t.name)}
+                            </div>
                           )}
                         </div>
                         <div className="min-w-0">
@@ -460,10 +467,16 @@ export default function MarketPage() {
                       <Link to={`/token/${t.token}`} className="block">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
-                            {t.logo ? (
-                              <img src={t.logo} alt="" className="h-full w-full object-cover" />
+                            {normalizeLogoUrl(t.logo) ? (
+                              <img src={normalizeLogoUrl(t.logo)} alt="" className="h-full w-full object-cover" />
                             ) : (
-                              <div className="h-full w-full" />
+                              <div
+                                className={`flex h-full w-full items-center justify-center text-xs font-semibold text-white ${logoFallbackClass(
+                                  t.token
+                                )}`}
+                              >
+                                {logoFallbackText(t.symbol, t.name)}
+                              </div>
                             )}
                           </div>
                           <div className="min-w-0">

@@ -189,6 +189,15 @@ export default function CreateTokenPage() {
           ) : null}
         </div>
         {logoError && <div className="mt-2 text-sm text-red-400">{logoError}</div>}
+        <div className="mt-3">
+          <div className="text-sm text-neutral-300">封面链接（可选）</div>
+          <input
+            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-neutral-600"
+            value={logo.startsWith("data:") ? "" : logo}
+            onChange={(e) => setLogo(e.target.value)}
+            placeholder="https://... 或 ipfs://..."
+          />
+        </div>
       </div>
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
