@@ -4902,6 +4902,14 @@ button:disabled,
 }
 
 /* TP 风格：收款/转账弹窗 */
+.wallet-action-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: rgba(10, 14, 20, 0.42);
+  z-index: 40;
+}
+
 .wallet-action-sheet {
   position: fixed;
   left: 0;

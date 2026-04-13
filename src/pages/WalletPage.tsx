@@ -491,7 +491,7 @@ export function WalletPage() {
 
       {quickSheetOpen && (
         <>
-          <button type="button" className="swap-token-picker-backdrop" onClick={() => setQuickSheetOpen(false)} aria-label="关闭" />
+          <button type="button" className="wallet-action-sheet-backdrop" onClick={() => setQuickSheetOpen(false)} aria-label="关闭" />
           <div className="wallet-action-sheet">
             <div className="wallet-action-sheet-handle" />
             <div className="wallet-action-sheet-head">
