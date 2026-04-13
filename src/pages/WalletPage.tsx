@@ -399,6 +399,14 @@ export function WalletPage() {
               type="button"
               className="wallet-quick-item"
               onClick={() => {
+                if (item.kind === 'receive') {
+                  if (!address) {
+                    flashPanelNotice('请先创建或导入钱包')
+                    return
+                  }
+                  void handleCopyAddress().then(() => flashPanelNotice('已复制'))
+                  return
+                }
                 setQuickAction(item.kind)
                 setQuickSheetOpen(true)
               }}
@@ -532,8 +540,13 @@ export function WalletPage() {
             </div>
             <div className="swap-sheet-actions">
               <button type="button" className="swap-sheet-secondary" onClick={() => {
-                setQuickAction('receive')
+                if (!address) {
+                  setActiveRowSymbol(null)
+                  flashPanelNotice('请先创建或导入钱包')
+                  return
+                }
                 setActiveRowSymbol(null)
+                void handleCopyAddress().then(() => flashPanelNotice('已复制'))
               }}>
                 收款
               </button>
