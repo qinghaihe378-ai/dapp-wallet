@@ -42,6 +42,14 @@ const formatCompact = (value: number) => {
   return `$${value.toFixed(2)}`
 }
 
+const formatTokenAmount = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+  if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`
+  return value >= 1 ? value.toFixed(2) : value.toFixed(6)
+}
+
 const formatPrice = (value: number) => {
   if (!Number.isFinite(value) || value <= 0) return '$0.00'
   return value >= 1 ? `$${value.toFixed(2)}` : `$${value.toFixed(6)}`
@@ -790,6 +798,13 @@ export function MarketDetailPage() {
                     </div>
                     {subTab === 'pool' ? (
                       <div className="trade-recent-list">
+                        <div className="ave-pool-table-head">
+                          <span>底池信息</span>
+                          <span>池子数量</span>
+                          <span>币种数量</span>
+                          <span>DEX</span>
+                          <span>流动性总额</span>
+                        </div>
                         {tokenPools.length > 0 ? tokenPools.map((pool, idx) => {
                           const icon = DEX_ICON_MAP[pool.dexId.toLowerCase()] || null
                           const active = dexPairAddress === pool.pairAddress
@@ -797,7 +812,7 @@ export function MarketDetailPage() {
                             <button
                               key={`${pool.pairAddress}-${idx}`}
                               type="button"
-                              className="ave-liquidity-row ave-liquidity-row-pool"
+                              className="ave-liquidity-row ave-liquidity-row-pool ave-pool-table-row"
                               style={{
                                 width: '100%',
                                 textAlign: 'left',
@@ -812,15 +827,19 @@ export function MarketDetailPage() {
                               }}
                               title="站内打开该池子"
                             >
-                              <span>{`${idx + 1}. ${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
-                              <span className="ave-pool-dex-badge">
-                                {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
-                              </span>
+                              <span>{`${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
+                              <span>{idx + 1}</span>
                               <span>
-                                {`${pool.baseAmount > 0 ? formatCompact(pool.baseAmount).replace('$', '') : '—'} ${pool.baseSymbol} / `}
-                                {`${pool.quoteAmount > 0 ? formatCompact(pool.quoteAmount).replace('$', '') : '—'} ${pool.quoteSymbol}`}
-                                {` · ${formatCompact(pool.liquidityUsd)} · Vol ${formatCompact(pool.volume24h)}`}
+                                {`${formatTokenAmount(pool.baseAmount)} ${pool.baseSymbol} / `}
+                                {`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}
                               </span>
+                              <span className="ave-pool-dex-cell">
+                                <span className="ave-pool-dex-badge">
+                                  {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
+                                </span>
+                                <span>{pool.dexId}</span>
+                              </span>
+                              <span>{formatCompact(pool.liquidityUsd)}</span>
                             </button>
                           )
                         }) : <span className="trade-empty">暂无池子数据</span>}

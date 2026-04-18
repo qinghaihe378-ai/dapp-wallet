@@ -7009,6 +7009,7 @@ button:disabled,
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 8px;
+  overflow-x: auto;
 }
 
 .trade-recent-list p {
@@ -7173,6 +7174,39 @@ button:disabled,
 
 .ave-liquidity-row.ave-liquidity-row-pool > span:last-child {
   justify-self: end;
+}
+
+.ave-pool-table-head {
+  display: grid;
+  grid-template-columns: 1.2fr .5fr 1.2fr .8fr .8fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 4px;
+  color: #8f99ac;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 640px;
+}
+
+.ave-pool-table-row {
+  margin-top: 6px;
+  display: grid !important;
+  grid-template-columns: 1.2fr .5fr 1.2fr .8fr .8fr !important;
+  gap: 8px;
+  align-items: center;
+  min-width: 640px;
+}
+
+.ave-pool-table-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ave-pool-dex-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ave-liquidity-row .ave-pool-dex-badge {
