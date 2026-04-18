@@ -66,6 +66,14 @@ const chainToHoneypotId: Record<string, number> = {
   avax: 43114,
 }
 
+const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
+  ethereum: 'eth',
+  binance_smart_chain: 'bsc',
+  polygon_pos: 'polygon',
+  base: 'base',
+  avalanche: 'avax',
+}
+
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
@@ -98,6 +106,15 @@ export function MarketDetailPage() {
     if (!dexItem?.id) return null
     return dexItem.id.split(':')[1] ?? null
   }, [dexItem?.id])
+
+  const detailPlatformAddress = useMemo(() => {
+    if (!detail?.platforms) return null
+    const hit = Object.entries(detail.platforms).find(([, addr]) => typeof addr === 'string' && addr.trim().startsWith('0x'))
+    return hit?.[1] ?? null
+  }, [detail?.platforms])
+
+  const securityAddress = dexTokenAddress ?? detailPlatformAddress
+  const securityChain = dexItem?.chain ?? (detail?.asset_platform_id ? platformToChain[detail.asset_platform_id] : undefined) ?? null
 
   const detailVM = useMemo(() => {
     if (dexItem) {
@@ -281,8 +298,8 @@ export function MarketDetailPage() {
   }, [dexScreenerChainId, dexPairAddress])
 
   useEffect(() => {
-    const chain = dexItem?.chain
-    const address = dexTokenAddress
+    const chain = securityChain
+    const address = securityAddress
     if (!chain || !address) {
       setBuyTax(null)
       setSellTax(null)
@@ -349,7 +366,7 @@ export function MarketDetailPage() {
     }
     void loadTax()
     return () => { cancelled = true }
-  }, [dexItem?.chain, dexTokenAddress])
+  }, [securityChain, securityAddress, detailVM?.symbol])
 
   useEffect(() => {
     if (!detail) return
@@ -605,24 +622,27 @@ export function MarketDetailPage() {
               <div className="ave-detail-panel-placeholder holders-panel">
                 <p>持币人前 100 名</p>
                 <span>总持币人数：{formatInt(holderCountValue)}</span>
+                <div className="holders-table-head">
+                  <span>排名</span>
+                  <span>地址</span>
+                  <span>占比</span>
+                  <span>余额</span>
+                </div>
+                <div className="holders-table-body">
+                  {Array.from({ length: 100 }, (_, idx) => {
+                    const row = realHolders[idx]
+                    return (
+                      <div key={idx + 1} className="holders-row">
+                        <span>#{idx + 1}</span>
+                        <span>{row ? `${row.address.slice(0, 8)}...${row.address.slice(-6)}` : '—'}</span>
+                        <span>{row ? `${row.percent.toFixed(4)}%` : '—'}</span>
+                        <span>{row && row.balance ? Number.parseFloat(row.balance).toLocaleString('en-US') : '—'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
                 {realHolders.length > 0 ? (
                   <>
-                    <div className="holders-table-head">
-                      <span>排名</span>
-                      <span>地址</span>
-                      <span>占比</span>
-                      <span>余额</span>
-                    </div>
-                    <div className="holders-table-body">
-                      {realHolders.map((row, idx) => (
-                        <div key={`${row.address}-${idx}`} className="holders-row">
-                          <span>#{idx + 1}</span>
-                          <span>{row.address.slice(0, 8)}...{row.address.slice(-6)}</span>
-                          <span>{row.percent.toFixed(4)}%</span>
-                          <span>{row.balance ? Number.parseFloat(row.balance).toLocaleString('en-US') : '—'}</span>
-                        </div>
-                      ))}
-                    </div>
                     <span className="holders-note">当前数据源返回 {realHolders.length} 名真实持币人，未返回的名次不展示。</span>
                   </>
                 ) : (
