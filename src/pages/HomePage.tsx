@@ -24,6 +24,11 @@ const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 const HOME_MAX_VISIBLE_TOKENS = 60
+function matchesSymbol(item: HomeItem, symbols: string[]): boolean {
+  const s = item.symbol.toLowerCase()
+  return symbols.some((x) => x.toLowerCase() === s)
+}
+
 const TOP_TICKER_PRESET: TickerPreset[] = [
   {
     label: '龙虾',
@@ -33,9 +38,11 @@ const TOP_TICKER_PRESET: TickerPreset[] = [
       return name.includes('龙虾') || name.includes('lobster') || symbol === 'lobster' || symbol === 'longxia' || symbol === 'lx'
     },
   },
-  { label: 'BTC', match: (item) => item.symbol.toLowerCase() === 'btc' || item.name.toLowerCase() === 'bitcoin' },
+  // BTC 位：优先 BTCB，其次 BTC，统一显示简称 BTC
+  { label: 'BTC', match: (item) => matchesSymbol(item, ['btcb', 'btc']) || item.name.toLowerCase() === 'bitcoin' },
   { label: 'ETH', match: (item) => item.symbol.toLowerCase() === 'eth' || item.name.toLowerCase() === 'ethereum' },
-  { label: 'BNB', match: (item) => item.symbol.toLowerCase() === 'bnb' || item.name.toLowerCase().includes('bnb') },
+  // BNB 位：优先 WBNB，其次 BNB，统一显示简称 BNB
+  { label: 'BNB', match: (item) => matchesSymbol(item, ['wbnb', 'bnb']) || item.name.toLowerCase().includes('bnb') },
 ]
 
 function hasTokenAvatar(image: string | undefined | null): boolean {
@@ -201,8 +208,23 @@ export function HomePage() {
   }, [systemConfig?.ui?.homeFilters])
 
   const topTicker = useMemo(() => {
+    const priority: Record<string, string[]> = {
+      BTC: ['btcb', 'btc'],
+      ETH: ['eth'],
+      BNB: ['wbnb', 'bnb'],
+    }
     return TOP_TICKER_PRESET.map((preset) => {
-      const matched = items.find((item) => preset.match(item))
+      const candidates = items.filter((item) => preset.match(item))
+      const prioritized = candidates.sort((a, b) => {
+        const p = priority[preset.label]
+        if (!p) return 0
+        const ai = p.indexOf(a.symbol.toLowerCase())
+        const bi = p.indexOf(b.symbol.toLowerCase())
+        const av = ai === -1 ? 999 : ai
+        const bv = bi === -1 ? 999 : bi
+        return av - bv
+      })
+      const matched = prioritized[0]
       return {
         label: preset.label,
         price: matched?.current_price,
