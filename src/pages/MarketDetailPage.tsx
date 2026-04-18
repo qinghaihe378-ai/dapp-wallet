@@ -543,7 +543,7 @@ export function MarketDetailPage() {
 
   return (
     <div className="page ave-page market-detail-page">
-      <section className="ave-detail-shell">
+      <section className="ave-detail-shell ave-detail-v2">
         <div className="ave-detail-topbar">
           <button
             type="button"
@@ -635,6 +635,24 @@ export function MarketDetailPage() {
             <div><span>24h成交量</span><strong>${formatWan(volume24hValue)}</strong></div>
             <div><span>24h持币数</span><strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong></div>
             <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
+          </div>
+        </div>
+        <div className="ave-detail-v2-data-cards">
+          <div className="ave-detail-v2-data-card">
+            <span>流通市值</span>
+            <strong>{formatCompact(detailVM.marketCap)}</strong>
+          </div>
+          <div className="ave-detail-v2-data-card">
+            <span>24h成交量</span>
+            <strong>{formatCompact(volume24hValue)}</strong>
+          </div>
+          <div className="ave-detail-v2-data-card">
+            <span>持币人数</span>
+            <strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong>
+          </div>
+          <div className="ave-detail-v2-data-card">
+            <span>24h交易数</span>
+            <strong>{formatInt(txns24hValue)}</strong>
           </div>
         </div>
 
@@ -776,7 +794,7 @@ export function MarketDetailPage() {
                 <p>代币详情</p>
                 <div className="detail-grid">
                   <div><span>名称</span><strong>{detailVM.name}</strong></div>
-                  <div><span>合约</span><strong>{dexTokenAddress ? `${dexTokenAddress.slice(0, 8)}...${dexTokenAddress.slice(-6)}` : '—'}</strong></div>
+                  <div className="ave-detail-v2-contract"><span>合约</span><strong>{dexTokenAddress ? `${dexTokenAddress.slice(0, 8)}...${dexTokenAddress.slice(-6)}` : '—'}</strong></div>
                   <div><span>总量</span><strong>{totalSupply ? Number.parseFloat(totalSupply).toLocaleString('en-US') : '—'}</strong></div>
                   <div><span>币种信息</span><strong>{coinTypeInfo ?? '—'}</strong></div>
                   <div className="detail-links">

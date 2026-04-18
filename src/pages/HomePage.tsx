@@ -68,6 +68,16 @@ export function HomePage() {
     // 热门：仅展示有头像（非空 image）的代币
     return baseFiltered.filter((item) => hasTokenAvatar(item.image))
   }, [activeSection, baseFiltered])
+  const movers = useMemo(() => {
+    const withChange = items.filter((item) => Number.isFinite(item.price_change_percentage_24h ?? NaN))
+    const gainers = [...withChange]
+      .sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
+      .slice(0, 5)
+    const losers = [...withChange]
+      .sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
+      .slice(0, 5)
+    return { gainers, losers }
+  }, [items])
 
   useEffect(() => {
     const load = async () => {
@@ -141,113 +151,89 @@ export function HomePage() {
   }, [config?.sections])
 
   return (
-    <div className="page ave-page ave-home-shell">
+    <div className="page ave-page ave-home-shell ave-home-v2">
       {config?.notice && (
         <div className="home-status-note">{config.notice}</div>
       )}
+      <div className="ave-home-v2-chain-switch">
+        <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
+      </div>
 
-      {sections.map((s) => {
-        if (s.id === 'banner') {
-          return (
-            <div key="banner" className="home-banner-panel">
-              <div className="home-banner-copy">
-                <div className="home-banner-title">{config?.title || 'ClawDEX'}</div>
-                <div className="home-banner-desc">{config?.subtitle || '合约直播 · 看见交易的另一种可能'}</div>
-                <div className="home-banner-metrics">
-                  <span>实时广播</span>
-                  <span>高手跟单</span>
+      <div className="ave-home-v2-nav">
+        <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>代币排行</button>
+        <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅榜</button>
+        <Link to="/new-tokens">新币</Link>
+        {lobsterLaunchUrl ? (
+          <a href={lobsterLaunchUrl} target="_blank" rel="noopener noreferrer">发射台</a>
+        ) : (
+          <Link to="/lobster">发射台</Link>
+        )}
+      </div>
+
+      <div className="home-market-panel">
+        <div className="home-panel-head">
+          <div className="home-panel-title">{activeSection === 'hot' ? '代币排行' : '涨幅排行'}</div>
+          <div className="home-panel-sub">
+            {activeSection === 'hot' ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示` : '24h 涨幅由高到低'}
+          </div>
+        </div>
+        <div className="home-token-feed">
+          {filteredItems.slice(0, 20).map((item) => (
+            <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
+              <div className="home-token-main">
+                <img src={item.image} alt="" className="home-token-icon" />
+                <div>
+                  <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
+                  <div className="home-token-sub">
+                    <span>{item.symbol.toUpperCase()}</span>
+                    <span className="home-token-sub-sep">/</span>
+                    <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
+                  </div>
                 </div>
               </div>
-              <div className="home-banner-live">LIVE</div>
-            </div>
-          )
-        }
-        if (s.id === 'tabs') {
-          return (
-            <div key="tabs" className="home-section-tabs">
-              <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
-              <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
-              <Link to="/new-tokens" className="ave-header-tab home-section-tab-link">新币</Link>
-              {lobsterLaunchUrl ? (
-                <a
-                  href={lobsterLaunchUrl}
-                  className="ave-header-tab home-section-tab-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  发射台
-                </a>
-              ) : (
-                <span className="home-lobster-tab-group">
-                  <Link to="/lobster" className="ave-header-tab home-section-tab-link">
-                    发射台
-                  </Link>
+              <div className="home-token-side">
+                <span className="home-token-price">
+                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
                 </span>
-              )}
-            </div>
-          )
-        }
-        if (s.id === 'market') {
-          return (
-            <div key="market" className="home-market-panel">
-              <div className="home-panel-head">
-                <div className="home-panel-title">
-                  {activeSection === 'hot' ? '热门列表' : '涨幅排行'}
-                </div>
-                <div className="home-panel-sub">
-                  {activeSection === 'hot' && (activeFilter === 'all' ? '全链热门' : `${activeFilter.toUpperCase()} 热门`)}
-                  {activeSection === 'gain' && '24h 涨幅高到低'}
-                </div>
+                <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                  {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
+                  {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                </span>
               </div>
+            </Link>
+          ))}
+        </div>
+      </div>
 
-              <div className="home-filter-strip">
-                <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
-                <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
-                <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
-                <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
-                <span className="home-filter-caption">价格</span>
-                <span className="home-filter-caption">涨幅</span>
-              </div>
+      <div className="ave-home-v2-movers">
+        <div className="ave-home-v2-movers-card">
+          <div className="ave-home-v2-movers-title">涨幅榜 Top5</div>
+          {movers.gainers.map((item) => (
+            <Link key={`g-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="ave-home-v2-mover-row">
+              <span>{item.symbol.toUpperCase()}</span>
+              <span className="up">+{(item.price_change_percentage_24h ?? 0).toFixed(2)}%</span>
+            </Link>
+          ))}
+        </div>
+        <div className="ave-home-v2-movers-card">
+          <div className="ave-home-v2-movers-title">跌幅榜 Top5</div>
+          {movers.losers.map((item) => (
+            <Link key={`l-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="ave-home-v2-mover-row">
+              <span>{item.symbol.toUpperCase()}</span>
+              <span className="down">{(item.price_change_percentage_24h ?? 0).toFixed(2)}%</span>
+            </Link>
+          ))}
+        </div>
+      </div>
 
-              <div className="home-token-feed">
-                {filteredItems.map((item) => (
-                  <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
-                    <div className="home-token-main">
-                      <img src={item.image} alt="" className="home-token-icon" />
-                      <div>
-                        <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
-                        <div className="home-token-sub">
-                          <span>{item.symbol.toUpperCase()}</span>
-                          <span className="home-token-sub-sep">/</span>
-                          <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="home-token-side">
-                      <span className="home-token-price">
-                        ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
-                      </span>
-                      <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
-                        {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
-                        {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )
-        }
-        if (s.id === 'quickNote') {
-          if (!(activeQuickAction === 'receive' || activeQuickAction === 'invite')) return null
-          return (
-            <div key="quickNote" className="home-status-note">
-              {activeQuickAction === 'receive' ? '收款二维码已就绪' : '邀请奖励入口已激活'}
-            </div>
-          )
-        }
-        return null
-      })}
+      {sections.some((s) => s.id === 'quickNote') && (activeQuickAction === 'receive' || activeQuickAction === 'invite') && (
+        <div className="home-status-note">
+          {activeQuickAction === 'receive' ? '收款二维码已就绪' : '邀请奖励入口已激活'}
+        </div>
+      )}
     </div>
   )
 }

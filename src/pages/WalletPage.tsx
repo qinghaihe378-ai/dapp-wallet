@@ -358,8 +358,8 @@ export function WalletPage() {
   ]
 
   return (
-    <div className="page ave-page ave-wallet-shell-page">
-      <div className="wallet-unified-card">
+    <div className="page ave-page ave-wallet-shell-page ave-wallet-v2">
+      <div className="wallet-unified-card ave-wallet-v2-card">
       <div className="wallet-hero-card">
         <div className="wallet-balance-block">
           <div className="wallet-balance-label">总资产</div>
@@ -422,7 +422,7 @@ export function WalletPage() {
         {panelNotice && <div className="wallet-inline-notice">{panelNotice}</div>}
       </div>
 
-      <div className="wallet-assets-section">
+      <div className="wallet-assets-section ave-wallet-v2-assets">
         <div className="wallet-assets-header">
           <span className="wallet-assets-title">资产</span>
           <div className="wallet-assets-actions">
@@ -439,7 +439,7 @@ export function WalletPage() {
           </div>
         </div>
 
-      <div className="wallet-token-feed">
+      <div className="wallet-token-feed ave-wallet-v2-token-feed">
         {filteredRows.map((item) => (
           <div key={item.symbol}>
             <button type="button" className="wallet-token-row" onClick={() => setActiveRowSymbol(item.symbol)}>

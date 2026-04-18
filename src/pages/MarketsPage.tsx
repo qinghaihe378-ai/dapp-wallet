@@ -173,20 +173,20 @@ export function MarketsPage() {
   }, [config?.sections])
 
   return (
-    <div className="page ave-page ave-market-shell">
-      <div className="market-panel">
+    <div className="page ave-page ave-market-shell ave-markets-v2">
+      <div className="market-panel ave-markets-v2-panel">
         {config?.notice && <div className="market-api-hint">{config.notice}</div>}
 
         {sections.map((s) => {
           if (s.id === 'controls') {
             return (
-              <div key="controls">
-                <div className="market-sort-row">
+              <div key="controls" className="ave-markets-v2-controls">
+                <div className="market-sort-row ave-markets-v2-sort-row">
                   <button type="button" className={sortBy === 'default' ? 'active' : ''} onClick={() => setSortBy('default')}>默认</button>
                   <button type="button" className={sortBy === 'change' ? 'active' : ''} onClick={() => setSortBy('change')}>涨幅</button>
                   <button type="button" className={sortBy === 'price' ? 'active' : ''} onClick={() => setSortBy('price')}>价格</button>
                 </div>
-                <div className="market-chain-row">
+                <div className="market-chain-row ave-markets-v2-chain-row">
                   {CHAIN_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -207,11 +207,12 @@ export function MarketsPage() {
 
           if (s.id === 'table') {
             return (
-              <div key="table">
-                <div className="market-table-head">
-                  <span>币种 / 池子</span>
+              <div key="table" className="ave-markets-v2-table-wrap">
+                <div className="market-table-head ave-markets-v2-table-head">
+                  <span>#</span>
+                  <span>代币</span>
                   <span>价格</span>
-                  <span>24h涨跌幅</span>
+                  <span>24h</span>
                 </div>
 
                 {(loading || addressSearchLoading) && <p className="ave-loading">加载中…</p>}
@@ -229,11 +230,12 @@ export function MarketsPage() {
 
           if (s.id === 'list') {
             return (
-              <div key="list" className="market-watch-list">
-                {rows.map((item) => {
+              <div key="list" className="market-watch-list ave-markets-v2-list">
+                {rows.map((item, idx) => {
                   const isDexToken = item.id.includes(':')
                   const innerLink = (
                     <>
+                      <div className="ave-markets-v2-rank">{idx + 1}</div>
                       <div className="market-watch-main">
                         <img src={item.image} alt="" className="market-watch-icon" />
                         <div>

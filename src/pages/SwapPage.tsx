@@ -1049,18 +1049,18 @@ export function SwapPage() {
   }
 
   return (
-    <div className="page ave-page ave-swap-shell">
+    <div className="page ave-page ave-swap-shell ave-swap-v2">
       {config?.notice && (
         <div className="home-status-note" style={{ marginBottom: 12 }}>
           {config.notice}
         </div>
       )}
-      <div className="swap-mode-segment">
+      <div className="swap-mode-segment ave-swap-v2-mode">
         <button type="button" className="active">兑换&跨链</button>
         <button type="button">池子</button>
       </div>
 
-      <div className="swap-white-panel">
+      <div className="swap-white-panel ave-swap-v2-panel">
         <div className="swap-lite-card swap-lite-card-top">
           <div className="swap-lite-label-row">
             <span>从</span>
@@ -1215,7 +1215,7 @@ export function SwapPage() {
         </button>
       </div>
 
-      <div className="swap-history-block">
+      <div className="swap-history-block ave-swap-v2-history">
         <div className="swap-history-head">
           <div className="swap-history-title">兑换历史</div>
           {hasPendingHistory && <div className="swap-history-live">链上确认中</div>}
