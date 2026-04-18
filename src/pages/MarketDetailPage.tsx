@@ -49,6 +49,14 @@ const formatWan = (value: number) => {
   return value.toFixed(0)
 }
 
+const chainToHoneypotId: Record<string, number> = {
+  eth: 1,
+  bsc: 56,
+  polygon: 137,
+  base: 8453,
+  avax: 43114,
+}
+
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
@@ -64,6 +72,8 @@ export function MarketDetailPage() {
   const [toolMode, setToolMode] = useState<'1s' | 'user' | 'global' | 'search'>('1s')
   const [isFavorite, setIsFavorite] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [buyTax, setBuyTax] = useState<number | null>(null)
+  const [sellTax, setSellTax] = useState<number | null>(null)
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -219,6 +229,56 @@ export function MarketDetailPage() {
     void loadPair()
     return () => { cancelled = true }
   }, [dexScreenerChainId, dexTokenAddress])
+
+  useEffect(() => {
+    const chain = dexItem?.chain
+    const address = dexTokenAddress
+    if (!chain || !address) {
+      setBuyTax(null)
+      setSellTax(null)
+      return
+    }
+    const chainId = chainToHoneypotId[chain]
+    if (!chainId) {
+      setBuyTax(null)
+      setSellTax(null)
+      return
+    }
+    let cancelled = false
+    const loadTax = async () => {
+      try {
+        const res = await fetch(
+          `https://api.honeypot.is/v2/IsHoneypot?address=${encodeURIComponent(address)}&chainID=${chainId}`,
+        )
+        if (!res.ok) throw new Error('honeypot api failed')
+        const json = (await res.json()) as {
+          simulationResult?: { buyTax?: number; sellTax?: number }
+          token?: { buyTax?: number; sellTax?: number }
+        }
+        if (cancelled) return
+        const b = json?.simulationResult?.buyTax ?? json?.token?.buyTax
+        const s = json?.simulationResult?.sellTax ?? json?.token?.sellTax
+        setBuyTax(Number.isFinite(b as number) ? Number(b) : null)
+        setSellTax(Number.isFinite(s as number) ? Number(s) : null)
+      } catch {
+        if (cancelled) return
+        setBuyTax(null)
+        setSellTax(null)
+      }
+    }
+    void loadTax()
+    return () => { cancelled = true }
+  }, [dexItem?.chain, dexTokenAddress])
+
+  const buyTaxLabel = useMemo(() => {
+    if (buyTax == null || buyTax <= 0) return '无税'
+    return `税${buyTax.toFixed(2).replace(/\.00$/, '')}%`
+  }, [buyTax])
+
+  const sellTaxLabel = useMemo(() => {
+    if (sellTax == null || sellTax <= 0) return '无税'
+    return `税${sellTax.toFixed(2).replace(/\.00$/, '')}%`
+  }, [sellTax])
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -444,8 +504,8 @@ export function MarketDetailPage() {
 
         <div className="ave-detail-bottom-cta">
           <button type="button" className="dapp" onClick={() => navigate('/bot')}>DApp</button>
-          <Link to={quickTradeTargets.buy} className="buy">买入<div>税3%</div></Link>
-          <Link to={quickTradeTargets.sell} className="sell">卖出<div>税3%</div></Link>
+          <Link to={quickTradeTargets.buy} className="buy">买入<div>{buyTaxLabel}</div></Link>
+          <Link to={quickTradeTargets.sell} className="sell">卖出<div>{sellTaxLabel}</div></Link>
         </div>
       </section>
     </div>
