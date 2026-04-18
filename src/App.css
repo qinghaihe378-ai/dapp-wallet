@@ -7372,6 +7372,139 @@ button:disabled,
   padding: 12px 0;
 }
 
+/* ===== Ave V2 Tightening ===== */
+.ave-markets-v2 .market-panel {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.ave-markets-v2 .market-sort-row button,
+.ave-markets-v2 .market-chain-pill {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid #1f2937;
+  color: #9ca3af;
+}
+
+.ave-markets-v2 .market-sort-row .active,
+.ave-markets-v2 .market-chain-pill.active {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.5);
+  color: #dbeafe;
+}
+
+.ave-markets-v2 .market-table-head {
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+  padding-bottom: 10px;
+}
+
+.ave-markets-v2 .market-watch-row {
+  background: rgba(17, 24, 39, 0.78);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 10px 10px;
+}
+
+.ave-markets-v2 .market-watch-row-wrap {
+  margin-top: 6px;
+}
+
+.ave-markets-v2 .market-watch-fav {
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid #1f2937;
+}
+
+.ave-detail-v2,
+.ave-detail-v2.ave-detail-shell {
+  background: #111827;
+}
+
+.ave-detail-v2 .ave-detail-topbar,
+.ave-detail-v2 .ave-detail-bottom-cta {
+  background: #111827;
+}
+
+.ave-detail-v2 .ave-detail-big-price {
+  font-size: 56px;
+}
+
+.ave-detail-v2 .ave-detail-price-panel,
+.ave-detail-v2 .ave-detail-v2-data-card,
+.ave-detail-v2 .ave-detail-liquidity-card,
+.ave-detail-v2 .ave-detail-panel-placeholder {
+  border-color: #1f2937;
+  background: rgba(17, 24, 39, 0.78);
+}
+
+.ave-detail-v2 .ave-detail-main-tabs button,
+.ave-detail-v2 .ave-detail-subtabs button {
+  font-size: 14px;
+}
+
+.ave-detail-v2 .ave-detail-chart-card .ave-kline-container {
+  height: 360px;
+}
+
+.ave-swap-v2 .swap-mode-segment,
+.ave-swap-v2 .swap-white-panel,
+.ave-swap-v2 .swap-lite-card,
+.ave-swap-v2 .swap-history-card,
+.ave-swap-v2 .swap-risk-note {
+  background: rgba(17, 24, 39, 0.84);
+  border-color: #1f2937;
+  box-shadow: none;
+}
+
+.ave-swap-v2 .swap-mode-segment .active {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(37, 99, 235, 0.5);
+  color: #dbeafe;
+}
+
+.ave-swap-v2 .swap-one-click-btn,
+.ave-swap-v2 .swap-one-click-btn-danger,
+.ave-swap-v2 .swap-one-click-btn-warn {
+  background: #2563eb;
+  box-shadow: none;
+}
+
+.ave-wallet-v2 .wallet-unified-card,
+.ave-wallet-v2 .wallet-hero-card,
+.ave-wallet-v2 .wallet-assets-section {
+  background: #111827;
+}
+
+.ave-wallet-v2 .wallet-hero-card,
+.ave-wallet-v2 .wallet-token-row {
+  border-color: #1f2937;
+}
+
+.ave-wallet-v2 .wallet-address-btn {
+  background: rgba(17, 24, 39, 0.9);
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+.ave-wallet-v2 .wallet-quick-icon {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid #1f2937;
+}
+
+.ave-wallet-v2 .wallet-quick-icon svg {
+  stroke: #93c5fd;
+}
+
+.ave-wallet-v2 .wallet-detail-card {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid #1f2937;
+}
+
+.ave-wallet-v2 .wallet-detail-title,
+.ave-wallet-v2 .wallet-detail-amount {
+  color: #f3f4f6;
+}
+
 @media (max-width: 420px) {
   .ave-home-v2-movers {
     grid-template-columns: 1fr;
