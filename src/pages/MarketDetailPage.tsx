@@ -271,12 +271,12 @@ export function MarketDetailPage() {
   }, [dexItem?.chain, dexTokenAddress])
 
   const buyTaxLabel = useMemo(() => {
-    if (buyTax == null || buyTax <= 0) return '无税'
+    if (buyTax == null || buyTax <= 0) return null
     return `税${buyTax.toFixed(2).replace(/\.00$/, '')}%`
   }, [buyTax])
 
   const sellTaxLabel = useMemo(() => {
-    if (sellTax == null || sellTax <= 0) return '无税'
+    if (sellTax == null || sellTax <= 0) return null
     return `税${sellTax.toFixed(2).replace(/\.00$/, '')}%`
   }, [sellTax])
 
@@ -504,8 +504,8 @@ export function MarketDetailPage() {
 
         <div className="ave-detail-bottom-cta">
           <button type="button" className="dapp" onClick={() => navigate('/bot')}>DApp</button>
-          <Link to={quickTradeTargets.buy} className="buy">买入<div>{buyTaxLabel}</div></Link>
-          <Link to={quickTradeTargets.sell} className="sell">卖出<div>{sellTaxLabel}</div></Link>
+          <Link to={quickTradeTargets.buy} className="buy">买入{buyTaxLabel && <div>{buyTaxLabel}</div>}</Link>
+          <Link to={quickTradeTargets.sell} className="sell">卖出{sellTaxLabel && <div>{sellTaxLabel}</div>}</Link>
         </div>
       </section>
     </div>
