@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
@@ -85,7 +85,6 @@ const DEX_ICON_MAP: Record<string, string> = {
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const [detail, setDetail] = useState<CoinDetail | null>(null)
   const [dexItem, setDexItem] = useState<MarketItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,7 +131,6 @@ export function MarketDetailPage() {
     if (!dexItem?.id) return null
     return dexItem.id.split(':')[1] ?? null
   }, [dexItem?.id])
-  const preferredPoolAddress = useMemo(() => searchParams.get('pool')?.trim().toLowerCase() ?? '', [searchParams])
 
   const detailPlatformAddress = useMemo(() => {
     if (!detail?.platforms) return null
@@ -288,10 +286,7 @@ export function MarketDetailPage() {
             volume24h: Number(p.volume?.h24 ?? 0) || 0,
           }))
           .sort((a, b) => b.liquidityUsd - a.liquidityUsd)
-        const preferred = preferredPoolAddress
-          ? list.find((p) => p.pairAddress.toLowerCase() === preferredPoolAddress)?.pairAddress ?? null
-          : null
-        const pair = preferred ?? list[0]?.pairAddress ?? null
+        const pair = list[0]?.pairAddress ?? null
         if (cancelled) return
         setTokenPools(list)
         setDexPairAddress(pair)
@@ -302,7 +297,7 @@ export function MarketDetailPage() {
 
     void loadPair()
     return () => { cancelled = true }
-  }, [dexScreenerChainId, dexTokenAddress, detailVM?.symbol, preferredPoolAddress])
+  }, [dexScreenerChainId, dexTokenAddress, detailVM?.symbol])
 
   useEffect(() => {
     if (!dexScreenerChainId || !dexPairAddress) {
@@ -789,19 +784,6 @@ export function MarketDetailPage() {
                               onClick={() => {
                                 setDexPairAddress(pool.pairAddress)
                                 setPairDexId(pool.dexId)
-                                setMainTab('market')
-                                setSubTab('trade')
-                                setSearchParams((prev) => {
-                                  const next = new URLSearchParams(prev)
-                                  next.set('pool', pool.pairAddress)
-                                  return next
-                                })
-                                if (typeof document !== 'undefined') {
-                                  document.querySelector('.ave-detail-chart-card')?.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start',
-                                  })
-                                }
                               }}
                               title="站内打开该池子"
                             >
