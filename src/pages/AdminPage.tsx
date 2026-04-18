@@ -469,6 +469,8 @@ export function AdminPage() {
   }
 
   const sections = normalizeSections(config.sections, defaults)
+  const currentPageLabel = PAGES.find((p) => p.id === pageId)?.label ?? pageId
+  const enabledSectionsCount = sections.filter((s) => s.enabled).length
 
   return (
     <div className="page ave-page admin-page">
@@ -476,6 +478,21 @@ export function AdminPage() {
         <aside className="card admin-sidebar">
           <div className="admin-sidebar-title">后台控制台</div>
           <div className="admin-sidebar-sub">常用操作与全站配置入口</div>
+          <div className="admin-menu-group">
+            <div className="admin-menu-title">页面管理</div>
+            <div className="admin-page-menu">
+              {PAGES.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`admin-page-menu-item ${pageId === p.id ? 'active' : ''}`}
+                  onClick={() => setPageId(p.id)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <label style={{ display: 'grid', gap: 6, marginTop: 12 }}>
             <span className="tip">当前页面</span>
             <select
@@ -509,11 +526,27 @@ export function AdminPage() {
         </aside>
 
         <div className="card admin-main-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0 }}>后台管理</h2>
-            <div className="tip" style={{ marginTop: 6 }}>
-              {config.updatedAt ? `上次保存：${new Date(config.updatedAt).toLocaleString('zh-CN')}` : '尚未保存过配置'}
+          <div className="admin-main-top">
+            <div>
+              <div className="admin-breadcrumb">控制台 / 页面管理 / {currentPageLabel}</div>
+              <h2 style={{ margin: '6px 0 0' }}>后台管理</h2>
+              <div className="tip" style={{ marginTop: 6 }}>
+                {config.updatedAt ? `上次保存：${new Date(config.updatedAt).toLocaleString('zh-CN')}` : '尚未保存过配置'}
+              </div>
+            </div>
+            <div className="admin-metric-grid">
+              <div className="admin-metric-card">
+                <div className="admin-metric-label">当前页面</div>
+                <div className="admin-metric-value">{currentPageLabel}</div>
+              </div>
+              <div className="admin-metric-card">
+                <div className="admin-metric-label">模块启用数</div>
+                <div className="admin-metric-value">{enabledSectionsCount}</div>
+              </div>
+              <div className="admin-metric-card">
+                <div className="admin-metric-label">热门代币数</div>
+                <div className="admin-metric-value">{manualHotRows.length}</div>
+              </div>
             </div>
           </div>
           {(error || success) && (
@@ -521,10 +554,6 @@ export function AdminPage() {
               {error ?? success}
             </div>
           )}
-          <button type="button" className="btn-ghost" onClick={() => void onLogout()}>
-            退出登录
-          </button>
-        </div>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
           <label style={{ display: 'grid', gap: 6 }}>
