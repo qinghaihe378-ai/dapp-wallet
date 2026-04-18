@@ -823,8 +823,8 @@ export function MarketDetailPage() {
                             >
                               <span className="ave-pool-pair-cell">{`${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
                               <span className="ave-pool-amount-cell">
-                                <span>{`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}</span>
                                 <span>{`${formatTokenAmount(pool.baseAmount)} ${pool.baseSymbol}`}</span>
+                                <span>{`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}</span>
                               </span>
                               <span className="ave-pool-dex-cell">
                                 <span className="ave-pool-dex-badge">
