@@ -327,6 +327,9 @@ type BinanceAlphaToken = {
   name?: string
   symbol?: string
   iconUrl?: string
+  logoUrl?: string
+  tokenIconUrl?: string
+  chainIconUrl?: string
   price?: string
   percentChange24h?: string
   marketCap?: string
@@ -367,11 +370,16 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
     if (!Number.isFinite(price) || price <= 0) continue
     const marketCap = Number(token.marketCap ?? 0)
     const p24 = Number(token.percentChange24h ?? 0)
+    const icon =
+      String(token.iconUrl ?? '').trim() ||
+      String(token.tokenIconUrl ?? '').trim() ||
+      String(token.logoUrl ?? '').trim() ||
+      String(token.chainIconUrl ?? '').trim()
     out.push({
       id: `${chain}:${address}`,
       symbol,
       name,
-      image: String(token.iconUrl ?? '').trim(),
+      image: icon,
       current_price: price,
       price_change_percentage_24h: Number.isFinite(p24) ? p24 : null,
       market_cap: Number.isFinite(marketCap) ? marketCap : 0,
@@ -379,6 +387,23 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
       coingeckoId: undefined,
     })
   }
+  // Alpha 少量代币会缺 iconUrl，回退到 Dex 按合约自动补头像
+  const missingImage = out.filter((it) => !it.image).slice(0, 120)
+  await Promise.all(
+    missingImage.map(async (it) => {
+      try {
+        const addr = dexMarketIdToTokenAddress(it.id)
+        if (!addr.startsWith('0x')) return
+        const rows = await searchByAddressOrQuery(addr, { allowZeroPrice: true })
+        const hit =
+          rows.find((x) => x.chain === it.chain && dexMarketIdToTokenAddress(x.id) === addr) ??
+          rows.find((x) => dexMarketIdToTokenAddress(x.id) === addr)
+        if (hit?.image) it.image = hit.image
+      } catch {
+        // ignore single token fallback error
+      }
+    }),
+  )
   return out
     .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
     .slice(0, limit)
