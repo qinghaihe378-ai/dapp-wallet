@@ -7505,6 +7505,183 @@ button:disabled,
   color: #f3f4f6;
 }
 
+/* ===== Global Ave Hard Match ===== */
+.ave-page {
+  color: #f3f4f6;
+}
+
+.ave-home-v2 .home-market-panel {
+  margin-top: 10px;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid #1f2937;
+  box-shadow: none;
+}
+
+.ave-home-v2 .home-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f3f4f6;
+}
+
+.ave-home-v2 .home-panel-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ave-home-v2 .home-token-row {
+  border-radius: 8px;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  background: rgba(17, 24, 39, 0.9);
+  padding: 9px 10px;
+}
+
+.ave-home-v2 .home-token-name {
+  font-size: 12px;
+}
+
+.ave-home-v2 .home-token-sub {
+  font-size: 10px;
+}
+
+.ave-home-v2 .home-token-price {
+  font-size: 12px;
+}
+
+.ave-home-v2 .home-token-badge {
+  min-width: 68px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.ave-home-v2 .home-token-badge.up {
+  background: rgba(22, 163, 74, 0.24);
+  color: #86efac;
+}
+
+.ave-home-v2 .home-token-badge.down {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+}
+
+.ave-home-v2-nav {
+  border-bottom-color: rgba(31, 41, 55, 0.9);
+}
+
+.ave-home-v2-nav .active {
+  color: #dbeafe;
+}
+
+.ave-home-v2-chain-switch .home-filter-pill {
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid #1f2937;
+  color: #94a3b8;
+}
+
+.ave-home-v2-chain-switch .home-filter-pill.active {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.45);
+  color: #dbeafe;
+}
+
+.ave-wallet-v2 .wallet-unified-card {
+  padding: 0;
+}
+
+.ave-wallet-v2 .wallet-hero-card {
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.82);
+  padding: 16px 14px 14px;
+}
+
+.ave-wallet-v2 .wallet-assets-section {
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.82);
+  padding: 0 12px 12px;
+}
+
+.ave-wallet-v2 .wallet-assets-header {
+  padding-top: 12px;
+  margin-bottom: 8px;
+}
+
+.ave-wallet-v2 .wallet-assets-title {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.ave-wallet-v2 .wallet-search-input,
+.ave-wallet-v2 .wallet-filter-btn {
+  border-color: #1f2937;
+  background: rgba(17, 24, 39, 0.9);
+}
+
+.ave-wallet-v2 .wallet-token-row {
+  border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+  padding: 10px 0;
+}
+
+.ave-wallet-v2 .wallet-token-row:hover {
+  background: rgba(31, 41, 55, 0.25);
+}
+
+.ave-wallet-v2 .wallet-token-name {
+  font-size: 12px;
+}
+
+.ave-wallet-v2 .wallet-token-sub {
+  font-size: 10px;
+}
+
+.ave-wallet-v2 .wallet-token-amount {
+  font-size: 12px;
+}
+
+.ave-wallet-v2 .wallet-token-side-sub {
+  font-size: 10px;
+}
+
+.ave-wallet-v2 .wallet-inline-notice {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #bfdbfe;
+}
+
+.ave-wallet-v2 .wallet-action-sheet {
+  background: #111827;
+  border: 1px solid #1f2937;
+  box-shadow: none;
+}
+
+.ave-wallet-v2 .wallet-action-sheet-title {
+  color: #f3f4f6;
+}
+
+.ave-wallet-v2 .wallet-action-sheet-sub {
+  color: #94a3b8;
+}
+
+.ave-wallet-v2 .wallet-send-input,
+.ave-wallet-v2 .wallet-send-token-select {
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.9);
+}
+
+.ave-wallet-v2 .wallet-send-submit,
+.ave-wallet-v2 .wallet-receive-copy-btn {
+  background: #2563eb;
+}
+
+.ave-wallet-v2 .wallet-send-submit:hover:not(:disabled),
+.ave-wallet-v2 .wallet-receive-copy-btn:hover {
+  background: #1d4ed8;
+}
+
 @media (max-width: 420px) {
   .ave-home-v2-movers {
     grid-template-columns: 1fr;
