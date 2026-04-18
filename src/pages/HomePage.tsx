@@ -14,6 +14,7 @@ interface HomeItem {
   current_price: number
   price_change_percentage_24h: number | null
   market_cap: number
+  volume_24h?: number
   chain?: string
 }
 
@@ -126,7 +127,7 @@ export function HomePage() {
     }
     if (activeSection === 'alpha') {
       return next
-        .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+        .sort((a, b) => (b.volume_24h ?? 0) - (a.volume_24h ?? 0))
         .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
     // 热门：仅展示有头像（非空 image）的代币
@@ -141,7 +142,13 @@ export function HomePage() {
         if (!res.ok) throw new Error('加载行情失败')
         const json = (await res.json()) as { items?: HomeItem[] }
         const data = json.items ?? []
-        setItems(data.map((item) => ({ ...item, market_cap: (item as any).market_cap ?? 0 })))
+        setItems(
+          data.map((item) => ({
+            ...item,
+            market_cap: (item as any).market_cap ?? 0,
+            volume_24h: (item as any).volume_24h ?? 0,
+          })),
+        )
       } catch (e) {
         console.error(e)
       }
@@ -300,7 +307,7 @@ export function HomePage() {
           </div>
           <div className="home-panel-sub">
             {activeSection === 'alpha'
-              ? `自动拉取币安 Alpha，按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
+              ? `自动拉取币安 Alpha，按 24h 交易量从高到低（${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()}）`
               : activeSection === 'hot'
               ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
               : activeSection === 'gain'
@@ -339,7 +346,11 @@ export function HomePage() {
                   <div className="home-token-sub">
                     <span>{item.symbol.toUpperCase()}</span>
                     <span className="home-token-sub-sep">/</span>
-                    <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
+                    <span>
+                      {activeSection === 'alpha'
+                        ? `Vol $${((item.volume_24h ?? 0) / 1e6).toFixed(2)}M`
+                        : `$${(item.market_cap / 1e6).toFixed(2)}M`}
+                    </span>
                   </div>
                 </div>
               </div>

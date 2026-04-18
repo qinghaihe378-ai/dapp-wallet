@@ -332,6 +332,7 @@ type BinanceAlphaToken = {
   chainIconUrl?: string
   price?: string
   percentChange24h?: string
+  volume24h?: string
   marketCap?: string
 }
 
@@ -369,6 +370,7 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
     const price = Number(token.price ?? 0)
     if (!Number.isFinite(price) || price <= 0) continue
     const marketCap = Number(token.marketCap ?? 0)
+    const volume24h = Number(token.volume24h ?? 0)
     const p24 = Number(token.percentChange24h ?? 0)
     const icon =
       String(token.iconUrl ?? '').trim() ||
@@ -383,6 +385,7 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
       current_price: price,
       price_change_percentage_24h: Number.isFinite(p24) ? p24 : null,
       market_cap: Number.isFinite(marketCap) ? marketCap : 0,
+      volume_24h: Number.isFinite(volume24h) ? volume24h : 0,
       chain,
       coingeckoId: undefined,
     })
@@ -405,7 +408,7 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
     }),
   )
   return out
-    .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+    .sort((a, b) => (b.volume_24h ?? 0) - (a.volume_24h ?? 0))
     .slice(0, limit)
 }
 

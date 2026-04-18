@@ -24,6 +24,7 @@ export interface MarketItem {
   current_price: number
   price_change_percentage_24h: number | null
   market_cap?: number
+  volume_24h?: number
   chain: ChainId
   /** CoinGecko 兼容 id，用于详情页 */
   coingeckoId?: string
