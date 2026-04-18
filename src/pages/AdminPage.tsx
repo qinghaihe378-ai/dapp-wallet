@@ -205,6 +205,7 @@ export function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [config, setConfig] = useState<PageConfig>({ title: '', subtitle: '', notice: '', sections: [] })
   const [manualHotRows, setManualHotRows] = useState<ManualHotToken[]>([])
   const [showManualJson, setShowManualJson] = useState(false)
@@ -283,6 +284,7 @@ export function AdminPage() {
     try {
       setTokenLibrarySaving(true)
       setError(null)
+      setSuccess(null)
       const rows = tokenLibraryRows
         .map((row) => ({
           ...row,
@@ -303,6 +305,7 @@ export function AdminPage() {
         .filter((row) => row.id && row.symbol && row.image)
       const res = await setAdminTokenLibrary(rows)
       setTokenLibraryRows(res.items ?? [])
+      setSuccess('代币库保存成功')
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存代币库失败')
     } finally {
@@ -314,6 +317,7 @@ export function AdminPage() {
     try {
       setApiConfigSaving(true)
       setError(null)
+      setSuccess(null)
       const next: ApiSystemConfig = {
         market: {
           cacheTtlSeconds: Number(apiConfig.market?.cacheTtlSeconds ?? 12) || 12,
@@ -367,6 +371,7 @@ export function AdminPage() {
       }
       const res = await setAdminSystemConfig(next)
       setApiConfig(res.config ?? next)
+      setSuccess('API 配置保存成功')
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存 API 配置失败')
     } finally {
@@ -378,6 +383,7 @@ export function AdminPage() {
     try {
       setSaving(true)
       setError(null)
+      setSuccess(null)
       const sections = normalizeSections(config.sections, defaults)
       let manualHotTokens: ManualHotToken[] | undefined
       if (pageId === 'home') {
@@ -430,6 +436,7 @@ export function AdminPage() {
       const mh = c.manualHotTokens ?? []
       setManualHotRows(Array.isArray(mh) ? mh : [])
       setManualJsonDraft(JSON.stringify(Array.isArray(mh) ? mh : [], null, 2))
+      setSuccess('页面配置保存成功')
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存失败')
     } finally {
@@ -473,6 +480,11 @@ export function AdminPage() {
               {config.updatedAt ? `上次保存：${new Date(config.updatedAt).toLocaleString('zh-CN')}` : '尚未保存过配置'}
             </div>
           </div>
+          {(error || success) && (
+            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10, border: `1px solid ${error ? 'rgba(239,68,68,.5)' : 'rgba(34,197,94,.5)'}`, color: error ? '#fca5a5' : '#86efac', background: error ? 'rgba(127,29,29,.18)' : 'rgba(20,83,45,.18)' }}>
+              {error ?? success}
+            </div>
+          )}
           <button type="button" className="btn-ghost" onClick={() => void onLogout()}>
             退出登录
           </button>
@@ -977,11 +989,9 @@ export function AdminPage() {
               {loading ? '加载中…' : '重新加载'}
             </button>
             <button type="button" className="btn-primary" disabled={saving} onClick={() => void onSave()}>
-              {saving ? '保存中…' : '保存配置'}
+              {saving ? '保存中…' : '保存页面配置'}
             </button>
           </div>
-
-          {error && <p className="error">{error}</p>}
         </div>
       </div>
     </div>
