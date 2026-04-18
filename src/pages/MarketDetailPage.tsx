@@ -631,14 +631,6 @@ export function MarketDetailPage() {
               <button type="button" className={toolMode === 'search' ? 'active' : ''} onClick={() => setToolMode('search')}>🔍</button>
             </div>
 
-            <div className="ave-detail-metric-strip">
-              <span>{detailVM.symbol}</span>
-              <span>WBNB</span>
-              <span>LP人数 {holderCountValue ? formatInt(holderCountValue) : '—'}</span>
-              <span>锁仓 98.09%</span>
-              <span>风险 55</span>
-            </div>
-
             <div className="ave-detail-period-row">
               <div className="ave-detail-period-tabs">
                 {[
@@ -730,13 +722,6 @@ export function MarketDetailPage() {
               {(['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ', 'RSI'] as const).map((it) => (
                 <button key={it} type="button" className={it === indicator ? 'active' : ''} onClick={() => setIndicator(it)}>{it}</button>
               ))}
-            </div>
-            <div className="ave-detail-metric-strip ave-detail-metric-strip-plain">
-              <span>{detailVM.symbol}</span>
-              <span>WBNB</span>
-              <span>LP人数 {holderCountValue ? formatInt(holderCountValue) : '—'}</span>
-              <span>锁仓 98.09%</span>
-              <span>风险 55</span>
             </div>
             {mainTab === 'holders' && (
               <div className="ave-detail-panel-placeholder holders-panel">
