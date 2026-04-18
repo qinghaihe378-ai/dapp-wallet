@@ -74,6 +74,8 @@ export function MarketDetailPage() {
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [buyTax, setBuyTax] = useState<number | null>(null)
   const [sellTax, setSellTax] = useState<number | null>(null)
+  const [pairVolume24h, setPairVolume24h] = useState<number | null>(null)
+  const [pairTxns24h, setPairTxns24h] = useState<number | null>(null)
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -231,6 +233,40 @@ export function MarketDetailPage() {
   }, [dexScreenerChainId, dexTokenAddress])
 
   useEffect(() => {
+    if (!dexScreenerChainId || !dexPairAddress) {
+      setPairVolume24h(null)
+      setPairTxns24h(null)
+      return
+    }
+    let cancelled = false
+    const loadPairStats = async () => {
+      try {
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/pairs/${dexScreenerChainId}/${dexPairAddress}`)
+        if (!res.ok) return
+        const json = (await res.json()) as {
+          pairs?: Array<{
+            volume?: { h24?: number }
+            txns?: { h24?: { buys?: number; sells?: number } }
+          }>
+        }
+        const p = json?.pairs?.[0]
+        if (!p || cancelled) return
+        const volume = p.volume?.h24
+        const buys = p.txns?.h24?.buys ?? 0
+        const sells = p.txns?.h24?.sells ?? 0
+        setPairVolume24h(Number.isFinite(volume as number) ? Number(volume) : null)
+        setPairTxns24h(Number.isFinite(buys + sells) ? buys + sells : null)
+      } catch {
+        if (cancelled) return
+        setPairVolume24h(null)
+        setPairTxns24h(null)
+      }
+    }
+    void loadPairStats()
+    return () => { cancelled = true }
+  }, [dexScreenerChainId, dexPairAddress])
+
+  useEffect(() => {
     const chain = dexItem?.chain
     const address = dexTokenAddress
     if (!chain || !address) {
@@ -279,6 +315,9 @@ export function MarketDetailPage() {
     if (sellTax == null || sellTax <= 0) return null
     return `税${sellTax.toFixed(2).replace(/\.00$/, '')}%`
   }, [sellTax])
+
+  const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
+  const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -385,9 +424,9 @@ export function MarketDetailPage() {
           </div>
           <div className="ave-detail-price-right">
             <div><span>流通市值</span><strong>${formatWan(detailVM.marketCap)}</strong></div>
-            <div><span>24h成交额</span><strong>${formatWan(detailVM.volume24h)}</strong></div>
+            <div><span>24h成交量</span><strong>${formatWan(volume24hValue)}</strong></div>
             <div><span>24h持币数</span><strong>{formatInt(holders)}</strong></div>
-            <div><span>24h交易数</span><strong>{formatInt((detailVM.volume24h || 1) / 4200)}</strong></div>
+            <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
           </div>
         </div>
 
