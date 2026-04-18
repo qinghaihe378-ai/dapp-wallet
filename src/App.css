@@ -7711,6 +7711,23 @@ button:disabled,
   font-size: 12px;
 }
 
+.ave-market-top-tabs {
+  justify-content: flex-start;
+}
+
+.ave-market-search-btn-wrap {
+  margin-left: auto;
+}
+
+.ave-market-search-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(55, 74, 103, 0.85);
+  background: rgba(20, 30, 45, 0.95);
+  color: #d6deea;
+}
+
 .ave-markets-v2 .market-sort-row .active,
 .ave-markets-v2 .market-chain-pill.active {
   background: rgba(59, 130, 246, 0.22);
@@ -7724,6 +7741,53 @@ button:disabled,
   padding: 0 2px 8px;
   font-size: 11px;
   letter-spacing: .02em;
+}
+
+.ave-markets-v2 .market-sort-row {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 2px;
+}
+
+.market-period-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.market-period-row > button {
+  min-width: 40px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(55, 74, 103, 0.85);
+  background: rgba(20, 30, 45, 0.95);
+  color: #a9b8ce;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.market-period-row > button.active {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(96, 165, 250, 0.58);
+  color: #e8f1ff;
+}
+
+.market-period-tools {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.market-period-tools > button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(55, 74, 103, 0.85);
+  background: rgba(20, 30, 45, 0.95);
+  color: #d6deea;
 }
 
 .ave-markets-v2 .market-watch-row {

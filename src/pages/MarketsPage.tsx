@@ -37,6 +37,8 @@ export function MarketsPage() {
   const [addressSearchResults, setAddressSearchResults] = useState<MarketItem[] | null>(null)
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
   const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
+  const [sourceTab, setSourceTab] = useState<'gold' | 'new' | 'four' | 'flap' | 'pump'>('gold')
+  const [period, setPeriod] = useState<'5m' | '1h' | '4h' | '24h'>('24h')
 
   const loadMarkets = async (silent = false) => {
     try {
@@ -150,9 +152,21 @@ export function MarketsPage() {
             return (
               <div key="controls" className="ave-markets-v2-controls">
                 <div className="market-sort-row ave-markets-v2-sort-row">
-                  <button type="button" className={sortBy === 'default' ? 'active' : ''} onClick={() => setSortBy('default')}>默认</button>
-                  <button type="button" className={sortBy === 'change' ? 'active' : ''} onClick={() => setSortBy('change')}>涨幅</button>
-                  <button type="button" className={sortBy === 'price' ? 'active' : ''} onClick={() => setSortBy('price')}>价格</button>
+                  <button type="button" className={sourceTab === 'gold' ? 'active' : ''} onClick={() => setSourceTab('gold')}>淘金</button>
+                  <button type="button" className={sourceTab === 'new' ? 'active' : ''} onClick={() => setSourceTab('new')}>新开盘</button>
+                  <button type="button" className={sourceTab === 'four' ? 'active' : ''} onClick={() => setSourceTab('four')}>Four.meme</button>
+                  <button type="button" className={sourceTab === 'flap' ? 'active' : ''} onClick={() => setSourceTab('flap')}>Flap</button>
+                  <button type="button" className={sourceTab === 'pump' ? 'active' : ''} onClick={() => setSourceTab('pump')}>Pump.fun</button>
+                </div>
+                <div className="market-period-row">
+                  <button type="button" className={period === '5m' ? 'active' : ''} onClick={() => { setPeriod('5m'); setSortBy('default') }}>5m</button>
+                  <button type="button" className={period === '1h' ? 'active' : ''} onClick={() => { setPeriod('1h'); setSortBy('price') }}>1h</button>
+                  <button type="button" className={period === '4h' ? 'active' : ''} onClick={() => { setPeriod('4h'); setSortBy('change') }}>4h</button>
+                  <button type="button" className={period === '24h' ? 'active' : ''} onClick={() => { setPeriod('24h'); setSortBy('change') }}>24h</button>
+                  <span className="market-period-tools">
+                    <button type="button" aria-label="排序">☰</button>
+                    <button type="button" aria-label="筛选">⌯</button>
+                  </span>
                 </div>
                 {apiProvider && (
                   <div className="market-api-hint">数据源: {apiProvider}</div>
@@ -165,9 +179,9 @@ export function MarketsPage() {
             return (
               <div key="table" className="ave-markets-v2-table-wrap">
                 <div className="market-table-head ave-markets-v2-table-head">
-                  <span>代币</span>
+                  <span>成交额 / 持币人</span>
                   <span>价格</span>
-                  <span>24h</span>
+                  <span>涨幅</span>
                 </div>
 
                 {(loading || addressSearchLoading) && <p className="ave-loading">加载中…</p>}
