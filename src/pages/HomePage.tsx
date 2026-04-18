@@ -31,6 +31,18 @@ function hasTokenAvatar(image: string | undefined | null): boolean {
   return image.trim().length > 0
 }
 
+function tokenFallbackSvgDataUrl(symbol: string) {
+  const text = (symbol || '?').trim().slice(0, 4).toUpperCase()
+  const safe = encodeURIComponent(text)
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>` +
+    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#1d4ed8'/><stop offset='100%' stop-color='#0f172a'/></linearGradient></defs>` +
+    `<rect width='80' height='80' rx='40' fill='url(#g)'/>` +
+    `<text x='40' y='46' text-anchor='middle' font-size='22' font-family='Inter,Arial,sans-serif' font-weight='700' fill='#e5e7eb'>${safe}</text>` +
+    `</svg>`
+  return `data:image/svg+xml;utf8,${svg}`
+}
+
 export function HomePage() {
   const { network } = useWallet()
   const { config } = usePageConfig('home')
@@ -280,7 +292,18 @@ export function HomePage() {
           {filteredItems.slice(0, 20).map((item) => (
             <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
               <div className="home-token-main">
-                <img src={item.image} alt="" className="home-token-icon" />
+                <img
+                  src={item.image}
+                  alt=""
+                  className="home-token-icon"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const t = e.currentTarget
+                    if (t.dataset.fallbackApplied === '1') return
+                    t.dataset.fallbackApplied = '1'
+                    t.src = tokenFallbackSvgDataUrl(item.symbol)
+                  }}
+                />
                 <div>
                   <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
                   <div className="home-token-sub">
