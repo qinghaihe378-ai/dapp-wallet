@@ -275,17 +275,31 @@ export function MarketDetailPage() {
           liquidity?: { usd?: number }
           volume?: { h24?: number }
         } | null>
-        const list = (Array.isArray(json) ? json : [])
-          .filter((p): p is NonNullable<typeof p> => Boolean(p?.pairAddress))
-          .map((p) => ({
+        const byPairAddress = new Map<string, {
+          pairAddress: string
+          dexId: string
+          baseSymbol: string
+          quoteSymbol: string
+          liquidityUsd: number
+          volume24h: number
+        }>()
+        for (const p of Array.isArray(json) ? json : []) {
+          if (!p?.pairAddress) continue
+          const pairAddress = String(p.pairAddress).toLowerCase()
+          const nextItem = {
             pairAddress: String(p.pairAddress),
             dexId: String(p.dexId ?? 'dex').trim() || 'dex',
             baseSymbol: String(p.baseToken?.symbol ?? detailVM?.symbol ?? 'TOKEN').toUpperCase(),
             quoteSymbol: String(p.quoteToken?.symbol ?? 'USD').toUpperCase(),
             liquidityUsd: Number(p.liquidity?.usd ?? 0) || 0,
             volume24h: Number(p.volume?.h24 ?? 0) || 0,
-          }))
-          .sort((a, b) => b.liquidityUsd - a.liquidityUsd)
+          }
+          const exist = byPairAddress.get(pairAddress)
+          if (!exist || nextItem.liquidityUsd > exist.liquidityUsd) {
+            byPairAddress.set(pairAddress, nextItem)
+          }
+        }
+        const list = [...byPairAddress.values()].sort((a, b) => b.liquidityUsd - a.liquidityUsd)
         const pair = list[0]?.pairAddress ?? null
         if (cancelled) return
         setTokenPools(list)
@@ -542,6 +556,7 @@ export function MarketDetailPage() {
     () => tokenPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [tokenPools],
   )
+  const poolPairCount = tokenPools.length
 
   useEffect(() => {
     setTokenLogoSrc(detailVM?.image ?? '')
@@ -762,6 +777,10 @@ export function MarketDetailPage() {
                     <div className="ave-liquidity-title">
                       <span>总流动性</span>
                       <strong>{formatCompact(totalPoolsLiquidity)}</strong>
+                    </div>
+                    <div className="ave-liquidity-row">
+                      <span>池子配对数量</span>
+                      <span>{poolPairCount}</span>
                     </div>
                     {subTab === 'pool' ? (
                       <div className="trade-recent-list">
