@@ -206,11 +206,10 @@ export function AppHeader() {
     return (
       <header className="ave-header ave-header-tabs">
         <div className="ave-header-tabbar">
-          <Link to="/market" className={`ave-header-tab ${marketChain ? '' : 'active'}`}>行情</Link>
+          <Link to="/market?chain=all" className={`ave-header-tab ${!marketChain || marketChain === 'all' ? 'active' : ''}`}>全链</Link>
           <Link to="/market?chain=eth" className={`ave-header-tab ${marketChain === 'eth' ? 'active' : ''}`}>ETH</Link>
           <Link to="/market?chain=bsc" className={`ave-header-tab ${marketChain === 'bsc' ? 'active' : ''}`}>BSC</Link>
           <Link to="/market?chain=base" className={`ave-header-tab ${marketChain === 'base' ? 'active' : ''}`}>Base</Link>
-          <Link to="/new-tokens" className="ave-header-tab">扫链</Link>
         </div>
       </header>
     )
