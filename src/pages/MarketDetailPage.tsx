@@ -852,7 +852,6 @@ export function MarketDetailPage() {
                                 <span className="ave-pool-dex-badge">
                                   {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
                                 </span>
-                                <span>{pool.dexId}</span>
                               </span>
                               <span>{formatCompact(pool.liquidityUsd)}</span>
                             </button>
