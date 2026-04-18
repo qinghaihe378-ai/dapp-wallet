@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
@@ -51,12 +51,19 @@ const formatWan = (value: number) => {
 
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
+  const navigate = useNavigate()
   const [detail, setDetail] = useState<CoinDetail | null>(null)
   const [dexItem, setDexItem] = useState<MarketItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [period, setPeriod] = useState<KLinePeriod>('1h')
   const [dexPairAddress, setDexPairAddress] = useState<string | null>(null)
+  const [mainTab, setMainTab] = useState<'market' | 'holders' | 'detail' | 'feed' | 'risk'>('market')
+  const [subTab, setSubTab] = useState<'trade' | 'pool' | 'mine' | 'orders' | 'watch' | 'creator'>('pool')
+  const [indicator, setIndicator] = useState<'MA' | 'EMA' | 'BOLL' | 'VOL' | 'MACD' | 'KDJ' | 'RSI'>('VOL')
+  const [toolMode, setToolMode] = useState<'1s' | 'user' | 'global' | 'search'>('1s')
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -242,7 +249,14 @@ export function MarketDetailPage() {
     <div className="page ave-page market-detail-page">
       <section className="ave-detail-shell">
         <div className="ave-detail-topbar">
-          <button type="button" className="ave-detail-icon-btn" aria-label="返回">‹</button>
+          <button
+            type="button"
+            className="ave-detail-icon-btn"
+            aria-label="返回"
+            onClick={() => navigate(-1)}
+          >
+            ‹
+          </button>
           <div className="ave-detail-token-meta">
             <img src={detailVM.image} alt="" className="ave-detail-avatar" />
             <div className="ave-detail-token-copy">
@@ -251,19 +265,55 @@ export function MarketDetailPage() {
             </div>
           </div>
           <div className="ave-detail-top-icons">
-            <button type="button" className="ave-detail-icon-btn">◦</button>
-            <button type="button" className="ave-detail-icon-btn">☆</button>
-            <button type="button" className="ave-detail-icon-btn">↗</button>
-            <button type="button" className="ave-detail-icon-btn">⋯</button>
+            <button type="button" className="ave-detail-icon-btn" onClick={() => setMainTab('risk')}>◦</button>
+            <button
+              type="button"
+              className={`ave-detail-icon-btn ${isFavorite ? 'active' : ''}`}
+              onClick={() => setIsFavorite((v) => !v)}
+            >
+              {isFavorite ? '★' : '☆'}
+            </button>
+            <button
+              type="button"
+              className="ave-detail-icon-btn"
+              onClick={async () => {
+                const sharePayload = {
+                  title: `${detailVM.name} 行情`,
+                  text: `${detailVM.name} ${formatPrice(detailVM.price)}`,
+                  url: window.location.href,
+                }
+                try {
+                  if (navigator.share) await navigator.share(sharePayload)
+                  else await navigator.clipboard.writeText(window.location.href)
+                } catch {
+                  // user cancelled share
+                }
+              }}
+            >
+              ↗
+            </button>
+            <button
+              type="button"
+              className={`ave-detail-icon-btn ${showMoreMenu ? 'active' : ''}`}
+              onClick={() => setShowMoreMenu((v) => !v)}
+            >
+              ⋯
+            </button>
           </div>
         </div>
+        {showMoreMenu && (
+          <div className="ave-detail-more-menu">
+            <button type="button" onClick={() => window.location.reload()}>刷新数据</button>
+            <button type="button" onClick={() => navigate('/market')}>返回行情列表</button>
+          </div>
+        )}
 
         <div className="ave-detail-main-tabs">
-          <button type="button" className="active">行情</button>
-          <button type="button">持币人 {formatInt(holders)}</button>
-          <button type="button">详情</button>
-          <button type="button">动态</button>
-          <button type="button">风险</button>
+          <button type="button" className={mainTab === 'market' ? 'active' : ''} onClick={() => setMainTab('market')}>行情</button>
+          <button type="button" className={mainTab === 'holders' ? 'active' : ''} onClick={() => setMainTab('holders')}>持币人 {formatInt(holders)}</button>
+          <button type="button" className={mainTab === 'detail' ? 'active' : ''} onClick={() => setMainTab('detail')}>详情</button>
+          <button type="button" className={mainTab === 'feed' ? 'active' : ''} onClick={() => setMainTab('feed')}>动态</button>
+          <button type="button" className={mainTab === 'risk' ? 'active' : ''} onClick={() => setMainTab('risk')}>风险</button>
         </div>
 
         <div className="ave-detail-price-panel">
@@ -281,82 +331,106 @@ export function MarketDetailPage() {
           </div>
         </div>
 
-        <div className="ave-detail-indicator-tabs">
-          {['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ', 'RSI'].map((it) => (
-            <button key={it} type="button" className={it === 'VOL' ? 'active' : ''}>{it}</button>
-          ))}
-        </div>
-
-        <div className="ave-detail-metric-strip">
-          <span>{detailVM.symbol}</span>
-          <span>WBNB</span>
-          <span>LP人数 {formatInt(holders)}</span>
-          <span>锁仓 98.09%</span>
-          <span>风险 55</span>
-        </div>
-
-        <div className="ave-detail-toolbar">
-          <button type="button">1s</button>
-          <button type="button">👤</button>
-          <button type="button">🌐</button>
-          <button type="button">🔍</button>
-        </div>
-
-        <div className="ave-detail-period-row">
-          <div className="ave-detail-period-tabs">
-            {[
-              { key: '1m' as const, label: '1分' },
-              { key: '5m' as const, label: '5分' },
-              { key: '30m' as const, label: '15分' },
-              { key: '1h' as const, label: '1时' },
-              { key: '2h' as const, label: '4时' },
-              { key: '1d' as const, label: '1日' },
-              { key: '1w' as const, label: '1周' },
-            ].map((item) => (
-              <button key={item.key} type="button" className={period === item.key ? 'active' : ''} onClick={() => setPeriod(item.key)}>
-                {item.label}
-              </button>
-            ))}
-            <span className="ave-detail-period-title">价格</span>
-          </div>
-          <div className="ave-detail-period-actions">
-            <button type="button">◫</button>
-            <button type="button">⚙</button>
-          </div>
-        </div>
-
-        <div className="ave-detail-chart-card">
-          <KLineChart
-            syntheticData={{ currentPrice: detailVM.price, change24h: detailVM.change24h ?? 0 }}
-            geckoPool={geckoNetworkId && dexPairAddress ? { network: geckoNetworkId, poolAddress: dexPairAddress } : undefined}
-            dexScreener={dexScreenerChainId && dexTokenAddress ? { chainId: dexScreenerChainId, tokenAddress: dexTokenAddress } : undefined}
-            period={period}
-          />
-        </div>
-
-        <div className="ave-detail-pool-section">
-          <div className="ave-detail-subtabs">
-            <button type="button">交易</button>
-            <button type="button" className="active">池子</button>
-            <button type="button">我的</button>
-            <button type="button">挂单</button>
-            <button type="button">关注</button>
-            <button type="button">创建者</button>
-          </div>
-          <div className="ave-detail-liquidity-card">
-            <div className="ave-liquidity-title">
-              <span>总流动性</span>
-              <strong>{formatCompact(detailVM.marketCap * 0.5)}</strong>
+        {mainTab === 'market' && (
+          <>
+            <div className="ave-detail-indicator-tabs">
+              {(['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ', 'RSI'] as const).map((it) => (
+                <button key={it} type="button" className={it === indicator ? 'active' : ''} onClick={() => setIndicator(it)}>{it}</button>
+              ))}
             </div>
-            <div className="ave-liquidity-row">
-              <span>池子配对</span>
-              <span>{detailVM.symbol}/WBNB</span>
+
+            <div className="ave-detail-metric-strip">
+              <span>{detailVM.symbol}</span>
+              <span>WBNB</span>
+              <span>LP人数 {formatInt(holders)}</span>
+              <span>锁仓 98.09%</span>
+              <span>风险 55</span>
             </div>
+
+            <div className="ave-detail-toolbar">
+              <button type="button" className={toolMode === '1s' ? 'active' : ''} onClick={() => setToolMode('1s')}>1s</button>
+              <button type="button" className={toolMode === 'user' ? 'active' : ''} onClick={() => setToolMode('user')}>👤</button>
+              <button type="button" className={toolMode === 'global' ? 'active' : ''} onClick={() => setToolMode('global')}>🌐</button>
+              <button type="button" className={toolMode === 'search' ? 'active' : ''} onClick={() => setToolMode('search')}>🔍</button>
+            </div>
+
+            <div className="ave-detail-period-row">
+              <div className="ave-detail-period-tabs">
+                {[
+                  { key: '1m' as const, label: '1分' },
+                  { key: '5m' as const, label: '5分' },
+                  { key: '30m' as const, label: '15分' },
+                  { key: '1h' as const, label: '1时' },
+                  { key: '2h' as const, label: '4时' },
+                  { key: '1d' as const, label: '1日' },
+                  { key: '1w' as const, label: '1周' },
+                ].map((item) => (
+                  <button key={item.key} type="button" className={period === item.key ? 'active' : ''} onClick={() => setPeriod(item.key)}>
+                    {item.label}
+                  </button>
+                ))}
+                <span className="ave-detail-period-title">价格</span>
+              </div>
+              <div className="ave-detail-period-actions">
+                <button type="button">◫</button>
+                <button type="button">⚙</button>
+              </div>
+            </div>
+
+            <div className="ave-detail-chart-card">
+              <KLineChart
+                syntheticData={{ currentPrice: detailVM.price, change24h: detailVM.change24h ?? 0 }}
+                geckoPool={geckoNetworkId && dexPairAddress ? { network: geckoNetworkId, poolAddress: dexPairAddress } : undefined}
+                dexScreener={dexScreenerChainId && dexTokenAddress ? { chainId: dexScreenerChainId, tokenAddress: dexTokenAddress } : undefined}
+                period={period}
+              />
+            </div>
+
+            <div className="ave-detail-pool-section">
+              <div className="ave-detail-subtabs">
+                <button type="button" className={subTab === 'trade' ? 'active' : ''} onClick={() => setSubTab('trade')}>交易</button>
+                <button type="button" className={subTab === 'pool' ? 'active' : ''} onClick={() => setSubTab('pool')}>池子</button>
+                <button type="button" className={subTab === 'mine' ? 'active' : ''} onClick={() => setSubTab('mine')}>我的</button>
+                <button type="button" className={subTab === 'orders' ? 'active' : ''} onClick={() => setSubTab('orders')}>挂单</button>
+                <button type="button" className={subTab === 'watch' ? 'active' : ''} onClick={() => setSubTab('watch')}>关注</button>
+                <button type="button" className={subTab === 'creator' ? 'active' : ''} onClick={() => setSubTab('creator')}>创建者</button>
+              </div>
+              <div className="ave-detail-liquidity-card">
+                {subTab === 'trade' && (
+                  <div className="ave-tab-placeholder">
+                    <p>快捷交易</p>
+                    <div className="ave-tab-actions">
+                      <Link to={quickTradeTargets.buy}>买入</Link>
+                      <Link to={quickTradeTargets.sell}>卖出</Link>
+                    </div>
+                  </div>
+                )}
+                {subTab !== 'trade' && (
+                  <>
+                    <div className="ave-liquidity-title">
+                      <span>总流动性</span>
+                      <strong>{formatCompact(detailVM.marketCap * 0.5)}</strong>
+                    </div>
+                    <div className="ave-liquidity-row">
+                      <span>池子配对</span>
+                      <span>{detailVM.symbol}/WBNB</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {mainTab !== 'market' && (
+          <div className="ave-detail-panel-placeholder">
+            <p>{mainTab === 'holders' ? '持币人' : mainTab === 'detail' ? '详情' : mainTab === 'feed' ? '动态' : '风险'}模块已切换</p>
+            <span>当前页面先保留行情核心功能，非行情模块可继续按你的接口扩展。</span>
           </div>
-        </div>
+        )}
 
         <div className="ave-detail-bottom-cta">
-          <button type="button" className="dapp">DApp</button>
+          <button type="button" className="dapp" onClick={() => navigate('/bot')}>DApp</button>
           <Link to={quickTradeTargets.buy} className="buy">买入<div>税3%</div></Link>
           <Link to={quickTradeTargets.sell} className="sell">卖出<div>税3%</div></Link>
         </div>

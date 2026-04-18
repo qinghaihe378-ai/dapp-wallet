@@ -6354,6 +6354,9 @@ button:disabled,
   background: #121a25;
   color: #f0f5ff;
   padding-bottom: calc(74px + var(--safe-bottom));
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 .ave-detail-topbar {
@@ -6374,6 +6377,11 @@ button:disabled,
   font-size: 18px;
   line-height: 1;
   padding: 0;
+}
+
+.ave-detail-icon-btn.active {
+  color: #f4f7ff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .ave-detail-token-meta {
@@ -6411,6 +6419,29 @@ button:disabled,
 .ave-detail-top-icons {
   display: flex;
   align-items: center;
+}
+
+.ave-detail-more-menu {
+  margin: 6px 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(14, 22, 34, 0.96);
+  overflow: hidden;
+}
+
+.ave-detail-more-menu button {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #d9e2f5;
+  text-align: left;
+  padding: 11px 12px;
+  font-size: 13px;
+}
+
+.ave-detail-more-menu button:last-child {
+  border-bottom: none;
 }
 
 .ave-detail-main-tabs {
@@ -6522,6 +6553,11 @@ button:disabled,
   background: rgba(255, 255, 255, 0.06);
   color: #98a3b6;
   font-size: 12px;
+}
+
+.ave-detail-toolbar button.active {
+  background: rgba(66, 135, 255, 0.24);
+  color: #eaf2ff;
 }
 
 .ave-detail-period-row {
@@ -6655,6 +6691,53 @@ button:disabled,
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.08);
   padding: 10px 12px;
+}
+
+.ave-tab-placeholder p {
+  margin: 0;
+  color: #a5b0c4;
+  font-size: 13px;
+}
+
+.ave-tab-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.ave-tab-actions a {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: rgba(66, 135, 255, 0.2);
+  color: #deebff;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.ave-detail-panel-placeholder {
+  margin: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 16px 14px;
+}
+
+.ave-detail-panel-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  color: #eff4ff;
+  font-weight: 600;
+}
+
+.ave-detail-panel-placeholder span {
+  display: block;
+  margin-top: 8px;
+  color: #96a2b8;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .ave-liquidity-title,
@@ -6792,6 +6875,14 @@ button:disabled,
     font-size: 52px;
   }
 
+  .ave-detail-price-right {
+    min-width: 136px;
+  }
+
+  .ave-detail-price-right div {
+    font-size: 13px;
+  }
+
   .ave-detail-chart-card .ave-kline-container {
     height: 440px;
   }
@@ -6799,5 +6890,49 @@ button:disabled,
   .ave-detail-bottom-cta .buy,
   .ave-detail-bottom-cta .sell {
     font-size: 32px;
+  }
+}
+
+@media (max-width: 389px) {
+  .ave-detail-main-tabs button {
+    font-size: 15px;
+  }
+
+  .ave-detail-big-price {
+    font-size: 46px;
+  }
+
+  .ave-detail-change {
+    font-size: 16px;
+  }
+
+  .ave-detail-price-panel {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ave-detail-price-right {
+    min-width: 0;
+  }
+
+  .ave-detail-chart-card .ave-kline-container {
+    height: 360px;
+  }
+
+  .ave-detail-bottom-cta {
+    grid-template-columns: 58px 1fr 1fr;
+    gap: 6px;
+    padding: 8px 8px calc(8px + var(--safe-bottom));
+  }
+
+  .ave-detail-bottom-cta .buy,
+  .ave-detail-bottom-cta .sell {
+    min-height: 42px;
+    font-size: 26px;
+  }
+
+  .ave-detail-bottom-cta .buy div,
+  .ave-detail-bottom-cta .sell div {
+    font-size: 14px;
   }
 }
