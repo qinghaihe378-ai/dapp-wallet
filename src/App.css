@@ -19,6 +19,12 @@
   z-index: 130;
 }
 
+/* 行情页：使用整屏深色背景，并把内容高度固定到可视区 */
+.ave-app .app-main.app-main-market {
+  padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+  background: #101722;
+}
+
 /* 站内嵌入龙虾 iframe：减少内边距，让 iframe 尽量占满可视区 */
 .ave-app .app-main.app-main-longxia-embed {
   display: flex;
@@ -2374,7 +2380,11 @@ button:disabled,
 }
 
 .ave-market-shell {
-  padding-top: 4px;
+  padding-top: 0;
+  min-height: calc(100svh - 56px - var(--bottom-nav-h) - var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  background: #101722;
 }
 
 .home-mode-row,
@@ -7624,6 +7634,10 @@ button:disabled,
 .ave-markets-v2-panel {
   border-radius: 12px;
   padding: 8px 8px 10px;
+  margin-top: 0;
+  min-height: calc(100svh - 56px - var(--bottom-nav-h) - var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
 }
 
 .ave-markets-v2-controls {
@@ -7694,10 +7708,21 @@ button:disabled,
 
 /* ===== Ave V2 Tightening ===== */
 .ave-markets-v2 .market-panel {
-  background: #0f1622;
+  background: #101722;
   border: 1px solid rgba(41, 55, 77, 0.7);
   border-radius: 12px;
   box-shadow: none;
+}
+
+.ave-markets-v2 .ave-markets-v2-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.ave-markets-v2 .ave-markets-v2-table-wrap {
+  flex-shrink: 0;
 }
 
 .ave-markets-v2 .market-sort-row button,
@@ -8350,5 +8375,14 @@ button:disabled,
   .ave-markets-v2-table-head,
   .ave-markets-v2-list .market-watch-row {
     grid-template-columns: minmax(0, 1fr) 78px 72px;
+  }
+
+  .ave-app .app-main.app-main-market {
+    padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+  }
+
+  .ave-market-shell,
+  .ave-markets-v2-panel {
+    min-height: calc(100svh - 52px - var(--bottom-nav-h) - var(--safe-bottom));
   }
 }
