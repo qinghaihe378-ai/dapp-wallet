@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { COLLECTION_INTERVAL_MS } from '../api/markets'
 import { apiUrl } from '../lib/apiBase'
-import { getLobsterLaunchUrl } from '../lib/lobsterLaunchUrl'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 interface HomeItem {
@@ -43,12 +42,12 @@ export function HomePage() {
     const stored = window.localStorage.getItem(homeQuickActionKey)
     return stored === 'receive' || stored === 'invite' ? stored : null
   })
-  const [activeFilter, setActiveFilter] = useState<'all' | 'eth' | 'bsc' | 'base'>(() => {
+  const [activeFilter, setActiveFilter] = useState<'all' | 'eth' | 'bsc' | 'base' | 'sol'>(() => {
     if (typeof window === 'undefined') return 'all'
     const stored = window.localStorage.getItem(homeFilterKey)
-    if (stored === 'sol') return 'all'
-    return stored === 'eth' || stored === 'bsc' || stored === 'base' || stored === 'all' ? stored : 'all'
+    return stored === 'eth' || stored === 'bsc' || stored === 'base' || stored === 'sol' || stored === 'all' ? stored : 'all'
   })
+  const [homeSearch, setHomeSearch] = useState('')
   const baseFiltered =
     activeFilter === 'all'
       ? items
@@ -57,28 +56,23 @@ export function HomePage() {
           if (activeFilter === 'eth') return chain === 'eth' || chain === 'btc'
           if (activeFilter === 'bsc') return chain === 'bsc'
           if (activeFilter === 'base') return chain === 'base'
+          if (activeFilter === 'sol') return chain === 'sol' || chain === 'solana'
           return true
         })
   const filteredItems = useMemo(() => {
+    let next = [...baseFiltered]
+    if (homeSearch.trim()) {
+      const q = homeSearch.trim().toLowerCase()
+      next = next.filter((item) => item.symbol.toLowerCase().includes(q) || item.name.toLowerCase().includes(q))
+    }
     if (activeSection === 'gain') {
-      return [...baseFiltered].sort(
+      return next.sort(
         (a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity)
       )
     }
     // 热门：仅展示有头像（非空 image）的代币
-    return baseFiltered.filter((item) => hasTokenAvatar(item.image))
-  }, [activeSection, baseFiltered])
-  const movers = useMemo(() => {
-    const withChange = items.filter((item) => Number.isFinite(item.price_change_percentage_24h ?? NaN))
-    const gainers = [...withChange]
-      .sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
-      .slice(0, 5)
-    const losers = [...withChange]
-      .sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
-      .slice(0, 5)
-    return { gainers, losers }
-  }, [items])
-  const [moverTab, setMoverTab] = useState<'gainers' | 'losers'>('gainers')
+    return next.filter((item) => hasTokenAvatar(item.image))
+  }, [activeSection, baseFiltered, homeSearch])
 
   useEffect(() => {
     const load = async () => {
@@ -106,11 +100,9 @@ export function HomePage() {
     queueMicrotask(() => {
       setActiveQuickAction(storedQuickAction === 'receive' || storedQuickAction === 'invite' ? storedQuickAction : null)
       setActiveFilter(
-        storedFilter === 'sol'
-          ? 'all'
-          : storedFilter === 'eth' || storedFilter === 'bsc' || storedFilter === 'base' || storedFilter === 'all'
-            ? storedFilter
-            : 'all',
+        storedFilter === 'eth' || storedFilter === 'bsc' || storedFilter === 'base' || storedFilter === 'sol' || storedFilter === 'all'
+          ? storedFilter
+          : 'all',
       )
       setActiveSection(storedSection === 'gain' ? 'gain' : 'hot')
     })
@@ -135,8 +127,6 @@ export function HomePage() {
     window.localStorage.setItem(homeSectionKey, activeSection)
   }, [activeSection, homeSectionKey])
 
-  const lobsterLaunchUrl = useMemo(() => getLobsterLaunchUrl(), [])
-
   const sections = useMemo(() => {
     const defaults = [
       { id: 'banner', enabled: true, order: 0 },
@@ -156,22 +146,53 @@ export function HomePage() {
       {config?.notice && (
         <div className="home-status-note">{config.notice}</div>
       )}
-      <div className="ave-home-v2-chain-switch">
-        <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
+      <div className="ave-home-shot-header">
+        <Link to="/wallet" className="ave-home-shot-avatar">🐺</Link>
+        <div className="ave-home-shot-search">
+          <span>⌕</span>
+          <input
+            type="text"
+            value={homeSearch}
+            onChange={(e) => setHomeSearch(e.target.value)}
+            placeholder="搜索币种/美股/合约"
+          />
+        </div>
+        <button type="button" className="ave-home-shot-icon" aria-label="scan">⌖</button>
+        <button type="button" className="ave-home-shot-icon" aria-label="notice">◔</button>
       </div>
 
-      <div className="ave-home-v2-nav">
-        <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>代币排行</button>
-        <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅榜</button>
+      <div className="home-banner-panel">
+        <div className="home-banner-copy">
+          <div className="home-banner-title">{config?.title || 'Ave.ai'}</div>
+          <div className="home-banner-desc">{config?.subtitle || '链上实时行情与交易'}</div>
+        </div>
+        <div className="home-banner-live">APP</div>
+      </div>
+
+      <div className="home-price-ticker">
+        {items.slice(0, 4).map((item) => (
+          <span key={`t-${item.id}`} className={(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}>
+            {item.symbol.toUpperCase()} ${item.current_price < 1 ? item.current_price.toFixed(4) : item.current_price.toFixed(2)}
+          </span>
+        ))}
+      </div>
+
+      <div className="ave-home-shot-tabs">
+        <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
+        <button type="button">合约</button>
+        <button type="button">币安Alpha</button>
+        <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
         <Link to="/new-tokens">新币</Link>
-        {lobsterLaunchUrl ? (
-          <a href={lobsterLaunchUrl} target="_blank" rel="noopener noreferrer">发射台</a>
-        ) : (
-          <Link to="/lobster">发射台</Link>
-        )}
+        <button type="button">Pre-IPO</button>
+      </div>
+
+      <div className="ave-home-v2-chain-switch">
+        <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'sol' ? 'active' : ''}`} onClick={() => setActiveFilter('sol')}>Sol</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
+        <button type="button" className="home-filter-pill-right">价格</button>
+        <button type="button" className="home-filter-pill-right">涨幅</button>
       </div>
 
       <div className="home-market-panel">
@@ -184,42 +205,6 @@ export function HomePage() {
         <div className="home-token-feed">
           {filteredItems.slice(0, 20).map((item) => (
             <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
-              <div className="home-token-main">
-                <img src={item.image} alt="" className="home-token-icon" />
-                <div>
-                  <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
-                  <div className="home-token-sub">
-                    <span>{item.symbol.toUpperCase()}</span>
-                    <span className="home-token-sub-sep">/</span>
-                    <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
-                  </div>
-                </div>
-              </div>
-              <div className="home-token-side">
-                <span className="home-token-price">
-                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
-                </span>
-                <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
-                  {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
-                  {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <div className="home-market-panel">
-        <div className="home-panel-head">
-          <div className="home-panel-title">涨跌幅榜</div>
-          <div className="ave-home-v2-mini-tabs">
-            <button type="button" className={moverTab === 'gainers' ? 'active' : ''} onClick={() => setMoverTab('gainers')}>涨幅</button>
-            <button type="button" className={moverTab === 'losers' ? 'active' : ''} onClick={() => setMoverTab('losers')}>跌幅</button>
-          </div>
-        </div>
-        <div className="home-token-feed">
-          {(moverTab === 'gainers' ? movers.gainers : movers.losers).map((item) => (
-            <Link key={`${moverTab}-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
               <div className="home-token-main">
                 <img src={item.image} alt="" className="home-token-icon" />
                 <div>

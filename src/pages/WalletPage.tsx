@@ -355,12 +355,27 @@ export function WalletPage() {
   const quickActions = [
     { label: '收款', kind: 'receive' as const },
     { label: '转账', kind: 'send' as const },
+    { label: '扫码', kind: 'scan' as const },
+    { label: '跨链', kind: 'bridge' as const },
   ]
 
   return (
     <div className="page ave-page ave-wallet-shell-page ave-wallet-v2">
       <div className="wallet-unified-card ave-wallet-v2-card">
       <div className="wallet-hero-card">
+        <div className="wallet-shot-topline">
+          <div className="wallet-shot-left">
+            <span className="wallet-shot-back">h</span>
+            <span className="wallet-shot-tag">未备份</span>
+          </div>
+          <div className="wallet-shot-right">
+            <span>{network.toUpperCase()}</span>
+          </div>
+        </div>
+        <div className="wallet-shot-address">
+          {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : '0x9e3c...76d6'}
+          <span className="wallet-shot-meta">793 ms · 0.05 Gwei</span>
+        </div>
         <div className="wallet-balance-block">
           <div className="wallet-balance-label">总资产</div>
           <div className={`wallet-total-value ${isObserveWallet ? 'wallet-total-value-observe' : ''}`}>
@@ -407,6 +422,11 @@ export function WalletPage() {
                   void handleCopyAddress().then(() => flashPanelNotice('已复制'))
                   return
                 }
+                if (item.kind === 'scan' || item.kind === 'bridge') {
+                  setQuickAction(item.kind)
+                  setQuickSheetOpen(true)
+                  return
+                }
                 setQuickAction(item.kind)
                 setQuickSheetOpen(true)
               }}
@@ -423,6 +443,14 @@ export function WalletPage() {
       </div>
 
       <div className="wallet-assets-section ave-wallet-v2-assets">
+        <div className="wallet-shot-tabs">
+          <button type="button" className="active">币种</button>
+          <button type="button">NFT</button>
+          <button type="button">理财</button>
+          <button type="button">动态</button>
+          <button type="button">工具</button>
+          <button type="button" className="wallet-shot-tabs-plus">+</button>
+        </div>
         <div className="wallet-assets-header">
           <span className="wallet-assets-title">资产</span>
           <div className="wallet-assets-actions">

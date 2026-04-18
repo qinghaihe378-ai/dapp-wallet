@@ -7682,6 +7682,231 @@ button:disabled,
   background: #1d4ed8;
 }
 
+/* ===== Screenshot Match (Home + Wallet) ===== */
+.ave-home-v2 .ave-home-shot-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px 34px;
+  gap: 10px;
+  align-items: center;
+}
+
+.ave-home-v2 .ave-home-shot-avatar,
+.ave-home-v2 .ave-home-shot-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.95);
+  color: #d1d5db;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.ave-home-v2 .ave-home-shot-search {
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.95);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #94a3b8;
+}
+
+.ave-home-v2 .ave-home-shot-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #f3f4f6;
+  font-size: 14px;
+  outline: none;
+}
+
+.ave-home-v2 .home-banner-panel {
+  margin-top: 10px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e2f8ff, #b8f6f1);
+  color: #0f172a;
+  min-height: 120px;
+}
+
+.ave-home-v2 .home-banner-title {
+  font-size: 26px;
+}
+
+.ave-home-v2 .home-price-ticker {
+  margin-top: 8px;
+  font-size: 34px;
+}
+
+.ave-home-v2 .ave-home-shot-tabs {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 8px 0 2px;
+}
+
+.ave-home-v2 .ave-home-shot-tabs button,
+.ave-home-v2 .ave-home-shot-tabs a {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ave-home-v2 .ave-home-shot-tabs .active {
+  color: #f3f4f6;
+}
+
+.ave-home-v2 .ave-home-v2-chain-switch .home-filter-pill-right {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  min-width: auto;
+  padding: 0 2px;
+}
+
+.ave-home-v2 .home-market-panel .home-panel-head {
+  display: none;
+}
+
+.ave-home-v2 .home-market-panel {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.ave-home-v2 .home-token-row {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 11px 0;
+}
+
+.ave-home-v2 .home-token-row + .home-token-row {
+  border-top: 1px solid rgba(31, 41, 55, 0.85);
+}
+
+.ave-home-v2 .home-token-side {
+  min-width: 132px;
+}
+
+.ave-home-v2 .home-token-badge {
+  min-width: 88px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.ave-home-v2 .home-token-price {
+  min-width: 78px;
+  text-align: right;
+}
+
+.ave-wallet-v2 .wallet-shot-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.ave-wallet-v2 .wallet-shot-left,
+.ave-wallet-v2 .wallet-shot-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ave-wallet-v2 .wallet-shot-back {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.ave-wallet-v2 .wallet-shot-tag {
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.22);
+  color: #fca5a5;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ave-wallet-v2 .wallet-shot-right span {
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.94);
+  color: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ave-wallet-v2 .wallet-shot-address {
+  color: #9ca3af;
+  font-size: 17px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ave-wallet-v2 .wallet-shot-meta {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.ave-wallet-v2 .wallet-quick-row {
+  margin-top: 14px;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ave-wallet-v2 .wallet-shot-tabs {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 6px 0 10px;
+}
+
+.ave-wallet-v2 .wallet-shot-tabs button {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 0;
+}
+
+.ave-wallet-v2 .wallet-shot-tabs .active {
+  color: #f3f4f6;
+}
+
+.ave-wallet-v2 .wallet-shot-tabs .wallet-shot-tabs-plus {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  background: rgba(17, 24, 39, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 420px) {
   .ave-home-v2-movers {
     grid-template-columns: 1fr;
