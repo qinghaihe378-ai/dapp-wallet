@@ -114,6 +114,7 @@ export function MarketDetailPage() {
   const [coinTypeInfo, setCoinTypeInfo] = useState<string | null>(null)
   const [communityLinks, setCommunityLinks] = useState<Array<{ label: string; url: string }>>([])
   const [pairDexId, setPairDexId] = useState<string | null>(null)
+  const [tokenLogoSrc, setTokenLogoSrc] = useState<string>('')
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -511,6 +512,10 @@ export function MarketDetailPage() {
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
   const pairDexIcon = pairDexId ? DEX_ICON_MAP[pairDexId.toLowerCase()] : null
 
+  useEffect(() => {
+    setTokenLogoSrc(detailVM?.image ?? '')
+  }, [detailVM?.image])
+
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
       <div className="page ave-page">
@@ -549,7 +554,18 @@ export function MarketDetailPage() {
             ‹
           </button>
           <div className="ave-detail-token-meta">
-            <img src={detailVM.image} alt="" className="ave-detail-avatar" />
+            {tokenLogoSrc ? (
+              <img
+                src={tokenLogoSrc}
+                alt=""
+                className="ave-detail-avatar"
+                onError={() => setTokenLogoSrc('')}
+              />
+            ) : (
+              <div className="ave-detail-avatar-fallback" aria-hidden="true">
+                {(detailVM.symbol || '?').slice(0, 1)}
+              </div>
+            )}
             <div className="ave-detail-token-copy">
               <div className="ave-detail-token-name">{detailVM.name}</div>
               <div className="ave-detail-token-sub">0xb...777 · 16时40分</div>
