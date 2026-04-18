@@ -18,11 +18,25 @@ interface HomeItem {
 }
 
 type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha'
+type TickerPreset = { label: string; match: (item: HomeItem) => boolean }
 
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 const HOME_MAX_VISIBLE_TOKENS = 60
+const TOP_TICKER_PRESET: TickerPreset[] = [
+  {
+    label: '龙虾',
+    match: (item) => {
+      const name = item.name.toLowerCase()
+      const symbol = item.symbol.toLowerCase()
+      return name.includes('龙虾') || name.includes('lobster') || symbol === 'lobster' || symbol === 'longxia' || symbol === 'lx'
+    },
+  },
+  { label: 'BTC', match: (item) => item.symbol.toLowerCase() === 'btc' || item.name.toLowerCase() === 'bitcoin' },
+  { label: 'ETH', match: (item) => item.symbol.toLowerCase() === 'eth' || item.name.toLowerCase() === 'ethereum' },
+  { label: 'BNB', match: (item) => item.symbol.toLowerCase() === 'bnb' || item.name.toLowerCase().includes('bnb') },
+]
 
 function hasTokenAvatar(image: string | undefined | null): boolean {
   if (image == null || typeof image !== 'string') return false
@@ -186,6 +200,17 @@ export function HomePage() {
     return list.filter((f) => f.enabled !== false)
   }, [systemConfig?.ui?.homeFilters])
 
+  const topTicker = useMemo(() => {
+    return TOP_TICKER_PRESET.map((preset) => {
+      const matched = items.find((item) => preset.match(item))
+      return {
+        label: preset.label,
+        price: matched?.current_price,
+        change: matched?.price_change_percentage_24h ?? null,
+      }
+    })
+  }, [items])
+
   return (
     <div className="page ave-page ave-home-shell ave-home-v2">
       {config?.notice && (
@@ -200,9 +225,9 @@ export function HomePage() {
       </div>
 
       <div className="home-price-ticker">
-        {items.slice(0, 4).map((item) => (
-          <span key={`t-${item.id}`} className={(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}>
-            {item.symbol.toUpperCase()} ${item.current_price < 1 ? item.current_price.toFixed(4) : item.current_price.toFixed(2)}
+        {topTicker.map((item) => (
+          <span key={`t-${item.label}`} className={(item.change ?? 0) >= 0 ? 'up' : 'down'}>
+            {item.label} {item.price == null ? '--' : `$${item.price < 1 ? item.price.toFixed(4) : item.price.toFixed(2)}`}
           </span>
         ))}
       </div>
