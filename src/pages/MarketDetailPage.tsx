@@ -153,14 +153,6 @@ export function MarketDetailPage() {
     return null
   }, [detail, dexItem])
 
-  const holders = useMemo(() => {
-    if (detailVM?.marketCap && detailVM.price > 0) {
-      const estimate = detailVM.marketCap / Math.max(detailVM.price, 0.000001) / 3800
-      return Math.max(120, Math.round(estimate))
-    }
-    return 1713
-  }, [detailVM])
-
   const quickTradeTargets = useMemo(() => {
     if (dexItem) {
       const symbol = dexItem.symbol?.toUpperCase() ?? ''
@@ -330,27 +322,13 @@ export function MarketDetailPage() {
         if (!res.ok) throw new Error('honeypot api failed')
         const json = (await res.json()) as {
           simulationResult?: { buyTax?: number; sellTax?: number }
-          token?: { buyTax?: number; sellTax?: number; totalHolders?: number; totalHoldersCount?: number; totalSupply?: string }
-          holderAnalysis?: { holders?: Array<{ address?: string; percentage?: number; quantity?: string }> }
-          holders?: Array<{ address?: string; percent?: string; balance?: string }>
+          token?: { buyTax?: number; sellTax?: number; totalSupply?: string }
         }
         if (cancelled) return
         const b = json?.simulationResult?.buyTax ?? json?.token?.buyTax
         const s = json?.simulationResult?.sellTax ?? json?.token?.sellTax
-        const h = json?.token?.totalHolders ?? json?.token?.totalHoldersCount
         setBuyTax(Number.isFinite(b as number) ? Number(b) : null)
         setSellTax(Number.isFinite(s as number) ? Number(s) : null)
-        setApiTotalHolders(Number.isFinite(h as number) ? Number(h) : null)
-        const holdersRaw = Array.isArray(json?.holders) ? json.holders : []
-        const parsed = holdersRaw
-          .filter((x) => x && typeof x.address === 'string')
-          .map((x) => ({
-            address: String(x.address),
-            percent: Number.parseFloat(String(x.percent ?? '0')) * 100,
-            balance: String(x.balance ?? ''),
-          }))
-          .filter((x) => Number.isFinite(x.percent) && x.percent >= 0)
-        setRealHolders(parsed.slice(0, 100))
         const ts = json?.token?.totalSupply
         setTotalSupply(typeof ts === 'string' && ts.trim() ? ts : null)
         setCoinTypeInfo(`${chain.toUpperCase()} · ${detailVM?.symbol ?? ''}`.trim())
@@ -367,6 +345,63 @@ export function MarketDetailPage() {
     void loadTax()
     return () => { cancelled = true }
   }, [securityChain, securityAddress, detailVM?.symbol])
+
+  useEffect(() => {
+    const chain = securityChain
+    const address = securityAddress
+    if (!chain || !address) {
+      setApiTotalHolders(null)
+      setRealHolders([])
+      return
+    }
+    const chainId = chainToHoneypotId[chain]
+    if (!chainId) {
+      setApiTotalHolders(null)
+      setRealHolders([])
+      return
+    }
+    let cancelled = false
+    const loadHolders = async () => {
+      try {
+        const url = `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${encodeURIComponent(address)}`
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('goplus api failed')
+        const json = (await res.json()) as {
+          result?: Record<string, {
+            holder_count?: string
+            total_supply?: string
+            token_name?: string
+            token_symbol?: string
+            holders?: Array<{ address?: string; percent?: string; balance?: string }>
+          }>
+        }
+        const key = address.toLowerCase()
+        const payload = json?.result?.[key] ?? json?.result?.[address]
+        if (!payload || cancelled) return
+        const holderCountNum = Number.parseInt(String(payload.holder_count ?? ''), 10)
+        setApiTotalHolders(Number.isFinite(holderCountNum) ? holderCountNum : null)
+        const parsed = (payload.holders ?? [])
+          .filter((x) => x && typeof x.address === 'string')
+          .map((x) => ({
+            address: String(x.address),
+            percent: Number.parseFloat(String(x.percent ?? '0')) * 100,
+            balance: String(x.balance ?? ''),
+          }))
+          .filter((x) => Number.isFinite(x.percent) && x.percent >= 0)
+        setRealHolders(parsed.slice(0, 100))
+        if (!totalSupply && payload.total_supply) setTotalSupply(String(payload.total_supply))
+        if (!coinTypeInfo && (payload.token_symbol || payload.token_name)) {
+          setCoinTypeInfo(`${chain.toUpperCase()} · ${payload.token_symbol ?? detailVM?.symbol ?? ''}`.trim())
+        }
+      } catch {
+        if (cancelled) return
+        setApiTotalHolders(null)
+        setRealHolders([])
+      }
+    }
+    void loadHolders()
+    return () => { cancelled = true }
+  }, [securityChain, securityAddress, totalSupply, coinTypeInfo, detailVM?.symbol])
 
   useEffect(() => {
     if (!detail) return
@@ -401,7 +436,7 @@ export function MarketDetailPage() {
 
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
-  const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : holders
+  const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -493,7 +528,7 @@ export function MarketDetailPage() {
 
         <div className="ave-detail-main-tabs">
           <button type="button" className={mainTab === 'market' ? 'active' : ''} onClick={() => setMainTab('market')}>行情</button>
-          <button type="button" className={mainTab === 'holders' ? 'active' : ''} onClick={() => setMainTab('holders')}>持币人 {formatInt(holders)}</button>
+          <button type="button" className={mainTab === 'holders' ? 'active' : ''} onClick={() => setMainTab('holders')}>持币人 {holderCountValue ? formatInt(holderCountValue) : '—'}</button>
           <button type="button" className={mainTab === 'detail' ? 'active' : ''} onClick={() => setMainTab('detail')}>详情</button>
           <button type="button" className={mainTab === 'feed' ? 'active' : ''} onClick={() => setMainTab('feed')}>动态</button>
           <button type="button" className={mainTab === 'risk' ? 'active' : ''} onClick={() => setMainTab('risk')}>风险</button>
@@ -509,7 +544,7 @@ export function MarketDetailPage() {
           <div className="ave-detail-price-right">
             <div><span>流通市值</span><strong>${formatWan(detailVM.marketCap)}</strong></div>
             <div><span>24h成交量</span><strong>${formatWan(volume24hValue)}</strong></div>
-            <div><span>24h持币数</span><strong>{formatInt(holders)}</strong></div>
+            <div><span>24h持币数</span><strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong></div>
             <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
           </div>
         </div>
@@ -526,7 +561,7 @@ export function MarketDetailPage() {
             <div className="ave-detail-metric-strip">
               <span>{detailVM.symbol}</span>
               <span>WBNB</span>
-              <span>LP人数 {formatInt(holders)}</span>
+              <span>LP人数 {holderCountValue ? formatInt(holderCountValue) : '—'}</span>
               <span>锁仓 98.09%</span>
               <span>风险 55</span>
             </div>
@@ -614,14 +649,14 @@ export function MarketDetailPage() {
             <div className="ave-detail-metric-strip ave-detail-metric-strip-plain">
               <span>{detailVM.symbol}</span>
               <span>WBNB</span>
-              <span>LP人数 {formatInt(holderCountValue)}</span>
+              <span>LP人数 {holderCountValue ? formatInt(holderCountValue) : '—'}</span>
               <span>锁仓 98.09%</span>
               <span>风险 55</span>
             </div>
             {mainTab === 'holders' && (
               <div className="ave-detail-panel-placeholder holders-panel">
                 <p>持币人前 100 名</p>
-                <span>总持币人数：{formatInt(holderCountValue)}</span>
+                <span>总持币人数：{holderCountValue ? formatInt(holderCountValue) : '—'}</span>
                 <div className="holders-table-head">
                   <span>排名</span>
                   <span>地址</span>
