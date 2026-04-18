@@ -3993,6 +3993,7 @@ button:disabled,
 /* Admin simple clean style */
 .admin-page {
   background: #111827;
+  max-width: none;
 }
 
 .admin-page .card {
@@ -4122,6 +4123,7 @@ button:disabled,
 
 .admin-main-card {
   padding: 14px;
+  overflow: visible;
 }
 
 .admin-main-top {
@@ -4174,6 +4176,45 @@ button:disabled,
     min-width: 0;
     width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-page {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-layout {
+    gap: 10px;
+  }
+
+  .admin-sidebar,
+  .admin-main-card {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .admin-main-top {
+    gap: 10px;
+  }
+
+  .admin-metric-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .admin-content-stack {
+    gap: 10px;
+  }
+
+  .admin-form-grid,
+  .admin-row-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-sidebar-actions {
+    grid-template-columns: 1fr;
   }
 }
 

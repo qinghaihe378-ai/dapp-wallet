@@ -555,7 +555,7 @@ export function AdminPage() {
             </div>
           )}
 
-        <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
+        <div className="admin-content-stack" style={{ display: 'grid', gap: 12, marginTop: 14 }}>
           <label style={{ display: 'grid', gap: 6 }}>
             <span className="tip">选择页面</span>
             <select
@@ -658,7 +658,7 @@ export function AdminPage() {
                             删除此行
                           </button>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                        <div className="admin-form-grid admin-form-grid-token" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
                           <label style={{ display: 'grid', gap: 4 }}>
                             <span className="tip">id（链:合约）</span>
                             <input
@@ -892,7 +892,7 @@ export function AdminPage() {
               {tokenLibraryRows.length === 0 && <div className="tip">暂无代币条目。</div>}
               {tokenLibraryRows.map((row, idx) => (
                 <div key={`lib-${idx}`} style={{ border: '1px solid var(--border, rgba(255,255,255,.12))', borderRadius: 10, padding: 10 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
+                  <div className="admin-form-grid admin-form-grid-tokenlib" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
                     <input value={row.id} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, id: e.target.value } : it))} placeholder="id: chain:0x..." style={{ padding: 10, borderRadius: 10 }} />
                     <input value={row.symbol} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, symbol: e.target.value } : it))} placeholder="symbol" style={{ padding: 10, borderRadius: 10 }} />
                     <input value={row.name} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder="name" style={{ padding: 10, borderRadius: 10 }} />
@@ -932,7 +932,7 @@ export function AdminPage() {
             <div style={{ fontWeight: 700 }}>API 管理</div>
             <div className="tip" style={{ marginTop: 4 }}>配置缓存、数据源开关、回退重试与 Birdeye Key。</div>
             <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+              <div className="admin-form-grid admin-form-grid-api" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
                 <input type="number" value={apiConfig.market?.cacheTtlSeconds ?? 12} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, cacheTtlSeconds: Number(e.target.value) } }))} placeholder="market ttl(sec)" style={{ padding: 10, borderRadius: 10 }} />
                 <input type="number" value={apiConfig.market?.freshMs ?? 10000} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, freshMs: Number(e.target.value) } }))} placeholder="market fresh(ms)" style={{ padding: 10, borderRadius: 10 }} />
                 <input type="number" value={apiConfig.market?.retries ?? 1} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, retries: Number(e.target.value) } }))} placeholder="market retries" style={{ padding: 10, borderRadius: 10 }} />
@@ -976,7 +976,7 @@ export function AdminPage() {
                   <div>
                     <div className="tip" style={{ marginBottom: 6 }}>底部导航标签</div>
                     {(apiConfig.ui?.bottomTabs ?? []).map((tab, idx) => (
-                      <div key={`btab-${tab.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 120px 1fr auto', marginBottom: 6 }}>
+                      <div key={`btab-${tab.id}-${idx}`} className="admin-row-grid admin-row-grid-bottom-tab" style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 120px 1fr auto', marginBottom: 6 }}>
                         <input value={tab.id} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, id: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
                         <input value={tab.to} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, to: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
                         <input value={tab.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
@@ -990,7 +990,7 @@ export function AdminPage() {
                   <div>
                     <div className="tip" style={{ marginBottom: 6 }}>首页标签（热门/Alpha/涨跌幅/新币）</div>
                     {(apiConfig.ui?.homeTabs ?? []).map((tab, idx) => (
-                      <div key={`htab-${tab.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
+                      <div key={`htab-${tab.id}-${idx}`} className="admin-row-grid admin-row-grid-home-tab" style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
                         <input value={tab.id} readOnly style={{ padding: 8, borderRadius: 8, opacity: .7 }} />
                         <input value={tab.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeTabs: (c.ui?.homeTabs ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1003,7 +1003,7 @@ export function AdminPage() {
                   <div>
                     <div className="tip" style={{ marginBottom: 6 }}>首页链筛选标签</div>
                     {(apiConfig.ui?.homeFilters ?? []).map((f, idx) => (
-                      <div key={`hfilter-${f.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
+                      <div key={`hfilter-${f.id}-${idx}`} className="admin-row-grid admin-row-grid-home-filter" style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
                         <input value={f.id} readOnly style={{ padding: 8, borderRadius: 8, opacity: .7 }} />
                         <input value={f.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeFilters: (c.ui?.homeFilters ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
