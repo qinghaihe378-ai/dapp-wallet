@@ -6862,12 +6862,40 @@ button:disabled,
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
-  color: #bac4d7;
+  border: 1px solid rgba(37, 222, 145, 0.26);
+  background: rgba(19, 196, 128, 0.1);
+  color: #7af3c3;
   display: inline-flex;
   align-items: center;
   font-size: 12px;
+}
+
+.ave-detail-metric-strip.ave-detail-metric-strip-plain span {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #bac4d7;
+}
+
+.ave-detail-chart-indicators {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 12px 4px;
+  color: #7fa8a7;
+  font-size: 12px;
+}
+
+.ave-detail-chart-indicators::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-chart-indicators span {
+  white-space: nowrap;
+}
+
+.ave-detail-chart-indicators span.active {
+  color: #59dec2;
 }
 
 @media (max-width: 430px) {

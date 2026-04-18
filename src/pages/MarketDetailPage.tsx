@@ -333,10 +333,11 @@ export function MarketDetailPage() {
 
         {mainTab === 'market' && (
           <>
-            <div className="ave-detail-indicator-tabs">
-              {(['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ', 'RSI'] as const).map((it) => (
-                <button key={it} type="button" className={it === indicator ? 'active' : ''} onClick={() => setIndicator(it)}>{it}</button>
-              ))}
+            <div className="ave-detail-toolbar">
+              <button type="button" className={toolMode === '1s' ? 'active' : ''} onClick={() => setToolMode('1s')}>1s</button>
+              <button type="button" className={toolMode === 'user' ? 'active' : ''} onClick={() => setToolMode('user')}>👤</button>
+              <button type="button" className={toolMode === 'global' ? 'active' : ''} onClick={() => setToolMode('global')}>🌐</button>
+              <button type="button" className={toolMode === 'search' ? 'active' : ''} onClick={() => setToolMode('search')}>🔍</button>
             </div>
 
             <div className="ave-detail-metric-strip">
@@ -345,13 +346,6 @@ export function MarketDetailPage() {
               <span>LP人数 {formatInt(holders)}</span>
               <span>锁仓 98.09%</span>
               <span>风险 55</span>
-            </div>
-
-            <div className="ave-detail-toolbar">
-              <button type="button" className={toolMode === '1s' ? 'active' : ''} onClick={() => setToolMode('1s')}>1s</button>
-              <button type="button" className={toolMode === 'user' ? 'active' : ''} onClick={() => setToolMode('user')}>👤</button>
-              <button type="button" className={toolMode === 'global' ? 'active' : ''} onClick={() => setToolMode('global')}>🌐</button>
-              <button type="button" className={toolMode === 'search' ? 'active' : ''} onClick={() => setToolMode('search')}>🔍</button>
             </div>
 
             <div className="ave-detail-period-row">
@@ -375,6 +369,11 @@ export function MarketDetailPage() {
                 <button type="button">◫</button>
                 <button type="button">⚙</button>
               </div>
+            </div>
+            <div className="ave-detail-chart-indicators">
+              <span className={indicator === 'EMA' ? 'active' : ''}>EMA5:{formatPrice(detailVM.price * 0.94)}</span>
+              <span>EMA10:{formatPrice(detailVM.price * 0.98)}</span>
+              <span>EMA20:{formatPrice(detailVM.price * 1.01)}</span>
             </div>
 
             <div className="ave-detail-chart-card">
@@ -423,10 +422,24 @@ export function MarketDetailPage() {
         )}
 
         {mainTab !== 'market' && (
-          <div className="ave-detail-panel-placeholder">
-            <p>{mainTab === 'holders' ? '持币人' : mainTab === 'detail' ? '详情' : mainTab === 'feed' ? '动态' : '风险'}模块已切换</p>
-            <span>当前页面先保留行情核心功能，非行情模块可继续按你的接口扩展。</span>
-          </div>
+          <>
+            <div className="ave-detail-indicator-tabs">
+              {(['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ', 'RSI'] as const).map((it) => (
+                <button key={it} type="button" className={it === indicator ? 'active' : ''} onClick={() => setIndicator(it)}>{it}</button>
+              ))}
+            </div>
+            <div className="ave-detail-metric-strip ave-detail-metric-strip-plain">
+              <span>{detailVM.symbol}</span>
+              <span>WBNB</span>
+              <span>LP人数 {formatInt(holders)}</span>
+              <span>锁仓 98.09%</span>
+              <span>风险 55</span>
+            </div>
+            <div className="ave-detail-panel-placeholder">
+              <p>{mainTab === 'holders' ? '持币人' : mainTab === 'detail' ? '详情' : mainTab === 'feed' ? '动态' : '风险'}模块已切换</p>
+              <span>当前页面先保留行情核心功能，非行情模块可继续按你的接口扩展。</span>
+            </div>
+          </>
         )}
 
         <div className="ave-detail-bottom-cta">
