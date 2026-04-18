@@ -570,7 +570,6 @@ export function MarketDetailPage() {
     () => tokenPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [tokenPools],
   )
-  const poolPairCount = tokenPools.length
 
   useEffect(() => {
     setTokenLogoSrc(detailVM?.image ?? '')
@@ -792,15 +791,10 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{formatCompact(totalPoolsLiquidity)}</strong>
                     </div>
-                    <div className="ave-liquidity-row">
-                      <span>池子配对数量</span>
-                      <span>{poolPairCount}</span>
-                    </div>
                     {subTab === 'pool' ? (
                       <div className="trade-recent-list">
                         <div className="ave-pool-table-head">
-                          <span>底池信息</span>
-                          <span>池子数量</span>
+                          <span>池子配对</span>
                           <span>币种数量</span>
                           <span>DEX</span>
                           <span>流动性总额</span>
@@ -827,11 +821,10 @@ export function MarketDetailPage() {
                               }}
                               title="站内打开该池子"
                             >
-                              <span>{`${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
-                              <span>{idx + 1}</span>
-                              <span>
-                                {`${formatTokenAmount(pool.baseAmount)} ${pool.baseSymbol} / `}
-                                {`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}
+                              <span className="ave-pool-pair-cell">{`${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
+                              <span className="ave-pool-amount-cell">
+                                <span>{`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}</span>
+                                <span>{`${formatTokenAmount(pool.baseAmount)} ${pool.baseSymbol}`}</span>
                               </span>
                               <span className="ave-pool-dex-cell">
                                 <span className="ave-pool-dex-badge">

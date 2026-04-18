@@ -7178,7 +7178,7 @@ button:disabled,
 
 .ave-pool-table-head {
   display: grid;
-  grid-template-columns: 1.2fr .5fr 1.2fr .8fr .8fr;
+  grid-template-columns: 1.2fr 1.3fr .8fr .8fr;
   gap: 8px;
   align-items: center;
   padding: 6px 4px;
@@ -7191,7 +7191,7 @@ button:disabled,
 .ave-pool-table-row {
   margin-top: 6px;
   display: grid !important;
-  grid-template-columns: 1.2fr .5fr 1.2fr .8fr .8fr !important;
+  grid-template-columns: 1.2fr 1.3fr .8fr .8fr !important;
   gap: 8px;
   align-items: center;
   min-width: 640px;
@@ -7201,6 +7201,22 @@ button:disabled,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ave-pool-pair-cell {
+  font-weight: 700;
+}
+
+.ave-pool-amount-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal !important;
+  line-height: 1.25;
+}
+
+.ave-pool-amount-cell > span {
+  color: #d9e3f7;
 }
 
 .ave-pool-dex-cell {
