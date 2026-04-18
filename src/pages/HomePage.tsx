@@ -22,6 +22,7 @@ type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha'
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
+const HOME_MAX_VISIBLE_TOKENS = 60
 
 function hasTokenAvatar(image: string | undefined | null): boolean {
   if (image == null || typeof image !== 'string') return false
@@ -70,20 +71,26 @@ export function HomePage() {
       next = next.filter((item) => item.symbol.toLowerCase().includes(q) || item.name.toLowerCase().includes(q))
     }
     if (activeSection === 'gain') {
-      return next.sort(
+      return next
+        .sort(
         (a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity)
       )
+        .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
     if (activeSection === 'loss') {
-      return next.sort(
+      return next
+        .sort(
         (a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity)
       )
+        .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
     if (activeSection === 'alpha') {
-      return next.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+      return next
+        .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+        .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
     // 热门：仅展示有头像（非空 image）的代币
-    return next.filter((item) => hasTokenAvatar(item.image))
+    return next.filter((item) => hasTokenAvatar(item.image)).slice(0, HOME_MAX_VISIBLE_TOKENS)
   }, [activeSection, baseFiltered, homeSearch])
 
   useEffect(() => {
