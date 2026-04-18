@@ -7632,19 +7632,12 @@ button:disabled,
 
 .ave-markets-v2-table-head,
 .ave-markets-v2-list .market-watch-row {
-  grid-template-columns: 28px minmax(0, 1fr) 90px 84px;
+  grid-template-columns: minmax(0, 1fr) 90px 84px;
   gap: 6px;
 }
 
 .ave-markets-v2-table-head {
   font-size: 12px;
-}
-
-.ave-markets-v2-rank {
-  color: #8f98a8;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
 }
 
 .ave-detail-v2-data-cards {
@@ -8292,6 +8285,6 @@ button:disabled,
 
   .ave-markets-v2-table-head,
   .ave-markets-v2-list .market-watch-row {
-    grid-template-columns: 28px minmax(0, 1fr) 78px 72px;
+    grid-template-columns: minmax(0, 1fr) 78px 72px;
   }
 }

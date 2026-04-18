@@ -176,7 +176,6 @@ export function MarketsPage() {
             return (
               <div key="table" className="ave-markets-v2-table-wrap">
                 <div className="market-table-head ave-markets-v2-table-head">
-                  <span>#</span>
                   <span>代币</span>
                   <span>价格</span>
                   <span>24h</span>
@@ -198,11 +197,10 @@ export function MarketsPage() {
           if (s.id === 'list') {
             return (
               <div key="list" className="market-watch-list ave-markets-v2-list">
-                {rows.map((item, idx) => {
+                {rows.map((item) => {
                   const isDexToken = item.id.includes(':')
                   const innerLink = (
                     <>
-                      <div className="ave-markets-v2-rank">{idx + 1}</div>
                       <div className="market-watch-main">
                         <img src={item.image} alt="" className="market-watch-icon" />
                         <div>
