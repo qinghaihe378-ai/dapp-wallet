@@ -6737,6 +6737,65 @@ button:disabled,
   text-decoration: none;
 }
 
+.trade-stats-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trade-stats-grid div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.trade-stats-grid span {
+  color: #8fa0bc;
+  font-size: 11px;
+}
+
+.trade-stats-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #f2f6ff;
+  font-size: 13px;
+}
+
+.trade-recent-list {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.trade-recent-list p {
+  margin: 0 0 6px;
+}
+
+.trade-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 1fr;
+  gap: 8px;
+  min-height: 26px;
+  align-items: center;
+  font-size: 12px;
+  color: #d9e3f7;
+}
+
+.trade-row .up {
+  color: #2edd9d;
+}
+
+.trade-row .down {
+  color: #ff6b78;
+}
+
+.trade-empty {
+  color: #93a4be;
+  font-size: 12px;
+}
+
 .ave-detail-panel-placeholder {
   margin: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);

@@ -93,6 +93,25 @@ export function MarketDetailPage() {
   const [sellTax, setSellTax] = useState<number | null>(null)
   const [pairVolume24h, setPairVolume24h] = useState<number | null>(null)
   const [pairTxns24h, setPairTxns24h] = useState<number | null>(null)
+  const [pairTxnsByWindow, setPairTxnsByWindow] = useState<Record<'m5' | 'h1' | 'h6' | 'h24', { buys: number; sells: number }>>({
+    m5: { buys: 0, sells: 0 },
+    h1: { buys: 0, sells: 0 },
+    h6: { buys: 0, sells: 0 },
+    h24: { buys: 0, sells: 0 },
+  })
+  const [pairVolumeByWindow, setPairVolumeByWindow] = useState<Record<'m5' | 'h1' | 'h6' | 'h24', number>>({
+    m5: 0,
+    h1: 0,
+    h6: 0,
+    h24: 0,
+  })
+  const [recentTrades, setRecentTrades] = useState<Array<{
+    txHash: string
+    side: 'buy' | 'sell'
+    volumeUsd: number
+    from: string
+    time: string
+  }>>([])
   const [apiTotalHolders, setApiTotalHolders] = useState<number | null>(null)
   const [realHolders, setRealHolders] = useState<Array<{ address: string; percent: number; balance: string }>>([])
   const [totalSupply, setTotalSupply] = useState<string | null>(null)
@@ -259,6 +278,13 @@ export function MarketDetailPage() {
     if (!dexScreenerChainId || !dexPairAddress) {
       setPairVolume24h(null)
       setPairTxns24h(null)
+      setPairTxnsByWindow({
+        m5: { buys: 0, sells: 0 },
+        h1: { buys: 0, sells: 0 },
+        h6: { buys: 0, sells: 0 },
+        h24: { buys: 0, sells: 0 },
+      })
+      setPairVolumeByWindow({ m5: 0, h1: 0, h6: 0, h24: 0 })
       return
     }
     let cancelled = false
@@ -268,8 +294,13 @@ export function MarketDetailPage() {
         if (!res.ok) return
         const json = (await res.json()) as {
           pairs?: Array<{
-            volume?: { h24?: number }
-            txns?: { h24?: { buys?: number; sells?: number } }
+            txns?: {
+              m5?: { buys?: number; sells?: number }
+              h1?: { buys?: number; sells?: number }
+              h6?: { buys?: number; sells?: number }
+              h24?: { buys?: number; sells?: number }
+            }
+            volume?: { m5?: number; h1?: number; h6?: number; h24?: number }
           }>
         }
         const p = json?.pairs?.[0]
@@ -279,15 +310,81 @@ export function MarketDetailPage() {
         const sells = p.txns?.h24?.sells ?? 0
         setPairVolume24h(Number.isFinite(volume as number) ? Number(volume) : null)
         setPairTxns24h(Number.isFinite(buys + sells) ? buys + sells : null)
+        setPairTxnsByWindow({
+          m5: { buys: p.txns?.m5?.buys ?? 0, sells: p.txns?.m5?.sells ?? 0 },
+          h1: { buys: p.txns?.h1?.buys ?? 0, sells: p.txns?.h1?.sells ?? 0 },
+          h6: { buys: p.txns?.h6?.buys ?? 0, sells: p.txns?.h6?.sells ?? 0 },
+          h24: { buys, sells },
+        })
+        setPairVolumeByWindow({
+          m5: p.volume?.m5 ?? 0,
+          h1: p.volume?.h1 ?? 0,
+          h6: p.volume?.h6 ?? 0,
+          h24: p.volume?.h24 ?? 0,
+        })
       } catch {
         if (cancelled) return
         setPairVolume24h(null)
         setPairTxns24h(null)
+        setPairTxnsByWindow({
+          m5: { buys: 0, sells: 0 },
+          h1: { buys: 0, sells: 0 },
+          h6: { buys: 0, sells: 0 },
+          h24: { buys: 0, sells: 0 },
+        })
+        setPairVolumeByWindow({ m5: 0, h1: 0, h6: 0, h24: 0 })
       }
     }
     void loadPairStats()
     return () => { cancelled = true }
   }, [dexScreenerChainId, dexPairAddress])
+
+  useEffect(() => {
+    if (!geckoNetworkId || !dexPairAddress) {
+      setRecentTrades([])
+      return
+    }
+    let cancelled = false
+    const loadTrades = async () => {
+      try {
+        const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/${geckoNetworkId}/pools/${dexPairAddress}/trades?page=1`)
+        if (!res.ok) return
+        const json = (await res.json()) as {
+          data?: Array<{
+            attributes?: {
+              tx_hash?: string
+              kind?: 'buy' | 'sell'
+              volume_in_usd?: string
+              tx_from_address?: string
+              block_timestamp?: string
+            }
+          }>
+        }
+        if (cancelled) return
+        const list = (json?.data ?? [])
+          .map((x) => x.attributes)
+          .filter((x): x is NonNullable<typeof x> => !!x && (x.kind === 'buy' || x.kind === 'sell'))
+          .slice(0, 20)
+          .map((x) => ({
+            txHash: x.tx_hash ?? '',
+            side: x.kind as 'buy' | 'sell',
+            volumeUsd: Number.parseFloat(x.volume_in_usd ?? '0') || 0,
+            from: x.tx_from_address ?? '',
+            time: x.block_timestamp ?? '',
+          }))
+        setRecentTrades(list)
+      } catch {
+        if (cancelled) return
+        setRecentTrades([])
+      }
+    }
+    void loadTrades()
+    const iv = setInterval(loadTrades, 15000)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [geckoNetworkId, dexPairAddress])
 
   useEffect(() => {
     const chain = securityChain
@@ -615,7 +712,25 @@ export function MarketDetailPage() {
               <div className="ave-detail-liquidity-card">
                 {subTab === 'trade' && (
                   <div className="ave-tab-placeholder">
-                    <p>快捷交易</p>
+                    <p>买卖数据（真实）</p>
+                    <div className="trade-stats-grid">
+                      <div><span>5m 买/卖</span><strong>{pairTxnsByWindow.m5.buys}/{pairTxnsByWindow.m5.sells}</strong></div>
+                      <div><span>1h 买/卖</span><strong>{pairTxnsByWindow.h1.buys}/{pairTxnsByWindow.h1.sells}</strong></div>
+                      <div><span>6h 买/卖</span><strong>{pairTxnsByWindow.h6.buys}/{pairTxnsByWindow.h6.sells}</strong></div>
+                      <div><span>24h 买/卖</span><strong>{pairTxnsByWindow.h24.buys}/{pairTxnsByWindow.h24.sells}</strong></div>
+                      <div><span>24h 成交量</span><strong>{formatCompact(pairVolumeByWindow.h24)}</strong></div>
+                      <div><span>24h 买卖比</span><strong>{pairTxnsByWindow.h24.sells > 0 ? (pairTxnsByWindow.h24.buys / pairTxnsByWindow.h24.sells).toFixed(2) : '—'}</strong></div>
+                    </div>
+                    <div className="trade-recent-list">
+                      <p>最新成交</p>
+                      {recentTrades.length > 0 ? recentTrades.slice(0, 8).map((t, i) => (
+                        <div key={`${t.txHash}-${i}`} className="trade-row">
+                          <span className={t.side === 'buy' ? 'up' : 'down'}>{t.side === 'buy' ? '买' : '卖'}</span>
+                          <span>${t.volumeUsd.toFixed(2)}</span>
+                          <span>{t.from ? `${t.from.slice(0, 6)}...${t.from.slice(-4)}` : '—'}</span>
+                        </div>
+                      )) : <span className="trade-empty">暂无买卖成交数据</span>}
+                    </div>
                     <div className="ave-tab-actions">
                       <Link to={quickTradeTargets.buy}>买入</Link>
                       <Link to={quickTradeTargets.sell}>卖出</Link>
