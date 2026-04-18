@@ -203,13 +203,63 @@ export function AppHeader() {
 
   if (headerMode === 'market') {
     const marketChain = (new URLSearchParams(location.search).get('chain') ?? '').toLowerCase()
+    const marketChainLabel =
+      marketChain === 'eth' ? 'ETH' :
+      marketChain === 'bsc' ? 'BSC' :
+      marketChain === 'base' ? 'Base' :
+      '全链'
+    const marketDropdown = showNet && createPortal(
+      <div
+        className="ave-network-overlay"
+        role="presentation"
+        onClick={(e) => { if (e.target === e.currentTarget) setShowNet(false) }}
+      >
+        <div
+          className="ave-network-dropdown ave-header-network-dropdown ave-header-network-dropdown-fixed ave-network-dropdown-portal"
+          style={{ top: netPos.top, left: netPos.left }}
+          role="menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {[
+            { key: 'all', label: '全链' },
+            { key: 'eth', label: 'ETH' },
+            { key: 'bsc', label: 'BSC' },
+            { key: 'base', label: 'Base' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              role="menuitem"
+              className={(marketChain || 'all') === opt.key ? 'active' : ''}
+              onClick={() => {
+                navigate(opt.key === 'all' ? '/market?chain=all' : `/market?chain=${opt.key}`)
+                setShowNet(false)
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>,
+      document.body
+    )
     return (
       <header className="ave-header ave-header-tabs">
         <div className="ave-header-tabbar">
-          <Link to="/market?chain=all" className={`ave-header-tab ${!marketChain || marketChain === 'all' ? 'active' : ''}`}>全链</Link>
-          <Link to="/market?chain=eth" className={`ave-header-tab ${marketChain === 'eth' ? 'active' : ''}`}>ETH</Link>
-          <Link to="/market?chain=bsc" className={`ave-header-tab ${marketChain === 'bsc' ? 'active' : ''}`}>BSC</Link>
-          <Link to="/market?chain=base" className={`ave-header-tab ${marketChain === 'base' ? 'active' : ''}`}>Base</Link>
+          <button type="button" className="ave-header-tab active">全链</button>
+          <div className="ave-header-tab ave-header-network-wrap">
+            <button
+              ref={netBtnRef}
+              type="button"
+              className="ave-header-network-btn"
+              onClick={() => setShowNet(!showNet)}
+              aria-expanded={showNet}
+            >
+              {marketChainLabel}
+              <span className="ave-header-network-arrow">▼</span>
+            </button>
+          </div>
+          {marketDropdown}
         </div>
       </header>
     )
