@@ -10,12 +10,14 @@ import {
 
 const redis = new Redis(process.env.REDIS_URL as string)
 // 让前端 10 秒轮询真正生效：缓存只保留短时间
-const TTL_SECONDS = 12
-const FRESH_MS = 10_000
+const DEFAULT_TTL_SECONDS = 12
+const DEFAULT_FRESH_MS = 10_000
 const ALPHA_CACHE_KEY = 'clawdex:markets:alpha'
 
 const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'polygon']
 const HOME_PAGE_CONFIG_KEY = 'clawdex:pageConfig:home'
+const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
+const TOKEN_LIBRARY_KEY = 'clawdex:tokenLibrary'
 /** 手动热门未进榜单时，Dex 单价缓存（秒），多客户端共用，减轻 DexScreener 压力 */
 const MANUAL_SPOT_TTL_SEC = 20
 
@@ -66,10 +68,47 @@ function normalizeManualHotTokens(raw: unknown): MarketItem[] {
 
 async function getManualHotTokens(): Promise<MarketItem[]> {
   const raw = await redis.get(HOME_PAGE_CONFIG_KEY)
+  const baseFromConfig = !raw
+    ? []
+    : (() => {
+        try {
+          const cfg = JSON.parse(raw) as { manualHotTokens?: unknown }
+          return normalizeManualHotTokens(cfg?.manualHotTokens)
+        } catch {
+          return []
+        }
+      })()
+  const baseFromLibrary = await getHotTokensFromLibrary()
+  const merged = [...baseFromConfig, ...baseFromLibrary]
+  const byId = new Map<string, MarketItem>()
+  for (const item of merged) {
+    if (!byId.has(item.id)) byId.set(item.id, item)
+  }
+  return [...byId.values()]
+}
+
+async function getHotTokensFromLibrary(): Promise<MarketItem[]> {
+  const raw = await redis.get(TOKEN_LIBRARY_KEY)
   if (!raw) return []
   try {
-    const cfg = JSON.parse(raw) as { manualHotTokens?: unknown }
-    return normalizeManualHotTokens(cfg?.manualHotTokens)
+    const list = JSON.parse(raw) as Array<Record<string, unknown>>
+    const mapped = (Array.isArray(list) ? list : [])
+      .filter((it) => Boolean(it?.hot) && it?.enabled !== false)
+      .map((it) => ({
+        id: String(it.id ?? '').trim(),
+        symbol: String(it.symbol ?? '').trim(),
+        name: String(it.name ?? '').trim() || String(it.symbol ?? '').trim(),
+        image: String(it.image ?? '').trim(),
+        current_price: Number(it.current_price ?? 0) || 0,
+        price_change_percentage_24h:
+          it.price_change_percentage_24h == null || it.price_change_percentage_24h === ''
+            ? null
+            : Number(it.price_change_percentage_24h),
+        market_cap: Number(it.market_cap ?? 0) || 0,
+        chain: String(it.chain ?? '').trim().toLowerCase() as ChainId,
+      }))
+      .filter((it) => it.id && it.symbol && it.image && CHAINS.includes(it.chain))
+    return mapped.sort((a, b) => Number((a as any).rank ?? 0) - Number((b as any).rank ?? 0))
   } catch {
     return []
   }
@@ -250,6 +289,36 @@ type MarketPayload = {
   items: MarketItem[]
 }
 
+type SystemConfig = {
+  market?: {
+    cacheTtlSeconds?: number
+    freshMs?: number
+    enableAlpha?: boolean
+    retries?: number
+    sourceToggles?: {
+      dexScreener?: boolean
+      birdeye?: boolean
+      coinGecko?: boolean
+      coinPaprika?: boolean
+      coinCap?: boolean
+    }
+  }
+  apiKeys?: {
+    birdeyeApiKey?: string
+  }
+}
+
+async function getSystemConfig(): Promise<SystemConfig> {
+  try {
+    const raw = await redis.get(SYSTEM_CONFIG_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as SystemConfig
+    return parsed ?? {}
+  } catch {
+    return {}
+  }
+}
+
 type BinanceAlphaToken = {
   tokenId?: string
   alphaId?: string
@@ -317,18 +386,26 @@ async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
 
 export default async function handler(req: any, res: any) {
   try {
+    const sysCfg = await getSystemConfig()
+    const ttlSeconds = Math.max(1, Number(sysCfg.market?.cacheTtlSeconds ?? DEFAULT_TTL_SECONDS))
+    const freshMs = Math.max(500, Number(sysCfg.market?.freshMs ?? DEFAULT_FRESH_MS))
+    const alphaEnabled = sysCfg.market?.enableAlpha !== false
     const chainParam = String(req?.query?.chain ?? 'all') as ChainId | 'all'
     const scope = String(req?.query?.scope ?? '').trim().toLowerCase()
     const refresh = String(req?.query?.refresh ?? '') === '1'
     const chain = chainParam === 'all' ? 'all' : (CHAINS.includes(chainParam) ? chainParam : 'all')
 
     if (scope === 'alpha') {
+      if (!alphaEnabled) {
+        res.status(403).json({ ok: false, message: 'alpha source disabled by admin config' })
+        return
+      }
       if (!refresh) {
         const cached = await redis.get(ALPHA_CACHE_KEY)
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
-          const age = Date.now() - (payload.updatedAt || 0)
-          if (age >= 0 && age < FRESH_MS) {
+            const age = Date.now() - (payload.updatedAt || 0)
+            if (age >= 0 && age < freshMs) {
             const byChain = chain === 'all' ? payload.items : payload.items.filter((it) => it.chain === chain)
             sendMarketPayload(res, { ...payload, chain, items: byChain } satisfies MarketPayload)
             return
@@ -343,7 +420,7 @@ export default async function handler(req: any, res: any) {
         chain: 'all',
         items: alphaItems,
       }
-      await redis.set(ALPHA_CACHE_KEY, JSON.stringify(alphaPayload), 'EX', TTL_SECONDS)
+      await redis.set(ALPHA_CACHE_KEY, JSON.stringify(alphaPayload), 'EX', ttlSeconds)
       const byChain = chain === 'all' ? alphaItems : alphaItems.filter((it) => it.chain === chain)
       sendMarketPayload(res, { ...alphaPayload, chain, items: byChain } satisfies MarketPayload)
       return
@@ -356,7 +433,7 @@ export default async function handler(req: any, res: any) {
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
           const age = Date.now() - (payload.updatedAt || 0)
-          if (age >= 0 && age < FRESH_MS) {
+          if (age >= 0 && age < freshMs) {
             const manualSlice = manualItems.filter((x) => x.chain === chain)
             const cachedList = payload.items ?? []
             let merged = mergeManualItems(cachedList, manualSlice)
@@ -368,7 +445,7 @@ export default async function handler(req: any, res: any) {
       } else {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         const age = Date.now() - (updatedAt || 0)
-        if (okCount === CHAINS.length && age >= 0 && age < FRESH_MS) {
+        if (okCount === CHAINS.length && age >= 0 && age < freshMs) {
           let merged = mergeManualItems(allItems, manualItems)
           merged = await enrichManualOnlyPrices(merged, manualItems, allItems)
           sendMarketPayload(res, { updatedAt, provider, chain: 'all', items: merged } satisfies MarketPayload)
@@ -379,7 +456,11 @@ export default async function handler(req: any, res: any) {
 
     // 缓存缺失或强制刷新：优先拉链上 Dex 行情，按链缓存各 N 个
     try {
-      const { data, provider } = await fetchOnchainMarketsWithFallback(800, 1)
+      const { data, provider } = await fetchOnchainMarketsWithFallback(800, 1, {
+        retries: Math.max(1, Number(sysCfg.market?.retries ?? 1)),
+        sourceToggles: sysCfg.market?.sourceToggles,
+        birdeyeApiKey: String(sysCfg.apiKeys?.birdeyeApiKey ?? '').trim() || undefined,
+      })
       const grouped = groupByChain(data)
       const now = Date.now()
       const writes: Array<Promise<unknown>> = []
@@ -388,7 +469,7 @@ export default async function handler(req: any, res: any) {
         const items = (grouped.get(c) ?? []).slice(0, 250)
         byChain.set(c, items)
         const payload: MarketPayload = { updatedAt: now, provider, chain: c, items }
-        writes.push(redis.set(keyFor(c), JSON.stringify(payload), 'EX', TTL_SECONDS))
+        writes.push(redis.set(keyFor(c), JSON.stringify(payload), 'EX', ttlSeconds))
       }
       await Promise.allSettled(writes)
 

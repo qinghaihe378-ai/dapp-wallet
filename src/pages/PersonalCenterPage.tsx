@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { NETWORK_CONFIG } from '../lib/walletConfig'
 import { UNISWAP_API_KEY_STORAGE_KEY } from '../api/uniswapTrade'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 const PROFILE_NICKNAME_KEY = 'profileNickname'
 
@@ -15,6 +16,7 @@ function getUniswapKeySource(): 'local' | 'env' | '' {
 }
 
 export function PersonalCenterPage() {
+  const { config } = usePageConfig('profile')
   const { address, network } = useWallet()
   const [nickname, setNickname] = useState(() => {
     if (typeof window === 'undefined') return ''
@@ -58,6 +60,7 @@ export function PersonalCenterPage() {
 
   return (
     <div className="page ave-page ave-profile-shell">
+      {config?.notice && <div className="home-status-note">{config.notice}</div>}
       <div className="profile-hero-card">
         <div className="profile-hero-topline">
           <div className="profile-hero-chip">个人中心</div>

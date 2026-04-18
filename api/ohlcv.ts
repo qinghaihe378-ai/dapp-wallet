@@ -3,7 +3,8 @@ import { Redis } from 'ioredis'
 const redis = new Redis(process.env.REDIS_URL as string)
 const BASE = 'https://api.geckoterminal.com/api/v2'
 const ACCEPT = 'application/json;version=20230203'
-const TTL_SECONDS = 30
+const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
+const DEFAULT_TTL_SECONDS = 30
 
 type Timeframe = 'minute' | 'hour' | 'day'
 
@@ -15,6 +16,17 @@ function clampInt(v: unknown, min: number, max: number, def: number) {
 
 export default async function handler(req: any, res: any) {
   try {
+    const sysRaw = await redis.get(SYSTEM_CONFIG_KEY)
+    let ttlSeconds = DEFAULT_TTL_SECONDS
+    if (sysRaw) {
+      try {
+        const sys = JSON.parse(sysRaw) as { ohlcv?: { cacheTtlSeconds?: number } }
+        ttlSeconds = Math.max(1, Number(sys?.ohlcv?.cacheTtlSeconds ?? DEFAULT_TTL_SECONDS))
+      } catch {
+        ttlSeconds = DEFAULT_TTL_SECONDS
+      }
+    }
+
     const network = String(req?.query?.network ?? '').trim()
     const pool = String(req?.query?.pool ?? '').trim()
     const timeframe = String(req?.query?.timeframe ?? 'minute').trim() as Timeframe
@@ -46,10 +58,9 @@ export default async function handler(req: any, res: any) {
     }
     const json = await r.json()
     const payload = { ok: true, updatedAt: Date.now(), data: json }
-    await redis.set(key, JSON.stringify(payload), 'EX', TTL_SECONDS)
+    await redis.set(key, JSON.stringify(payload), 'EX', ttlSeconds)
     res.status(200).json(payload)
   } catch (e) {
     res.status(500).json({ ok: false, message: e instanceof Error ? e.message : String(e) })
   }
 }
-

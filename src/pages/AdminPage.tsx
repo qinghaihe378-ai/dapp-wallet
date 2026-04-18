@@ -2,8 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   adminLogin,
   adminLogout,
+  getAdminSystemConfig,
+  getAdminTokenLibrary,
   getAdminPageConfig,
+  setAdminSystemConfig,
+  setAdminTokenLibrary,
   setAdminPageConfig,
+  type ApiSystemConfig,
+  type ManagedToken,
   type ManualHotToken,
   type PageConfig,
   type PageId,
@@ -16,6 +22,9 @@ const PAGES: Array<{ id: PageId; label: string; defaultSections: string[] }> = [
   { id: 'newTokens', label: '新币', defaultSections: ['hero', 'chains', 'emptyNote'] },
   { id: 'bot', label: 'Bot', defaultSections: ['notice', 'chat'] },
   { id: 'swap', label: '交易', defaultSections: ['notice', 'swapForm', 'history'] },
+  { id: 'wallet', label: '钱包', defaultSections: ['hero', 'assets', 'actions'] },
+  { id: 'profile', label: '个人中心', defaultSections: ['hero', 'menu', 'api'] },
+  { id: 'marketDetail', label: '详情页', defaultSections: ['topbar', 'price', 'chart', 'holders', 'detail'] },
 ]
 
 function normalizeHomeTitle(pageId: PageId, title: string | undefined): string | undefined {
@@ -120,6 +129,44 @@ function move(list: SectionConfig[], idx: number, dir: -1 | 1) {
   return next.map((s, i) => ({ ...s, order: i }))
 }
 
+function emptyManagedToken(): ManagedToken {
+  return {
+    id: '',
+    symbol: '',
+    name: '',
+    image: '',
+    chain: 'bsc',
+    address: '',
+    current_price: 0,
+    price_change_percentage_24h: null,
+    market_cap: 0,
+    enabled: true,
+    hot: false,
+    rank: 0,
+  }
+}
+
+function defaultSystemConfig(): ApiSystemConfig {
+  return {
+    market: {
+      cacheTtlSeconds: 12,
+      freshMs: 10_000,
+      enableAlpha: true,
+      retries: 1,
+      sourceToggles: {
+        dexScreener: true,
+        birdeye: true,
+        coinGecko: true,
+        coinPaprika: true,
+        coinCap: true,
+      },
+    },
+    newTokens: { cacheTtlSeconds: 60 },
+    ohlcv: { cacheTtlSeconds: 30 },
+    apiKeys: { birdeyeApiKey: '' },
+  }
+}
+
 export function AdminPage() {
   const [password, setPassword] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
@@ -132,6 +179,10 @@ export function AdminPage() {
   const [manualHotRows, setManualHotRows] = useState<ManualHotToken[]>([])
   const [showManualJson, setShowManualJson] = useState(false)
   const [manualJsonDraft, setManualJsonDraft] = useState('[]')
+  const [tokenLibraryRows, setTokenLibraryRows] = useState<ManagedToken[]>([])
+  const [apiConfig, setApiConfig] = useState<ApiSystemConfig>(defaultSystemConfig())
+  const [tokenLibrarySaving, setTokenLibrarySaving] = useState(false)
+  const [apiConfigSaving, setApiConfigSaving] = useState(false)
 
   const defaults = useMemo(() => PAGES.find((p) => p.id === pageId)?.defaultSections ?? [], [pageId])
 
@@ -162,6 +213,15 @@ export function AdminPage() {
   useEffect(() => {
     if (!loggedIn) return
     void loadConfig()
+    void (async () => {
+      try {
+        const [tokenRes, apiRes] = await Promise.all([getAdminTokenLibrary(), getAdminSystemConfig()])
+        setTokenLibraryRows(Array.isArray(tokenRes.items) ? tokenRes.items : [])
+        setApiConfig(apiRes.config ? { ...defaultSystemConfig(), ...apiRes.config } : defaultSystemConfig())
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '后台扩展配置加载失败')
+      }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn, pageId])
 
@@ -184,6 +244,76 @@ export function AdminPage() {
       setConfig({ title: '', subtitle: '', notice: '', sections: [] })
       setManualHotRows([])
       setManualJsonDraft('[]')
+      setTokenLibraryRows([])
+      setApiConfig(defaultSystemConfig())
+    }
+  }
+
+  const onSaveTokenLibrary = async () => {
+    try {
+      setTokenLibrarySaving(true)
+      setError(null)
+      const rows = tokenLibraryRows
+        .map((row) => ({
+          ...row,
+          id: String(row.id).trim(),
+          symbol: String(row.symbol).trim(),
+          name: String(row.name).trim() || String(row.symbol).trim(),
+          image: String(row.image).trim(),
+          chain: row.chain,
+          address: String(row.address ?? '').trim(),
+          current_price: Number(row.current_price) || 0,
+          market_cap: Number(row.market_cap) || 0,
+          rank: Number(row.rank ?? 0) || 0,
+          enabled: row.enabled !== false,
+          hot: Boolean(row.hot),
+          price_change_percentage_24h:
+            row.price_change_percentage_24h == null ? null : Number(row.price_change_percentage_24h),
+        }))
+        .filter((row) => row.id && row.symbol && row.image)
+      const res = await setAdminTokenLibrary(rows)
+      setTokenLibraryRows(res.items ?? [])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '保存代币库失败')
+    } finally {
+      setTokenLibrarySaving(false)
+    }
+  }
+
+  const onSaveApiConfig = async () => {
+    try {
+      setApiConfigSaving(true)
+      setError(null)
+      const next: ApiSystemConfig = {
+        market: {
+          cacheTtlSeconds: Number(apiConfig.market?.cacheTtlSeconds ?? 12) || 12,
+          freshMs: Number(apiConfig.market?.freshMs ?? 10_000) || 10_000,
+          enableAlpha: apiConfig.market?.enableAlpha !== false,
+          retries: Number(apiConfig.market?.retries ?? 1) || 1,
+          sourceToggles: {
+            dexScreener: apiConfig.market?.sourceToggles?.dexScreener !== false,
+            birdeye: apiConfig.market?.sourceToggles?.birdeye !== false,
+            coinGecko: apiConfig.market?.sourceToggles?.coinGecko !== false,
+            coinPaprika: apiConfig.market?.sourceToggles?.coinPaprika !== false,
+            coinCap: apiConfig.market?.sourceToggles?.coinCap !== false,
+          },
+        },
+        newTokens: {
+          cacheTtlSeconds: Number(apiConfig.newTokens?.cacheTtlSeconds ?? 60) || 60,
+        },
+        ohlcv: {
+          cacheTtlSeconds: Number(apiConfig.ohlcv?.cacheTtlSeconds ?? 30) || 30,
+        },
+        apiKeys: {
+          birdeyeApiKey: String(apiConfig.apiKeys?.birdeyeApiKey ?? '').trim(),
+        },
+      }
+      const res = await setAdminSystemConfig(next)
+      setApiConfig(res.config ?? next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '保存 API 配置失败')
+    } finally {
+      setApiConfigSaving(false)
     }
   }
 
@@ -607,6 +737,109 @@ export function AdminPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>代币库管理（含热门代币）</div>
+                <div className="tip" style={{ marginTop: 4 }}>支持全局代币条目；勾选“热门”后会并入首页热门池。</div>
+              </div>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setTokenLibraryRows((rows) => [...rows, emptyManagedToken()])}
+              >
+                添加代币
+              </button>
+            </div>
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              {tokenLibraryRows.length === 0 && <div className="tip">暂无代币条目。</div>}
+              {tokenLibraryRows.map((row, idx) => (
+                <div key={`lib-${idx}`} style={{ border: '1px solid var(--border, rgba(255,255,255,.12))', borderRadius: 10, padding: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
+                    <input value={row.id} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, id: e.target.value } : it))} placeholder="id: chain:0x..." style={{ padding: 10, borderRadius: 10 }} />
+                    <input value={row.symbol} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, symbol: e.target.value } : it))} placeholder="symbol" style={{ padding: 10, borderRadius: 10 }} />
+                    <input value={row.name} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder="name" style={{ padding: 10, borderRadius: 10 }} />
+                    <input value={row.image} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, image: e.target.value } : it))} placeholder="image URL" style={{ padding: 10, borderRadius: 10 }} />
+                    <select value={row.chain} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, chain: e.target.value as ManagedToken['chain'] } : it))} style={{ padding: 10, borderRadius: 10 }}>
+                      <option value="eth">eth</option>
+                      <option value="bsc">bsc</option>
+                      <option value="base">base</option>
+                      <option value="polygon">polygon</option>
+                    </select>
+                    <input type="number" value={row.current_price} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, current_price: Number(e.target.value) } : it))} placeholder="price" style={{ padding: 10, borderRadius: 10 }} />
+                    <input type="number" value={row.market_cap} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, market_cap: Number(e.target.value) } : it))} placeholder="market cap" style={{ padding: 10, borderRadius: 10 }} />
+                    <input type="number" value={row.rank ?? 0} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, rank: Number(e.target.value) } : it))} placeholder="rank" style={{ padding: 10, borderRadius: 10 }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={row.enabled !== false} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, enabled: e.target.checked } : it))} />
+                      <span className="tip">启用</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={Boolean(row.hot)} onChange={(e) => setTokenLibraryRows((r) => r.map((it, i) => i === idx ? { ...it, hot: e.target.checked } : it))} />
+                      <span className="tip">热门</span>
+                    </label>
+                    <button type="button" className="btn-ghost" onClick={() => setTokenLibraryRows((r) => r.filter((_, i) => i !== idx))}>删除</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button type="button" className="btn-primary" disabled={tokenLibrarySaving} onClick={() => void onSaveTokenLibrary()}>
+                {tokenLibrarySaving ? '保存中…' : '保存代币库'}
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <div style={{ fontWeight: 700 }}>API 管理</div>
+            <div className="tip" style={{ marginTop: 4 }}>配置缓存、数据源开关、回退重试与 Birdeye Key。</div>
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+                <input type="number" value={apiConfig.market?.cacheTtlSeconds ?? 12} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, cacheTtlSeconds: Number(e.target.value) } }))} placeholder="market ttl(sec)" style={{ padding: 10, borderRadius: 10 }} />
+                <input type="number" value={apiConfig.market?.freshMs ?? 10000} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, freshMs: Number(e.target.value) } }))} placeholder="market fresh(ms)" style={{ padding: 10, borderRadius: 10 }} />
+                <input type="number" value={apiConfig.market?.retries ?? 1} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, retries: Number(e.target.value) } }))} placeholder="market retries" style={{ padding: 10, borderRadius: 10 }} />
+                <input type="number" value={apiConfig.newTokens?.cacheTtlSeconds ?? 60} onChange={(e) => setApiConfig((c) => ({ ...c, newTokens: { ...c.newTokens, cacheTtlSeconds: Number(e.target.value) } }))} placeholder="new-tokens ttl(sec)" style={{ padding: 10, borderRadius: 10 }} />
+                <input type="number" value={apiConfig.ohlcv?.cacheTtlSeconds ?? 30} onChange={(e) => setApiConfig((c) => ({ ...c, ohlcv: { ...c.ohlcv, cacheTtlSeconds: Number(e.target.value) } }))} placeholder="ohlcv ttl(sec)" style={{ padding: 10, borderRadius: 10 }} />
+              </div>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span className="tip">Birdeye API Key（服务端）</span>
+                <input value={apiConfig.apiKeys?.birdeyeApiKey ?? ''} onChange={(e) => setApiConfig((c) => ({ ...c, apiKeys: { ...c.apiKeys, birdeyeApiKey: e.target.value } }))} style={{ padding: 10, borderRadius: 10 }} />
+              </label>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.enableAlpha !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, enableAlpha: e.target.checked } }))} />
+                  <span className="tip">启用币安Alpha</span>
+                </label>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.sourceToggles?.dexScreener !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, dexScreener: e.target.checked } } }))} />
+                  <span className="tip">DexScreener</span>
+                </label>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.sourceToggles?.birdeye !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, birdeye: e.target.checked } } }))} />
+                  <span className="tip">Birdeye</span>
+                </label>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.sourceToggles?.coinGecko !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, coinGecko: e.target.checked } } }))} />
+                  <span className="tip">CoinGecko</span>
+                </label>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.sourceToggles?.coinPaprika !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, coinPaprika: e.target.checked } } }))} />
+                  <span className="tip">CoinPaprika</span>
+                </label>
+                <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={apiConfig.market?.sourceToggles?.coinCap !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, coinCap: e.target.checked } } }))} />
+                  <span className="tip">CoinCap</span>
+                </label>
+              </div>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button type="button" className="btn-primary" disabled={apiConfigSaving} onClick={() => void onSaveApiConfig()}>
+                {apiConfigSaving ? '保存中…' : '保存 API 配置'}
+              </button>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-export type PageId = 'home' | 'market' | 'newTokens' | 'bot' | 'swap'
+export type PageId = 'home' | 'market' | 'newTokens' | 'bot' | 'swap' | 'wallet' | 'profile' | 'marketDetail'
 
 export type SectionConfig = {
   id: string
@@ -25,6 +25,48 @@ export type PageConfig = {
   notice?: string
   sections?: SectionConfig[]
   manualHotTokens?: ManualHotToken[]
+  updatedAt?: number
+}
+
+export type ManagedToken = {
+  id: string
+  symbol: string
+  name: string
+  image: string
+  current_price: number
+  price_change_percentage_24h: number | null
+  market_cap: number
+  chain: 'eth' | 'bsc' | 'base' | 'polygon'
+  address?: string
+  enabled?: boolean
+  hot?: boolean
+  rank?: number
+  updatedAt?: number
+}
+
+export type ApiSystemConfig = {
+  market?: {
+    cacheTtlSeconds?: number
+    freshMs?: number
+    enableAlpha?: boolean
+    sourceToggles?: {
+      dexScreener?: boolean
+      birdeye?: boolean
+      coinGecko?: boolean
+      coinPaprika?: boolean
+      coinCap?: boolean
+    }
+    retries?: number
+  }
+  newTokens?: {
+    cacheTtlSeconds?: number
+  }
+  ohlcv?: {
+    cacheTtlSeconds?: number
+  }
+  apiKeys?: {
+    birdeyeApiKey?: string
+  }
   updatedAt?: number
 }
 
@@ -71,3 +113,24 @@ export async function getPublicPageConfig(page: PageId) {
   return await jsonFetch<{ ok: boolean; page: string; config: PageConfig | null }>(`/api/public-config?page=${encodeURIComponent(page)}`)
 }
 
+export async function getAdminTokenLibrary() {
+  return await jsonFetch<{ ok: boolean; items: ManagedToken[]; updatedAt?: number }>(`/api/admin/token-library`)
+}
+
+export async function setAdminTokenLibrary(items: ManagedToken[]) {
+  return await jsonFetch<{ ok: boolean; items: ManagedToken[]; updatedAt: number }>(`/api/admin/token-library`, {
+    method: 'PUT',
+    body: JSON.stringify({ items }),
+  })
+}
+
+export async function getAdminSystemConfig() {
+  return await jsonFetch<{ ok: boolean; config: ApiSystemConfig | null }>(`/api/admin/system-config`)
+}
+
+export async function setAdminSystemConfig(config: ApiSystemConfig) {
+  return await jsonFetch<{ ok: boolean; config: ApiSystemConfig }>(`/api/admin/system-config`, {
+    method: 'PUT',
+    body: JSON.stringify({ config }),
+  })
+}

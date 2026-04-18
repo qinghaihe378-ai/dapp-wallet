@@ -29,6 +29,18 @@ export interface MarketItem {
   coingeckoId?: string
 }
 
+export interface MarketFetchRuntimeOptions {
+  sourceToggles?: {
+    dexScreener?: boolean
+    birdeye?: boolean
+    coinGecko?: boolean
+    coinPaprika?: boolean
+    coinCap?: boolean
+  }
+  retries?: number
+  birdeyeApiKey?: string
+}
+
 /** CoinGecko 返回格式 */
 interface CoinGeckoItem {
   id: string
@@ -225,8 +237,11 @@ const MARKET_APIS = [
   },
   {
     name: 'Birdeye',
-    fetch: async (perPage: number): Promise<MarketItem[]> => {
-      const apiKey = (import.meta as any).env?.VITE_BIRDEYE_API_KEY as string | undefined
+    fetch: async (perPage: number, _page: number, options?: MarketFetchRuntimeOptions): Promise<MarketItem[]> => {
+      const apiKey =
+        options?.birdeyeApiKey?.trim() ||
+        ((typeof process !== 'undefined' ? process.env?.BIRDEYE_API_KEY : '') || '') ||
+        (((import.meta as any).env?.VITE_BIRDEYE_API_KEY as string | undefined) ?? '')
       if (!apiKey) throw new Error('Birdeye API key not configured (VITE_BIRDEYE_API_KEY)')
       const chains: Array<{ id: string; chain: ChainId }> = [
         { id: 'ethereum', chain: 'eth' },
@@ -331,15 +346,48 @@ export interface FetchMarketsResult {
   provider: string
 }
 
+function sourceEnabled(name: string, options?: MarketFetchRuntimeOptions) {
+  const toggles = options?.sourceToggles
+  if (!toggles) return true
+  if (name === 'DexScreener') return toggles.dexScreener !== false
+  if (name === 'Birdeye') return toggles.birdeye !== false
+  if (name === 'CoinGecko') return toggles.coinGecko !== false
+  if (name === 'CoinPaprika') return toggles.coinPaprika !== false
+  if (name === 'CoinCap') return toggles.coinCap !== false
+  return true
+}
+
+async function tryApiWithRetry(
+  api: { name: string; fetch: (perPage: number, page: number, options?: MarketFetchRuntimeOptions) => Promise<MarketItem[]> },
+  perPage: number,
+  page: number,
+  options?: MarketFetchRuntimeOptions,
+) {
+  const attempts = Math.max(1, Number(options?.retries ?? 1))
+  let lastError: unknown = null
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const data = await api.fetch(perPage, page, options)
+      if (data.length > 0) return data
+      lastError = new Error('empty data')
+    } catch (e) {
+      lastError = e
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
 /** 依次尝试多个 API，直到成功 */
 export async function fetchMarketsWithFallback(
   perPage = 20,
   page = 1,
+  options?: MarketFetchRuntimeOptions,
 ): Promise<FetchMarketsResult> {
   const errors: string[] = []
-  for (const api of MARKET_APIS) {
+  const enabledApis = MARKET_APIS.filter((api) => sourceEnabled(api.name, options))
+  for (const api of enabledApis) {
     try {
-      const data = await api.fetch(perPage, page)
+      const data = await tryApiWithRetry(api as any, perPage, page, options)
       if (data.length > 0) {
         return { data, provider: api.name }
       }
@@ -356,13 +404,15 @@ export async function fetchMarketsWithFallback(
 export async function fetchOnchainMarketsWithFallback(
   perPage = 50,
   page = 1,
+  options?: MarketFetchRuntimeOptions,
 ): Promise<FetchMarketsResult> {
   const errors: string[] = []
-  const onchainFirst = MARKET_APIS.filter((a) => a.name === 'DexScreener' || a.name === 'Birdeye')
-  const rest = MARKET_APIS.filter((a) => !onchainFirst.includes(a))
+  const enabledApis = MARKET_APIS.filter((api) => sourceEnabled(api.name, options))
+  const onchainFirst = enabledApis.filter((a) => a.name === 'DexScreener' || a.name === 'Birdeye')
+  const rest = enabledApis.filter((a) => !onchainFirst.includes(a))
   for (const api of [...onchainFirst, ...rest]) {
     try {
-      const data = await api.fetch(perPage, page)
+      const data = await tryApiWithRetry(api as any, perPage, page, options)
       if (data.length > 0) return { data, provider: api.name }
     } catch (e) {
       const msg = axios.isAxiosError(e) ? `${e.message} (${e.response?.status ?? '?'})` : String(e)

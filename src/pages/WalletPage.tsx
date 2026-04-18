@@ -8,6 +8,7 @@ import { readTrackedTokenBalances } from '../lib/evm/balances'
 import { isSupportedSwapNetwork } from '../lib/evm/config'
 import { getSwapTokens, getTokenBySymbol } from '../lib/evm/tokens'
 import { ERC20_ABI } from '../lib/evm/abis'
+import { usePageConfig } from '../hooks/usePageConfig'
 
 interface Holding {
   symbol: string
@@ -87,6 +88,7 @@ function WalletQuickIcon({ kind }: { kind: WalletQuickAction }) {
 }
 
 export function WalletPage() {
+  const { config } = usePageConfig('wallet')
   const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance, canUseInjected, connectInjected } = useWallet()
   const { getPrice } = usePrices()
   const walletValuesVisibleKey = `walletValuesVisible:${network}`
@@ -361,6 +363,7 @@ export function WalletPage() {
 
   return (
     <div className="page ave-page ave-wallet-shell-page ave-wallet-v2">
+      {config?.notice && <div className="home-status-note">{config.notice}</div>}
       <div className="wallet-unified-card ave-wallet-v2-card">
       <div className="wallet-hero-card">
         <div className="wallet-shot-topline">
