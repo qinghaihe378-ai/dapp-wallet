@@ -67,6 +67,33 @@ export type ApiSystemConfig = {
   apiKeys?: {
     birdeyeApiKey?: string
   }
+  ui?: {
+    bottomTabs?: Array<{
+      id: string
+      to: string
+      label: string
+      icon: string
+      enabled: boolean
+    }>
+    homeTabs?: Array<{
+      id: 'hot' | 'alpha' | 'gain' | 'loss' | 'newTokens'
+      label: string
+      enabled: boolean
+    }>
+    homeFilters?: Array<{
+      id: 'all' | 'base' | 'eth' | 'bsc'
+      label: string
+      enabled: boolean
+    }>
+    routeToggles?: {
+      market?: boolean
+      newTokens?: boolean
+      bot?: boolean
+      swap?: boolean
+      wallet?: boolean
+      profile?: boolean
+    }
+  }
   updatedAt?: number
 }
 
@@ -133,4 +160,8 @@ export async function setAdminSystemConfig(config: ApiSystemConfig) {
     method: 'PUT',
     body: JSON.stringify({ config }),
   })
+}
+
+export async function getPublicSystemConfig() {
+  return await jsonFetch<{ ok: boolean; config: ApiSystemConfig | null }>(`/api/public-system-config`)
 }

@@ -3990,6 +3990,57 @@ button:disabled,
   text-decoration: none;
 }
 
+/* Admin simple clean style */
+.admin-page {
+  background: #111827;
+}
+
+.admin-page .card {
+  background: rgba(17, 24, 39, 0.88);
+  border: 1px solid rgba(55, 65, 81, 0.95);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(2, 6, 23, 0.28);
+}
+
+.admin-page .layout,
+.admin-page .card input,
+.admin-page .card select,
+.admin-page .card textarea,
+.admin-page .card button {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.admin-page .card input,
+.admin-page .card select,
+.admin-page .card textarea {
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(55, 65, 81, 0.95);
+  color: #e5e7eb;
+}
+
+.admin-page .card input:focus,
+.admin-page .card select:focus,
+.admin-page .card textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.admin-page .btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.admin-page .btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.admin-page .btn-ghost {
+  background: rgba(31, 41, 55, 0.82);
+  border: 1px solid rgba(55, 65, 81, 0.95);
+}
+
 .swap-token-picker-sheet {
   position: fixed;
   left: 0;

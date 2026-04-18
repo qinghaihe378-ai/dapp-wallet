@@ -4,6 +4,7 @@ import { useWallet } from '../components/WalletProvider'
 import { COLLECTION_INTERVAL_MS } from '../api/markets'
 import { apiUrl } from '../lib/apiBase'
 import { usePageConfig } from '../hooks/usePageConfig'
+import { useSystemConfig } from '../hooks/useSystemConfig'
 
 interface HomeItem {
   id: string
@@ -30,6 +31,7 @@ function hasTokenAvatar(image: string | undefined | null): boolean {
 export function HomePage() {
   const { network } = useWallet()
   const { config } = usePageConfig('home')
+  const { config: systemConfig } = useSystemConfig()
   const homeQuickActionKey = `${HOME_QUICK_ACTION_KEY_PREFIX}:${network}`
   const homeFilterKey = `${HOME_FILTER_KEY_PREFIX}:${network}`
   const homeSectionKey = `${HOME_SECTION_KEY_PREFIX}:${network}`
@@ -152,6 +154,31 @@ export function HomePage() {
       .filter((s) => s.enabled !== false)
   }, [config?.sections])
 
+  const homeTabs = useMemo(() => {
+    const defaults: Array<{ id: 'hot' | 'alpha' | 'gain' | 'loss' | 'newTokens'; label: string; enabled: boolean }> = [
+      { id: 'hot', label: '热门', enabled: true },
+      { id: 'alpha', label: '币安Alpha', enabled: true },
+      { id: 'gain', label: '涨幅', enabled: true },
+      { id: 'loss', label: '跌幅', enabled: true },
+      { id: 'newTokens', label: '新币', enabled: true },
+    ]
+    const fromCfg = systemConfig?.ui?.homeTabs
+    const list = Array.isArray(fromCfg) && fromCfg.length > 0 ? fromCfg : defaults
+    return list.filter((t) => t.enabled !== false)
+  }, [systemConfig?.ui?.homeTabs])
+
+  const homeFilters = useMemo(() => {
+    const defaults: Array<{ id: 'all' | 'base' | 'eth' | 'bsc'; label: string; enabled: boolean }> = [
+      { id: 'all', label: 'All', enabled: true },
+      { id: 'base', label: 'Base', enabled: true },
+      { id: 'eth', label: 'ETH', enabled: true },
+      { id: 'bsc', label: 'BSC', enabled: true },
+    ]
+    const fromCfg = systemConfig?.ui?.homeFilters
+    const list = Array.isArray(fromCfg) && fromCfg.length > 0 ? fromCfg : defaults
+    return list.filter((f) => f.enabled !== false)
+  }, [systemConfig?.ui?.homeFilters])
+
   return (
     <div className="page ave-page ave-home-shell ave-home-v2">
       {config?.notice && (
@@ -174,18 +201,23 @@ export function HomePage() {
       </div>
 
       <div className="ave-home-shot-tabs">
-        <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
-        <button type="button" className={activeSection === 'alpha' ? 'active' : ''} onClick={() => setActiveSection('alpha')}>币安Alpha</button>
-        <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
-        <button type="button" className={activeSection === 'loss' ? 'active' : ''} onClick={() => setActiveSection('loss')}>跌幅</button>
-        <Link to="/new-tokens">新币</Link>
+        {homeTabs.map((tab) => {
+          if (tab.id === 'newTokens') return <Link key={tab.id} to="/new-tokens">{tab.label}</Link>
+          const sectionId: HomeSection = tab.id
+          return (
+            <button key={tab.id} type="button" className={activeSection === sectionId ? 'active' : ''} onClick={() => setActiveSection(sectionId)}>
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       <div className="ave-home-v2-chain-switch">
-        <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
+        {homeFilters.map((f) => (
+          <button key={f.id} type="button" className={`home-filter-pill ${activeFilter === f.id ? 'active' : ''}`} onClick={() => setActiveFilter(f.id)}>
+            {f.label}
+          </button>
+        ))}
         <button type="button" className="home-filter-pill-right">价格</button>
         <button type="button" className="home-filter-pill-right">涨幅</button>
       </div>

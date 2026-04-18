@@ -164,6 +164,36 @@ function defaultSystemConfig(): ApiSystemConfig {
     newTokens: { cacheTtlSeconds: 60 },
     ohlcv: { cacheTtlSeconds: 30 },
     apiKeys: { birdeyeApiKey: '' },
+    ui: {
+      bottomTabs: [
+        { id: 'home', to: '/', label: '首页', icon: 'home', enabled: true },
+        { id: 'market', to: '/market', label: '行情', icon: 'market', enabled: true },
+        { id: 'bot', to: '/bot', label: 'Bot', icon: 'bot', enabled: true },
+        { id: 'swap', to: '/swap', label: '交易', icon: 'swap', enabled: true },
+        { id: 'wallet', to: '/wallet', label: '钱包', icon: 'wallet', enabled: true },
+      ],
+      homeTabs: [
+        { id: 'hot', label: '热门', enabled: true },
+        { id: 'alpha', label: '币安Alpha', enabled: true },
+        { id: 'gain', label: '涨幅', enabled: true },
+        { id: 'loss', label: '跌幅', enabled: true },
+        { id: 'newTokens', label: '新币', enabled: true },
+      ],
+      homeFilters: [
+        { id: 'all', label: 'All', enabled: true },
+        { id: 'base', label: 'Base', enabled: true },
+        { id: 'eth', label: 'ETH', enabled: true },
+        { id: 'bsc', label: 'BSC', enabled: true },
+      ],
+      routeToggles: {
+        market: true,
+        newTokens: true,
+        bot: true,
+        swap: true,
+        wallet: true,
+        profile: true,
+      },
+    },
   }
 }
 
@@ -307,6 +337,33 @@ export function AdminPage() {
         apiKeys: {
           birdeyeApiKey: String(apiConfig.apiKeys?.birdeyeApiKey ?? '').trim(),
         },
+        ui: {
+          bottomTabs: (apiConfig.ui?.bottomTabs ?? []).map((t) => ({
+            id: String(t.id ?? '').trim(),
+            to: String(t.to ?? '').trim(),
+            label: String(t.label ?? '').trim(),
+            icon: String(t.icon ?? '').trim(),
+            enabled: t.enabled !== false,
+          })),
+          homeTabs: (apiConfig.ui?.homeTabs ?? []).map((t) => ({
+            id: t.id,
+            label: String(t.label ?? '').trim(),
+            enabled: t.enabled !== false,
+          })),
+          homeFilters: (apiConfig.ui?.homeFilters ?? []).map((f) => ({
+            id: f.id,
+            label: String(f.label ?? '').trim(),
+            enabled: f.enabled !== false,
+          })),
+          routeToggles: {
+            market: apiConfig.ui?.routeToggles?.market !== false,
+            newTokens: apiConfig.ui?.routeToggles?.newTokens !== false,
+            bot: apiConfig.ui?.routeToggles?.bot !== false,
+            swap: apiConfig.ui?.routeToggles?.swap !== false,
+            wallet: apiConfig.ui?.routeToggles?.wallet !== false,
+            profile: apiConfig.ui?.routeToggles?.profile !== false,
+          },
+        },
       }
       const res = await setAdminSystemConfig(next)
       setApiConfig(res.config ?? next)
@@ -382,7 +439,7 @@ export function AdminPage() {
 
   if (!loggedIn) {
     return (
-      <div className="page ave-page">
+      <div className="page ave-page admin-page">
         <div className="card">
           <h2 style={{ margin: 0 }}>后台管理</h2>
           <p className="tip" style={{ marginTop: 8 }}>请输入管理员密码登录。</p>
@@ -407,7 +464,7 @@ export function AdminPage() {
   const sections = normalizeSections(config.sections, defaults)
 
   return (
-    <div className="page ave-page">
+    <div className="page ave-page admin-page">
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
           <div>
@@ -834,6 +891,78 @@ export function AdminPage() {
                   <input type="checkbox" checked={apiConfig.market?.sourceToggles?.coinCap !== false} onChange={(e) => setApiConfig((c) => ({ ...c, market: { ...c.market, sourceToggles: { ...c.market?.sourceToggles, coinCap: e.target.checked } } }))} />
                   <span className="tip">CoinCap</span>
                 </label>
+              </div>
+              <div style={{ borderTop: '1px solid rgba(148,163,184,.2)', paddingTop: 10 }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>全站标签与功能控制</div>
+                <div className="tip" style={{ marginBottom: 8 }}>所有页面标签、底部导航、路由入口都可在这里开关和改名。</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div>
+                    <div className="tip" style={{ marginBottom: 6 }}>底部导航标签</div>
+                    {(apiConfig.ui?.bottomTabs ?? []).map((tab, idx) => (
+                      <div key={`btab-${tab.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 120px 1fr auto', marginBottom: 6 }}>
+                        <input value={tab.id} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, id: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
+                        <input value={tab.to} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, to: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
+                        <input value={tab.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input type="checkbox" checked={tab.enabled !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, bottomTabs: (c.ui?.bottomTabs ?? []).map((it, i) => i === idx ? { ...it, enabled: e.target.checked } : it) } }))} />
+                          <span className="tip">启用</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="tip" style={{ marginBottom: 6 }}>首页标签（热门/Alpha/涨跌幅/新币）</div>
+                    {(apiConfig.ui?.homeTabs ?? []).map((tab, idx) => (
+                      <div key={`htab-${tab.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
+                        <input value={tab.id} readOnly style={{ padding: 8, borderRadius: 8, opacity: .7 }} />
+                        <input value={tab.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeTabs: (c.ui?.homeTabs ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input type="checkbox" checked={tab.enabled !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeTabs: (c.ui?.homeTabs ?? []).map((it, i) => i === idx ? { ...it, enabled: e.target.checked } : it) } }))} />
+                          <span className="tip">启用</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="tip" style={{ marginBottom: 6 }}>首页链筛选标签</div>
+                    {(apiConfig.ui?.homeFilters ?? []).map((f, idx) => (
+                      <div key={`hfilter-${f.id}-${idx}`} style={{ display: 'grid', gap: 8, gridTemplateColumns: '120px 1fr auto', marginBottom: 6 }}>
+                        <input value={f.id} readOnly style={{ padding: 8, borderRadius: 8, opacity: .7 }} />
+                        <input value={f.label} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeFilters: (c.ui?.homeFilters ?? []).map((it, i) => i === idx ? { ...it, label: e.target.value } : it) } }))} style={{ padding: 8, borderRadius: 8 }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input type="checkbox" checked={f.enabled !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, homeFilters: (c.ui?.homeFilters ?? []).map((it, i) => i === idx ? { ...it, enabled: e.target.checked } : it) } }))} />
+                          <span className="tip">启用</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.market !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, market: e.target.checked } } }))} />
+                      <span className="tip">行情页</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.newTokens !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, newTokens: e.target.checked } } }))} />
+                      <span className="tip">新币页</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.bot !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, bot: e.target.checked } } }))} />
+                      <span className="tip">Bot页</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.swap !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, swap: e.target.checked } } }))} />
+                      <span className="tip">交易页</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.wallet !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, wallet: e.target.checked } } }))} />
+                      <span className="tip">钱包页</span>
+                    </label>
+                    <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={apiConfig.ui?.routeToggles?.profile !== false} onChange={(e) => setApiConfig((c) => ({ ...c, ui: { ...c.ui, routeToggles: { ...c.ui?.routeToggles, profile: e.target.checked } } }))} />
+                      <span className="tip">个人中心</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 10 }}>

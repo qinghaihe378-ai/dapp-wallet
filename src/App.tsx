@@ -12,14 +12,23 @@ import { WalletPage } from './pages/WalletPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { AdminPage } from './pages/AdminPage'
 import { LongxiaEmbedPage } from './pages/LongxiaEmbedPage'
+import { useSystemConfig } from './hooks/useSystemConfig'
 import './App.css'
 
-const tabs = [
-  { to: '/', label: '首页', icon: 'home' },
-  { to: '/market', label: '行情', icon: 'market' },
-  { to: '/bot', label: 'Bot', icon: 'bot' },
-  { to: '/swap', label: '交易', icon: 'swap' },
-  { to: '/wallet', label: '钱包', icon: 'wallet' },
+type BottomTabItem = {
+  id: string
+  to: string
+  label: string
+  icon: string
+  enabled: boolean
+}
+
+const tabs: BottomTabItem[] = [
+  { id: 'home', to: '/', label: '首页', icon: 'home', enabled: true },
+  { id: 'market', to: '/market', label: '行情', icon: 'market', enabled: true },
+  { id: 'bot', to: '/bot', label: 'Bot', icon: 'bot', enabled: true },
+  { id: 'swap', to: '/swap', label: '交易', icon: 'swap', enabled: true },
+  { id: 'wallet', to: '/wallet', label: '钱包', icon: 'wallet', enabled: true },
 ]
 
 
@@ -84,10 +93,14 @@ function TabIcon({ name }: { name: string }) {
 }
 
 function AppContent() {
+  const { config: systemConfig } = useSystemConfig()
   const location = useLocation()
   const isBot = location.pathname === '/bot'
   const isLobsterEmbed = location.pathname === '/lobster'
   const isMarketDetail = /^\/market\/[^/]+$/.test(location.pathname)
+  const routeToggles = systemConfig?.ui?.routeToggles
+  const dynamicTabs = (systemConfig?.ui?.bottomTabs && Array.isArray(systemConfig.ui.bottomTabs) ? systemConfig.ui.bottomTabs : tabs)
+    .filter((tab) => tab && tab.enabled !== false)
   const hideNav = location.pathname === '/admin' || isMarketDetail
   const hideHeader = location.pathname === '/admin' || isLobsterEmbed || isMarketDetail
   return (
@@ -103,30 +116,30 @@ function AppContent() {
       >
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/market" element={<MarketsPage />} />
+              {routeToggles?.market !== false && <Route path="/market" element={<MarketsPage />} />}
               <Route path="/market/:coinId" element={<MarketDetailPage />} />
-              <Route path="/new-tokens" element={<NewTokensPage />} />
-              <Route path="/profile" element={<PersonalCenterPage />} />
+              {routeToggles?.newTokens !== false && <Route path="/new-tokens" element={<NewTokensPage />} />}
+              {routeToggles?.profile !== false && <Route path="/profile" element={<PersonalCenterPage />} />}
               <Route path="/lobster" element={<LongxiaEmbedPage />} />
-              <Route path="/bot" element={<BotPage />} />
-              <Route path="/swap" element={<SwapPage />} />
-              <Route path="/wallet" element={<WalletPage />} />
+              {routeToggles?.bot !== false && <Route path="/bot" element={<BotPage />} />}
+              {routeToggles?.swap !== false && <Route path="/swap" element={<SwapPage />} />}
+              {routeToggles?.wallet !== false && <Route path="/wallet" element={<WalletPage />} />}
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/*" element={<AdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
           {!hideNav && <nav className="ave-bottom-nav" aria-label="底部导航">
-            {tabs.map((tab) => (
+            {dynamicTabs.map((tab) => (
               <NavLink
-                key={tab.to}
-                to={tab.to}
+                key={tab.id ?? tab.to}
+                to={tab.to as string}
                 className={({ isActive }) => 'ave-tab' + (isActive ? ' active' : '')}
               >
-                <span className={`ave-tab-icon ave-tab-icon-${tab.icon}`} aria-hidden="true">
-                  <TabIcon name={tab.icon} />
+                <span className={`ave-tab-icon ave-tab-icon-${tab.icon as string}`} aria-hidden="true">
+                  <TabIcon name={tab.icon as string} />
                 </span>
-                <span className="ave-tab-label">{tab.label}</span>
+                <span className="ave-tab-label">{tab.label as string}</span>
               </NavLink>
             ))}
           </nav>}
