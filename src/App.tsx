@@ -1,4 +1,4 @@
-import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { HashRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { AppHeader } from './components/AppHeader'
 import { WalletProvider } from './components/WalletProvider'
 import { HomePage } from './pages/HomePage'
@@ -136,13 +136,13 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <WalletProvider>
         <div className="app ave-app">
           <AppContent />
         </div>
       </WalletProvider>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
