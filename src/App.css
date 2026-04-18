@@ -6788,6 +6788,12 @@ button:disabled,
   font-size: 12px;
 }
 
+.holders-note {
+  margin-top: 10px;
+  color: #93a3bf;
+  font-size: 12px;
+}
+
 .detail-panel .detail-grid {
   margin-top: 10px;
   display: grid;
@@ -6814,6 +6820,17 @@ button:disabled,
   color: #f0f5ff;
   font-size: 13px;
   font-weight: 700;
+}
+
+.detail-panel .detail-grid .detail-links strong {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-panel .detail-grid .detail-links a {
+  color: #85b6ff;
+  text-decoration: none;
 }
 
 .ave-liquidity-title,

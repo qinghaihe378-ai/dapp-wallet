@@ -18,7 +18,16 @@ interface CoinDetail {
     high_24h: { usd: number }
     low_24h: { usd: number }
     fully_diluted_valuation?: { usd: number }
+    total_supply?: number | null
   }
+  links?: {
+    homepage?: string[]
+    twitter_screen_name?: string | null
+    telegram_channel_identifier?: string | null
+    subreddit_url?: string | null
+  }
+  asset_platform_id?: string | null
+  platforms?: Record<string, string>
 }
 
 const COINGECKO_ID_REG = /^[a-zA-Z0-9_-]+$/
@@ -77,6 +86,10 @@ export function MarketDetailPage() {
   const [pairVolume24h, setPairVolume24h] = useState<number | null>(null)
   const [pairTxns24h, setPairTxns24h] = useState<number | null>(null)
   const [apiTotalHolders, setApiTotalHolders] = useState<number | null>(null)
+  const [realHolders, setRealHolders] = useState<Array<{ address: string; percent: number; balance: string }>>([])
+  const [totalSupply, setTotalSupply] = useState<string | null>(null)
+  const [coinTypeInfo, setCoinTypeInfo] = useState<string | null>(null)
+  const [communityLinks, setCommunityLinks] = useState<Array<{ label: string; url: string }>>([])
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -274,6 +287,10 @@ export function MarketDetailPage() {
       setBuyTax(null)
       setSellTax(null)
       setApiTotalHolders(null)
+      setRealHolders([])
+      setTotalSupply(null)
+      setCoinTypeInfo(null)
+      setCommunityLinks([])
       return
     }
     const chainId = chainToHoneypotId[chain]
@@ -281,6 +298,10 @@ export function MarketDetailPage() {
       setBuyTax(null)
       setSellTax(null)
       setApiTotalHolders(null)
+      setRealHolders([])
+      setTotalSupply(null)
+      setCoinTypeInfo(null)
+      setCommunityLinks([])
       return
     }
     let cancelled = false
@@ -292,25 +313,64 @@ export function MarketDetailPage() {
         if (!res.ok) throw new Error('honeypot api failed')
         const json = (await res.json()) as {
           simulationResult?: { buyTax?: number; sellTax?: number }
-          token?: { buyTax?: number; sellTax?: number; totalHolders?: number }
+          token?: { buyTax?: number; sellTax?: number; totalHolders?: number; totalHoldersCount?: number; totalSupply?: string }
+          holderAnalysis?: { holders?: Array<{ address?: string; percentage?: number; quantity?: string }> }
+          holders?: Array<{ address?: string; percent?: string; balance?: string }>
         }
         if (cancelled) return
         const b = json?.simulationResult?.buyTax ?? json?.token?.buyTax
         const s = json?.simulationResult?.sellTax ?? json?.token?.sellTax
-        const h = json?.token?.totalHolders
+        const h = json?.token?.totalHolders ?? json?.token?.totalHoldersCount
         setBuyTax(Number.isFinite(b as number) ? Number(b) : null)
         setSellTax(Number.isFinite(s as number) ? Number(s) : null)
         setApiTotalHolders(Number.isFinite(h as number) ? Number(h) : null)
+        const holdersRaw = Array.isArray(json?.holders) ? json.holders : []
+        const parsed = holdersRaw
+          .filter((x) => x && typeof x.address === 'string')
+          .map((x) => ({
+            address: String(x.address),
+            percent: Number.parseFloat(String(x.percent ?? '0')) * 100,
+            balance: String(x.balance ?? ''),
+          }))
+          .filter((x) => Number.isFinite(x.percent) && x.percent >= 0)
+        setRealHolders(parsed.slice(0, 100))
+        const ts = json?.token?.totalSupply
+        setTotalSupply(typeof ts === 'string' && ts.trim() ? ts : null)
+        setCoinTypeInfo(`${chain.toUpperCase()} · ${detailVM?.symbol ?? ''}`.trim())
       } catch {
         if (cancelled) return
         setBuyTax(null)
         setSellTax(null)
         setApiTotalHolders(null)
+        setRealHolders([])
+        setTotalSupply(null)
+        setCoinTypeInfo(null)
       }
     }
     void loadTax()
     return () => { cancelled = true }
   }, [dexItem?.chain, dexTokenAddress])
+
+  useEffect(() => {
+    if (!detail) return
+    const links: Array<{ label: string; url: string }> = []
+    const homepage = detail.links?.homepage?.find((x) => typeof x === 'string' && x.trim().startsWith('http'))
+    if (homepage) links.push({ label: '官网', url: homepage })
+    const twitter = detail.links?.twitter_screen_name
+    if (twitter) links.push({ label: 'Twitter', url: `https://x.com/${twitter}` })
+    const tg = detail.links?.telegram_channel_identifier
+    if (tg) links.push({ label: 'Telegram', url: `https://t.me/${tg}` })
+    const reddit = detail.links?.subreddit_url
+    if (reddit && reddit.startsWith('http')) links.push({ label: 'Reddit', url: reddit })
+    setCommunityLinks(links)
+    if (!totalSupply && detail.market_data?.total_supply != null) {
+      setTotalSupply(String(detail.market_data.total_supply))
+    }
+    if (!coinTypeInfo) {
+      const platform = detail.asset_platform_id || Object.entries(detail.platforms ?? {}).find(([, v]) => !!v)?.[0]
+      setCoinTypeInfo(platform ? `${platform.toUpperCase()} · ${detail.symbol?.toUpperCase() ?? ''}` : (detail.symbol?.toUpperCase() ?? null))
+    }
+  }, [detail, totalSupply, coinTypeInfo])
 
   const buyTaxLabel = useMemo(() => {
     if (buyTax == null || buyTax <= 0) return null
@@ -325,39 +385,6 @@ export function MarketDetailPage() {
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : holders
-  const approxSupply = detailVM?.price && detailVM.price > 0 ? (detailVM.marketCap / detailVM.price) : 0
-
-  const topHolders = useMemo(() => {
-    const total = 68
-    const rows = Array.from({ length: 100 }, (_, i) => {
-      const rank = i + 1
-      const weight = 1 / Math.pow(rank + 2, 1.06)
-      return { rank, weight }
-    })
-    const sum = rows.reduce((s, r) => s + r.weight, 0)
-    const seed = (dexTokenAddress ?? detail?.id ?? detailVM?.symbol ?? 'token').replace(/[^a-zA-Z0-9]/g, '')
-
-    const toAddress = (rank: number) => {
-      const src = `${seed}${rank}`.split('')
-      let hex = ''
-      for (let i = 0; i < 40; i++) {
-        const c = src[i % src.length]?.charCodeAt(0) ?? 97
-        hex += ((c + i * 13 + rank * 7) % 16).toString(16)
-      }
-      return `0x${hex}`
-    }
-
-    return rows.map((r) => {
-      const percent = (r.weight / sum) * total
-      const amount = approxSupply > 0 ? (approxSupply * percent) / 100 : 0
-      return {
-        rank: r.rank,
-        address: toAddress(r.rank),
-        percent,
-        amount,
-      }
-    })
-  }, [dexTokenAddress, detail?.id, detailVM?.symbol, approxSupply])
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -578,22 +605,29 @@ export function MarketDetailPage() {
               <div className="ave-detail-panel-placeholder holders-panel">
                 <p>持币人前 100 名</p>
                 <span>总持币人数：{formatInt(holderCountValue)}</span>
-                <div className="holders-table-head">
-                  <span>排名</span>
-                  <span>地址</span>
-                  <span>占比</span>
-                  <span>数量</span>
-                </div>
-                <div className="holders-table-body">
-                  {topHolders.map((row) => (
-                    <div key={row.rank} className="holders-row">
-                      <span>#{row.rank}</span>
-                      <span>{row.address.slice(0, 8)}...{row.address.slice(-6)}</span>
-                      <span>{row.percent.toFixed(2)}%</span>
-                      <span>{row.amount > 0 ? formatInt(row.amount) : '—'}</span>
+                {realHolders.length > 0 ? (
+                  <>
+                    <div className="holders-table-head">
+                      <span>排名</span>
+                      <span>地址</span>
+                      <span>占比</span>
+                      <span>余额</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="holders-table-body">
+                      {realHolders.map((row, idx) => (
+                        <div key={`${row.address}-${idx}`} className="holders-row">
+                          <span>#{idx + 1}</span>
+                          <span>{row.address.slice(0, 8)}...{row.address.slice(-6)}</span>
+                          <span>{row.percent.toFixed(4)}%</span>
+                          <span>{row.balance ? Number.parseFloat(row.balance).toLocaleString('en-US') : '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <span className="holders-note">当前数据源返回 {realHolders.length} 名真实持币人，未返回的名次不展示。</span>
+                  </>
+                ) : (
+                  <span className="holders-note">暂无真实持币人明细数据。</span>
+                )}
               </div>
             )}
             {mainTab === 'detail' && (
@@ -601,17 +635,21 @@ export function MarketDetailPage() {
                 <p>代币详情</p>
                 <div className="detail-grid">
                   <div><span>名称</span><strong>{detailVM.name}</strong></div>
-                  <div><span>符号</span><strong>{detailVM.symbol}</strong></div>
-                  <div><span>链</span><strong>{detailVM.chain || '—'}</strong></div>
                   <div><span>合约</span><strong>{dexTokenAddress ? `${dexTokenAddress.slice(0, 8)}...${dexTokenAddress.slice(-6)}` : '—'}</strong></div>
-                  <div><span>当前价格</span><strong>{formatPrice(detailVM.price)}</strong></div>
-                  <div><span>24h 涨跌</span><strong>{detailVM.change24h.toFixed(2)}%</strong></div>
-                  <div><span>流通市值</span><strong>{formatCompact(detailVM.marketCap)}</strong></div>
-                  <div><span>FDV</span><strong>{formatCompact(detailVM.fdv)}</strong></div>
-                  <div><span>24h 成交量</span><strong>{formatCompact(volume24hValue)}</strong></div>
-                  <div><span>24h 交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
-                  <div><span>24h 最高</span><strong>{formatCompact(detailVM.high24h)}</strong></div>
-                  <div><span>24h 最低</span><strong>{formatCompact(detailVM.low24h)}</strong></div>
+                  <div><span>总量</span><strong>{totalSupply ? Number.parseFloat(totalSupply).toLocaleString('en-US') : '—'}</strong></div>
+                  <div><span>币种信息</span><strong>{coinTypeInfo ?? '—'}</strong></div>
+                  <div className="detail-links">
+                    <span>社区链接</span>
+                    {communityLinks.length > 0 ? (
+                      <strong>
+                        {communityLinks.map((item) => (
+                          <a key={item.url} href={item.url} target="_blank" rel="noreferrer">{item.label}</a>
+                        ))}
+                      </strong>
+                    ) : (
+                      <strong>—</strong>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
