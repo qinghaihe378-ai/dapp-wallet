@@ -49,7 +49,7 @@ export function HomePage() {
     const stored = window.localStorage.getItem(homeFilterKey)
     return stored === 'eth' || stored === 'bsc' || stored === 'base' || stored === 'sol' || stored === 'all' ? stored : 'all'
   })
-  const [homeSearch, setHomeSearch] = useState('')
+  const [homeSearch] = useState('')
   const baseFiltered =
     activeFilter === 'all'
       ? items
@@ -157,21 +157,6 @@ export function HomePage() {
       {config?.notice && (
         <div className="home-status-note">{config.notice}</div>
       )}
-      <div className="ave-home-shot-header">
-        <Link to="/wallet" className="ave-home-shot-avatar">🐺</Link>
-        <div className="ave-home-shot-search">
-          <span>⌕</span>
-          <input
-            type="text"
-            value={homeSearch}
-            onChange={(e) => setHomeSearch(e.target.value)}
-            placeholder="搜索币种/美股/合约"
-          />
-        </div>
-        <button type="button" className="ave-home-shot-icon" aria-label="scan">⌖</button>
-        <button type="button" className="ave-home-shot-icon" aria-label="notice">◔</button>
-      </div>
-
       <div className="home-banner-panel">
         <div className="home-banner-copy">
           <div className="home-banner-title">clawdex.me</div>
