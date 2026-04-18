@@ -163,7 +163,7 @@ export function HomePage() {
 
       <div className="home-banner-panel">
         <div className="home-banner-copy">
-          <div className="home-banner-title">{config?.title || 'Ave.ai'}</div>
+          <div className="home-banner-title">clawdex.me</div>
           <div className="home-banner-desc">{config?.subtitle || '链上实时行情与交易'}</div>
         </div>
         <div className="home-banner-live">APP</div>

@@ -18,6 +18,13 @@ const PAGES: Array<{ id: PageId; label: string; defaultSections: string[] }> = [
   { id: 'swap', label: '交易', defaultSections: ['notice', 'swapForm', 'history'] },
 ]
 
+function normalizeHomeTitle(pageId: PageId, title: string | undefined): string | undefined {
+  const next = title?.trim()
+  if (!next) return undefined
+  if (pageId === 'home' && next.toLowerCase() === 'ave.ai') return 'clawdex.me'
+  return next
+}
+
 function normalizeSections(input: unknown, defaults: string[]): SectionConfig[] {
   const arr = Array.isArray(input) ? input : []
   const map = new Map<string, SectionConfig>()
@@ -134,8 +141,9 @@ export function AdminPage() {
       setError(null)
       const res = await getAdminPageConfig(pageId)
       const c = res.config ?? {}
+      const normalizedTitle = normalizeHomeTitle(pageId, c.title)
       setConfig({
-        title: c.title ?? '',
+        title: normalizedTitle ?? '',
         subtitle: c.subtitle ?? '',
         notice: c.notice ?? '',
         sections: normalizeSections(c.sections, defaults),
@@ -215,7 +223,7 @@ export function AdminPage() {
         manualHotTokens = config.manualHotTokens ?? []
       }
       const next: PageConfig = {
-        title: config.title?.trim() || undefined,
+        title: normalizeHomeTitle(pageId, config.title),
         subtitle: config.subtitle?.trim() || undefined,
         notice: config.notice?.trim() || undefined,
         sections,
@@ -223,8 +231,9 @@ export function AdminPage() {
       }
       const res = await setAdminPageConfig(pageId, next)
       const c = res.config
+      const normalizedTitle = normalizeHomeTitle(pageId, c.title)
       setConfig({
-        title: c.title ?? '',
+        title: normalizedTitle ?? '',
         subtitle: c.subtitle ?? '',
         notice: c.notice ?? '',
         sections: normalizeSections(c.sections, defaults),
@@ -616,4 +625,3 @@ export function AdminPage() {
     </div>
   )
 }
-
