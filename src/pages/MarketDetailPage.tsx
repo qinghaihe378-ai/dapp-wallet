@@ -341,7 +341,7 @@ export function MarketDetailPage() {
       }
     }
     void loadTrades()
-    const iv = setInterval(loadTrades, 5000)
+    const iv = setInterval(loadTrades, 1000)
     return () => {
       cancelled = true
       clearInterval(iv)
