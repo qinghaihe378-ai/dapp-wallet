@@ -809,7 +809,19 @@ export function MarketDetailPage() {
         )}
 
         <div className="ave-detail-bottom-cta">
-          <button type="button" className="dapp" onClick={() => navigate('/bot')}>DApp</button>
+          <button
+            type="button"
+            className="dapp"
+            onClick={() => navigate('/bot')}
+            aria-label={pairDexId ? `打开 ${pairDexId}` : '打开 DApp'}
+            title={pairDexId ?? 'DApp'}
+          >
+            {pairDexIcon ? (
+              <img src={pairDexIcon} alt={pairDexId ?? 'dex'} />
+            ) : (
+              <span>{pairDexId ? pairDexId.slice(0, 3).toUpperCase() : 'DEX'}</span>
+            )}
+          </button>
           <Link to={quickTradeTargets.buy} className="buy">买入{buyTaxLabel && <div>{buyTaxLabel}</div>}</Link>
           <Link to={quickTradeTargets.sell} className="sell">卖出{sellTaxLabel && <div>{sellTaxLabel}</div>}</Link>
         </div>
