@@ -678,7 +678,6 @@ export function MarketDetailPage() {
                     <div className="trade-recent-list">
                       {recentTrades.length > 0 ? recentTrades.slice(0, 100).map((t, i) => (
                         <div key={`${t.txHash}-${i}`} className="trade-row">
-                          <span className={t.side === 'buy' ? 'up' : 'down'}>{t.side === 'buy' ? '买' : '卖'}</span>
                           <span>${t.volumeUsd.toFixed(2)}</span>
                           <span>{t.from ? `${t.from.slice(0, 6)}...${t.from.slice(-4)}` : '—'}</span>
                         </div>
