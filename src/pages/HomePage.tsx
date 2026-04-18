@@ -185,11 +185,9 @@ export function HomePage() {
 
       <div className="ave-home-shot-tabs">
         <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
-        <button type="button">合约</button>
         <button type="button" className={activeSection === 'alpha' ? 'active' : ''} onClick={() => setActiveSection('alpha')}>币安Alpha</button>
         <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
         <Link to="/new-tokens">新币</Link>
-        <button type="button">Pre-IPO</button>
       </div>
 
       <div className="ave-home-v2-chain-switch">
