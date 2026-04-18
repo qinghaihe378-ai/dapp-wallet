@@ -6337,3 +6337,467 @@ button:disabled,
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ===== Ave token detail pixel pass ===== */
+.ave-app .app-main.app-main-market-detail {
+  padding: 0;
+  background: #121a25;
+}
+
+.market-detail-page {
+  max-width: none;
+  margin: 0;
+}
+
+.ave-detail-shell {
+  min-height: 100dvh;
+  background: #121a25;
+  color: #f0f5ff;
+  padding-bottom: calc(74px + var(--safe-bottom));
+}
+
+.ave-detail-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(8px + var(--safe-top)) 12px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ave-detail-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #aeb8ca;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.ave-detail-token-meta {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ave-detail-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.ave-detail-token-copy {
+  min-width: 0;
+}
+
+.ave-detail-token-name {
+  font-size: 14px;
+  color: #f5f8ff;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ave-detail-token-sub {
+  margin-top: 3px;
+  color: #8f98ab;
+  font-size: 11px;
+}
+
+.ave-detail-top-icons {
+  display: flex;
+  align-items: center;
+}
+
+.ave-detail-main-tabs {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ave-detail-main-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-main-tabs button {
+  border: none;
+  background: transparent;
+  color: #99a3b5;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 0 8px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.ave-detail-main-tabs button.active {
+  color: #f1f5ff;
+}
+
+.ave-detail-main-tabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: #2f7bff;
+}
+
+.ave-detail-price-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ave-detail-big-price {
+  font-size: 64px;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: #17d99b;
+  font-weight: 800;
+}
+
+.ave-detail-change {
+  margin-top: 6px;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+.ave-detail-change.up {
+  color: #20d89a;
+}
+
+.ave-detail-change.down {
+  color: #ff6a79;
+}
+
+.ave-detail-price-right {
+  min-width: 152px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+.ave-detail-price-right div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.ave-detail-price-right span {
+  color: #8e98aa;
+}
+
+.ave-detail-price-right strong {
+  color: #e6eeff;
+  font-weight: 700;
+}
+
+.ave-detail-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 6px;
+}
+
+.ave-detail-toolbar button {
+  border: none;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #98a3b6;
+  font-size: 12px;
+}
+
+.ave-detail-period-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 12px 8px;
+}
+
+.ave-detail-period-tabs {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ave-detail-period-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-period-tabs button {
+  border: none;
+  background: transparent;
+  color: #8e98aa;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.ave-detail-period-tabs button.active {
+  color: #f1f5ff;
+  font-weight: 700;
+}
+
+.ave-detail-period-title {
+  color: #f1f5ff;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+.ave-detail-period-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ave-detail-period-actions button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9aa4b6;
+  font-size: 13px;
+}
+
+.ave-detail-chart-card {
+  padding: 0 4px 2px;
+}
+
+.ave-detail-chart-card .chart-header {
+  margin: 0;
+  padding: 0 8px 6px;
+}
+
+.ave-detail-chart-card .chart-title {
+  font-size: 12px;
+  color: #8c96a9;
+  font-weight: 600;
+}
+
+.ave-detail-chart-card .chart-subtitle {
+  display: none;
+}
+
+.ave-detail-chart-card .ave-kline-container {
+  height: 520px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ave-detail-pool-section {
+  padding: 10px 12px 0;
+}
+
+.ave-detail-subtabs {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ave-detail-subtabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-subtabs button {
+  border: none;
+  background: transparent;
+  color: #9ea8ba;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 0 8px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.ave-detail-subtabs button.active {
+  color: #f5f8ff;
+}
+
+.ave-detail-subtabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: #2f7bff;
+}
+
+.ave-detail-liquidity-card {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 10px 12px;
+}
+
+.ave-liquidity-title,
+.ave-liquidity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ave-liquidity-title span,
+.ave-liquidity-row span:first-child {
+  color: #8f99ac;
+}
+
+.ave-liquidity-title strong,
+.ave-liquidity-row span:last-child {
+  color: #f2f6ff;
+  font-weight: 700;
+}
+
+.ave-liquidity-row {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.ave-detail-bottom-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 250;
+  display: grid;
+  grid-template-columns: 70px 1fr 1fr;
+  gap: 8px;
+  padding: 10px 10px calc(10px + var(--safe-bottom));
+  background: #121a25;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ave-detail-bottom-cta .dapp {
+  border: none;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c4cede;
+  font-size: 20px;
+}
+
+.ave-detail-bottom-cta .buy,
+.ave-detail-bottom-cta .sell {
+  min-height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: #fff;
+  font-size: 36px;
+  font-weight: 800;
+  text-decoration: none;
+  line-height: 0.95;
+}
+
+.ave-detail-bottom-cta .buy {
+  background: #15c98c;
+}
+
+.ave-detail-bottom-cta .sell {
+  background: #ff4e66;
+}
+
+.ave-detail-bottom-cta .buy div,
+.ave-detail-bottom-cta .sell div {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.ave-detail-indicator-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px 12px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ave-detail-indicator-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-indicator-tabs button {
+  min-width: 46px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8e98aa;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ave-detail-indicator-tabs button.active {
+  color: #f3f7ff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ave-detail-metric-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 12px 6px;
+  scrollbar-width: none;
+}
+
+.ave-detail-metric-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-detail-metric-strip span {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: #bac4d7;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+@media (max-width: 430px) {
+  .ave-detail-big-price {
+    font-size: 52px;
+  }
+
+  .ave-detail-chart-card .ave-kline-container {
+    height: 440px;
+  }
+
+  .ave-detail-bottom-cta .buy,
+  .ave-detail-bottom-cta .sell {
+    font-size: 32px;
+  }
+}

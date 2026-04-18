@@ -87,8 +87,9 @@ function AppContent() {
   const location = useLocation()
   const isBot = location.pathname === '/bot'
   const isLobsterEmbed = location.pathname === '/lobster'
-  const hideNav = location.pathname === '/admin'
-  const hideHeader = location.pathname === '/admin' || isLobsterEmbed
+  const isMarketDetail = /^\/market\/[^/]+$/.test(location.pathname)
+  const hideNav = location.pathname === '/admin' || isMarketDetail
+  const hideHeader = location.pathname === '/admin' || isLobsterEmbed || isMarketDetail
   return (
     <>
       {!hideHeader && <AppHeader />}
@@ -96,7 +97,8 @@ function AppContent() {
         className={
           'app-main' +
           (isBot ? ' app-main-bot' : '') +
-          (isLobsterEmbed ? ' app-main-longxia-embed' : '')
+          (isLobsterEmbed ? ' app-main-longxia-embed' : '') +
+          (isMarketDetail ? ' app-main-market-detail' : '')
         }
       >
             <Routes>
