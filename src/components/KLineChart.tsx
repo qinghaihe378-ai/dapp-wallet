@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createChart, CandlestickSeries, LineSeries, type IChartApi, type ISeriesApi, type CandlestickData, type UTCTimestamp, type LineData } from 'lightweight-charts'
+import { createChart, CandlestickSeries, LineSeries, CrosshairMode, type IChartApi, type ISeriesApi, type CandlestickData, type UTCTimestamp, type LineData } from 'lightweight-charts'
 
-export type KLinePeriod = '1m' | '5m' | '30m' | '1h' | '2h' | '1d' | '1w'
+export type KLinePeriod = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w'
 
 interface Props {
   syntheticData: { currentPrice: number; change24h: number }
@@ -15,9 +15,9 @@ interface Props {
 const PERIOD_CONFIG: Record<KLinePeriod, { count: number; label: string }> = {
   '1m': { count: 60, label: '1m' },
   '5m': { count: 48, label: '5m' },
-  '30m': { count: 48, label: '30m' },
+  '15m': { count: 56, label: '15m' },
   '1h': { count: 24, label: '1H' },
-  '2h': { count: 24, label: '2H' },
+  '4h': { count: 24, label: '4H' },
   '1d': { count: 7, label: '1D' },
   '1w': { count: 4, label: '1W' },
 }
@@ -29,9 +29,9 @@ function toGeckoParams(period: KLinePeriod): { timeframe: GeckoTimeframe; aggreg
   switch (period) {
     case '1m': return { timeframe: 'minute', aggregate: 1, limit, pollMs: 5000 }
     case '5m': return { timeframe: 'minute', aggregate: 5, limit, pollMs: 7000 }
-    case '30m': return { timeframe: 'minute', aggregate: 30, limit, pollMs: 12000 }
+    case '15m': return { timeframe: 'minute', aggregate: 15, limit, pollMs: 10000 }
     case '1h': return { timeframe: 'hour', aggregate: 1, limit, pollMs: 20000 }
-    case '2h': return { timeframe: 'hour', aggregate: 2, limit, pollMs: 25000 }
+    case '4h': return { timeframe: 'hour', aggregate: 4, limit, pollMs: 30000 }
     case '1d': return { timeframe: 'day', aggregate: 1, limit, pollMs: 60000 }
     case '1w': return { timeframe: 'day', aggregate: 7, limit, pollMs: 120000 }
   }
@@ -51,7 +51,7 @@ function generateSyntheticOHLC(
   const candles: CandlestickData[] = []
   let prevClose = startPrice
   const now = Math.floor(Date.now() / 1000)
-  const intervalSec = period === '1m' ? 60 : period === '5m' ? 300 : period === '30m' ? 1800 : period === '1h' ? 3600 : period === '2h' ? 7200 : period === '1d' ? 86400 : 604800
+  const intervalSec = period === '1m' ? 60 : period === '5m' ? 300 : period === '15m' ? 900 : period === '1h' ? 3600 : period === '4h' ? 14400 : period === '1d' ? 86400 : 604800
 
   for (let i = 0; i < count; i++) {
     const t = (i + 1) / count
@@ -81,16 +81,12 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null>(null)
   const [livePricePoints, setLivePricePoints] = useState<LineData[]>([])
   const [geckoCandles, setGeckoCandles] = useState<CandlestickData[]>([])
+  const [hoverPrice, setHoverPrice] = useState<number | null>(null)
 
   const useGeckoOhlcv = Boolean(geckoPool?.network && geckoPool?.poolAddress)
   const useLivePrice = !useGeckoOhlcv && Boolean(syntheticData.currentPrice > 0 && dexScreener)
   const dex = dexScreener
   const gecko = geckoPool
-
-  useEffect(() => {
-    if (!gecko) return
-    setGeckoCandles([])
-  }, [gecko?.network, gecko?.poolAddress, period])
 
   useEffect(() => {
     if (!gecko?.network || !gecko?.poolAddress) return
@@ -146,9 +142,9 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
     const windowSeconds =
       period === '1m' ? 60 :
       period === '5m' ? 5 * 60 :
-      period === '30m' ? 30 * 60 :
+      period === '15m' ? 15 * 60 :
       period === '1h' ? 60 * 60 :
-      period === '2h' ? 2 * 60 * 60 :
+      period === '4h' ? 4 * 60 * 60 :
       period === '1d' ? 24 * 60 * 60 :
       7 * 24 * 60 * 60
 
@@ -156,9 +152,9 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
     const stepSeconds =
       period === '1m' ? 5 :
       period === '5m' ? 10 :
-      period === '30m' ? 30 :
+      period === '15m' ? 20 :
       period === '1h' ? 60 :
-      period === '2h' ? 90 :
+      period === '4h' ? 120 :
       period === '1d' ? 5 * 60 :
       30 * 60
 
@@ -231,11 +227,25 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
     return generateSyntheticOHLC(syntheticData.currentPrice, syntheticData.change24h, period)
   }, [syntheticData.currentPrice, syntheticData.change24h, period])
 
+  const displayCandles = useMemo(() => {
+    if (useGeckoOhlcv && geckoCandles.length > 0) return geckoCandles
+    return data
+  }, [useGeckoOhlcv, geckoCandles, data])
+
+  const hasAnyData =
+    (useLivePrice && livePricePoints.length > 0) ||
+    (!useLivePrice && displayCandles.length > 0)
+
+  const latestPrice = useMemo(() => {
+    if (useLivePrice) {
+      const last = livePricePoints[livePricePoints.length - 1]
+      return typeof last?.value === 'number' ? last.value : null
+    }
+    const last = displayCandles[displayCandles.length - 1]
+    return last?.close ?? null
+  }, [useLivePrice, livePricePoints, displayCandles])
+
   useEffect(() => {
-    const hasAnyData =
-      (useGeckoOhlcv && geckoCandles.length > 0) ||
-      (useLivePrice && livePricePoints.length > 0) ||
-      (!useGeckoOhlcv && !useLivePrice && data.length > 0)
     if (!containerRef.current || !hasAnyData) return
 
     const container = containerRef.current
@@ -263,6 +273,7 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
         secondsVisible: period === '1m' || period === '5m',
       },
       crosshair: {
+        mode: CrosshairMode.Normal,
         vertLine: { labelBackgroundColor: '#1e2329', color: '#5e6673' },
         horzLine: { labelBackgroundColor: '#1e2329', color: '#5e6673' },
       },
@@ -277,7 +288,7 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
         wickUpColor: '#0ecb81',
         wickDownColor: '#f6465d',
       })
-      candlestickSeries.setData(geckoCandles)
+      candlestickSeries.setData(displayCandles)
       seriesRef.current = candlestickSeries
     } else if (useLivePrice) {
       const line = chart.addSeries(LineSeries, {
@@ -297,10 +308,24 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
         wickUpColor: '#0ecb81',
         wickDownColor: '#f6465d',
       })
-      candlestickSeries.setData(data)
+      candlestickSeries.setData(displayCandles)
       seriesRef.current = candlestickSeries
     }
     chart.timeScale().fitContent()
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.seriesData || !seriesRef.current) {
+        setHoverPrice(null)
+        return
+      }
+      const dataPoint = param.seriesData.get(seriesRef.current) as { close?: number; value?: number } | undefined
+      if (!dataPoint) {
+        setHoverPrice(null)
+        return
+      }
+      if (typeof dataPoint.value === 'number') setHoverPrice(dataPoint.value)
+      else if (typeof dataPoint.close === 'number') setHoverPrice(dataPoint.close)
+      else setHoverPrice(null)
+    })
 
     chartRef.current = chart
 
@@ -309,15 +334,12 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [data, geckoCandles, livePricePoints, useGeckoOhlcv, useLivePrice])
+  }, [hasAnyData, useGeckoOhlcv, useLivePrice, displayCandles, livePricePoints, period])
 
-  if (
-    (useGeckoOhlcv && geckoCandles.length === 0) ||
-    (useLivePrice && livePricePoints.length === 0) ||
-    (!useGeckoOhlcv && !useLivePrice && data.length === 0)
-  ) return null
+  if (!hasAnyData) return null
 
   const periodLabel = PERIOD_CONFIG[period].label
+  const shownPrice = hoverPrice ?? latestPrice
 
   return (
     <div>
@@ -335,7 +357,14 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
           </div>
         </div>
       </div>
-      <div ref={containerRef} className="ave-kline-container" />
+      <div className="ave-kline-wrap">
+        {shownPrice !== null && (
+          <div className="ave-kline-live-price">
+            {shownPrice >= 1 ? shownPrice.toFixed(4) : shownPrice.toFixed(8)}
+          </div>
+        )}
+        <div ref={containerRef} className="ave-kline-container" />
+      </div>
     </div>
   )
 }

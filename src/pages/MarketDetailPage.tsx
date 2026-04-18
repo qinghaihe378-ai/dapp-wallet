@@ -353,9 +353,9 @@ export function MarketDetailPage() {
                 {[
                   { key: '1m' as const, label: '1分' },
                   { key: '5m' as const, label: '5分' },
-                  { key: '30m' as const, label: '15分' },
+                  { key: '15m' as const, label: '15分' },
                   { key: '1h' as const, label: '1时' },
-                  { key: '2h' as const, label: '4时' },
+                  { key: '4h' as const, label: '4时' },
                   { key: '1d' as const, label: '1日' },
                   { key: '1w' as const, label: '1周' },
                 ].map((item) => (

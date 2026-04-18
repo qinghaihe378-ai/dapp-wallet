@@ -1360,6 +1360,26 @@ button:disabled,
   height: 260px;
 }
 
+.ave-kline-wrap {
+  position: relative;
+}
+
+.ave-kline-live-price {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 8;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(17, 201, 129, 0.92);
+  color: #06150f;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+}
+
 .chart-header {
   display: flex;
   align-items: center;
