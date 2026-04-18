@@ -78,6 +78,7 @@ export function HomePage() {
       .slice(0, 5)
     return { gainers, losers }
   }, [items])
+  const [moverTab, setMoverTab] = useState<'gainers' | 'losers'>('gainers')
 
   useEffect(() => {
     const load = async () => {
@@ -208,22 +209,37 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="ave-home-v2-movers">
-        <div className="ave-home-v2-movers-card">
-          <div className="ave-home-v2-movers-title">涨幅榜 Top5</div>
-          {movers.gainers.map((item) => (
-            <Link key={`g-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="ave-home-v2-mover-row">
-              <span>{item.symbol.toUpperCase()}</span>
-              <span className="up">+{(item.price_change_percentage_24h ?? 0).toFixed(2)}%</span>
-            </Link>
-          ))}
+      <div className="home-market-panel">
+        <div className="home-panel-head">
+          <div className="home-panel-title">涨跌幅榜</div>
+          <div className="ave-home-v2-mini-tabs">
+            <button type="button" className={moverTab === 'gainers' ? 'active' : ''} onClick={() => setMoverTab('gainers')}>涨幅</button>
+            <button type="button" className={moverTab === 'losers' ? 'active' : ''} onClick={() => setMoverTab('losers')}>跌幅</button>
+          </div>
         </div>
-        <div className="ave-home-v2-movers-card">
-          <div className="ave-home-v2-movers-title">跌幅榜 Top5</div>
-          {movers.losers.map((item) => (
-            <Link key={`l-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="ave-home-v2-mover-row">
-              <span>{item.symbol.toUpperCase()}</span>
-              <span className="down">{(item.price_change_percentage_24h ?? 0).toFixed(2)}%</span>
+        <div className="home-token-feed">
+          {(moverTab === 'gainers' ? movers.gainers : movers.losers).map((item) => (
+            <Link key={`${moverTab}-${item.id}`} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
+              <div className="home-token-main">
+                <img src={item.image} alt="" className="home-token-icon" />
+                <div>
+                  <div className="home-token-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
+                  <div className="home-token-sub">
+                    <span>{item.symbol.toUpperCase()}</span>
+                    <span className="home-token-sub-sep">/</span>
+                    <span>${(item.market_cap / 1e6).toFixed(2)}M</span>
+                  </div>
+                </div>
+              </div>
+              <div className="home-token-side">
+                <span className="home-token-price">
+                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
+                </span>
+                <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                  {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
+                  {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                </span>
+              </div>
             </Link>
           ))}
         </div>

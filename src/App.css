@@ -7273,6 +7273,27 @@ button:disabled,
   font-size: 12px;
 }
 
+.ave-home-v2-mini-tabs {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.ave-home-v2-mini-tabs button {
+  min-width: 44px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a6b0c2;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ave-home-v2-mini-tabs button.active {
+  background: rgba(75, 141, 255, 0.2);
+  color: #f2f7ff;
+}
+
 .ave-markets-v2-panel {
   border-radius: 16px;
   padding: 12px 10px;
