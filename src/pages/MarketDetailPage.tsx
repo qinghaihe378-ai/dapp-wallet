@@ -706,7 +706,7 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{formatCompact(detailVM.marketCap * 0.5)}</strong>
                     </div>
-                    <div className="ave-liquidity-row">
+                    <div className="ave-liquidity-row ave-liquidity-row-pool">
                       <span>池子配对</span>
                       <span className="ave-pool-dex-badge">
                         {pairDexIcon ? (

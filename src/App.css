@@ -6915,6 +6915,24 @@ button:disabled,
   font-size: 13px;
 }
 
+.ave-liquidity-row.ave-liquidity-row-pool {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.ave-liquidity-row.ave-liquidity-row-pool > span:first-child {
+  justify-self: start;
+}
+
+.ave-liquidity-row.ave-liquidity-row-pool > .ave-pool-dex-badge {
+  justify-self: center;
+}
+
+.ave-liquidity-row.ave-liquidity-row-pool > span:last-child {
+  justify-self: end;
+}
+
 .ave-liquidity-row .ave-pool-dex-badge {
   width: 26px;
   height: 26px;
