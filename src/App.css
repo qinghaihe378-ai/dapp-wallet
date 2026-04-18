@@ -7772,10 +7772,10 @@ button:disabled,
 }
 
 .ave-markets-v2 .market-watch-change {
-  min-width: 78px;
-  height: 34px;
+  min-width: 52px;
+  height: 23px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 700;
 }
 
