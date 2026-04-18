@@ -11,10 +11,7 @@ const NETWORKS: Network[] = ['mainnet', 'bsc', 'base']
 export function AppHeader() {
   const { network, switchNetwork, address } = useWallet()
   const [showNet, setShowNet] = useState(false)
-  const [showMarketNet, setShowMarketNet] = useState(false)
-  const [marketNetPos, setMarketNetPos] = useState({ top: 0, left: 0 })
   const [netPos, setNetPos] = useState({ top: 0, left: 0 })
-  const marketNetBtnRef = useRef<HTMLButtonElement>(null)
   const netBtnRef = useRef<HTMLButtonElement>(null)
   const walletNetBtnRef = useRef<HTMLButtonElement>(null)
   const [homeSearch, setHomeSearch] = useState('')
@@ -41,7 +38,6 @@ export function AppHeader() {
   useEffect(() => {
     queueMicrotask(() => {
       setShowNet(false)
-      setShowMarketNet(false)
     })
   }, [location.pathname])
 
@@ -88,13 +84,6 @@ export function AppHeader() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  useLayoutEffect(() => {
-    if (showMarketNet && marketNetBtnRef.current) {
-      const rect = marketNetBtnRef.current.getBoundingClientRect()
-      setMarketNetPos({ top: rect.bottom + 8, left: rect.left })
-    }
-  }, [showMarketNet])
 
   useLayoutEffect(() => {
     const btn = netBtnRef.current ?? walletNetBtnRef.current
@@ -213,50 +202,14 @@ export function AppHeader() {
   }
 
   if (headerMode === 'market') {
-    const marketNetDropdown = showMarketNet && createPortal(
-      <div
-        className="ave-network-overlay"
-        role="presentation"
-        onClick={(e) => { if (e.target === e.currentTarget) setShowMarketNet(false) }}
-      >
-        <div
-          className="ave-network-dropdown ave-header-network-dropdown ave-header-network-dropdown-fixed ave-network-dropdown-portal"
-          style={{ top: marketNetPos.top, left: marketNetPos.left }}
-          role="menu"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {NETWORKS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              role="menuitem"
-              className={n === network ? 'active' : ''}
-              onClick={() => handleNetworkSelect(n, () => setShowMarketNet(false))}
-            >
-              {NETWORK_CONFIG[n].chainName}
-            </button>
-          ))}
-        </div>
-      </div>,
-      document.body
-    )
+    const marketChain = (new URLSearchParams(location.search).get('chain') ?? '').toLowerCase()
     return (
       <header className="ave-header ave-header-tabs">
         <div className="ave-header-tabbar">
-          <button type="button" className="ave-header-tab active">自选</button>
-          <div className="ave-header-tab ave-header-network-wrap">
-            <button
-              ref={marketNetBtnRef}
-              type="button"
-              className="ave-header-network-btn"
-              onClick={() => setShowMarketNet(!showMarketNet)}
-              aria-expanded={showMarketNet}
-            >
-              {NETWORK_CONFIG[network].chainName.replace(' Mainnet', '')}
-              <span className="ave-header-network-arrow">▼</span>
-            </button>
-          </div>
-          {marketNetDropdown}
+          <Link to="/market" className={`ave-header-tab ${marketChain ? '' : 'active'}`}>行情</Link>
+          <Link to="/market?chain=eth" className={`ave-header-tab ${marketChain === 'eth' ? 'active' : ''}`}>ETH</Link>
+          <Link to="/market?chain=bsc" className={`ave-header-tab ${marketChain === 'bsc' ? 'active' : ''}`}>BSC</Link>
+          <Link to="/market?chain=base" className={`ave-header-tab ${marketChain === 'base' ? 'active' : ''}`}>Base</Link>
           <Link to="/new-tokens" className="ave-header-tab">扫链</Link>
         </div>
       </header>

@@ -28,7 +28,11 @@ export function MarketsPage() {
     const stored = window.localStorage.getItem(marketSortKey)
     return stored === 'change' || stored === 'price' || stored === 'default' ? stored : 'default'
   })
-  const [chainFilter, setChainFilter] = useState<ChainId | 'all'>('all')
+  const chainFromQuery = (searchParams.get('chain') ?? '').toLowerCase()
+  const chainFilter: ChainId | 'all' =
+    chainFromQuery === 'eth' || chainFromQuery === 'bsc' || chainFromQuery === 'base'
+      ? (chainFromQuery as ChainId)
+      : 'all'
   const [apiProvider, setApiProvider] = useState<string>('')
   const [addressSearchResults, setAddressSearchResults] = useState<MarketItem[] | null>(null)
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
@@ -123,11 +127,6 @@ export function MarketsPage() {
     return useAddressResults ? next : next.slice(0, 120)
   }, [addressSearchResults, chainFilter, list, searchQuery, sortBy])
 
-  const CHAIN_OPTIONS: { value: ChainId; label: string }[] = [
-    { value: 'eth', label: 'ETH' },
-    { value: 'bsc', label: 'BSC' },
-    { value: 'base', label: 'Base' },
-  ]
   const sections = useMemo(() => {
     const defaults = [
       { id: 'controls', enabled: true, order: 0 },
@@ -154,18 +153,6 @@ export function MarketsPage() {
                   <button type="button" className={sortBy === 'default' ? 'active' : ''} onClick={() => setSortBy('default')}>默认</button>
                   <button type="button" className={sortBy === 'change' ? 'active' : ''} onClick={() => setSortBy('change')}>涨幅</button>
                   <button type="button" className={sortBy === 'price' ? 'active' : ''} onClick={() => setSortBy('price')}>价格</button>
-                </div>
-                <div className="market-chain-row ave-markets-v2-chain-row">
-                  {CHAIN_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`market-chain-pill ${chainFilter === opt.value ? 'active' : ''}`}
-                      onClick={() => setChainFilter((current) => (current === opt.value ? 'all' : opt.value))}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
                 </div>
                 {apiProvider && (
                   <div className="market-api-hint">数据源: {apiProvider}</div>
