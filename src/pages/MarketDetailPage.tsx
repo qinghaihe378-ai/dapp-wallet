@@ -326,7 +326,7 @@ export function MarketDetailPage() {
         const list = (json?.data ?? [])
           .map((x) => x.attributes)
           .filter((x): x is NonNullable<typeof x> => !!x && (x.kind === 'buy' || x.kind === 'sell'))
-          .slice(0, 20)
+          .slice(0, 100)
           .map((x) => ({
             txHash: x.tx_hash ?? '',
             side: x.kind as 'buy' | 'sell',
@@ -676,7 +676,7 @@ export function MarketDetailPage() {
                   <div className="ave-tab-placeholder">
                     <p>最新成交（实时）</p>
                     <div className="trade-recent-list">
-                      {recentTrades.length > 0 ? recentTrades.slice(0, 8).map((t, i) => (
+                      {recentTrades.length > 0 ? recentTrades.slice(0, 100).map((t, i) => (
                         <div key={`${t.txHash}-${i}`} className="trade-row">
                           <span className={t.side === 'buy' ? 'up' : 'down'}>{t.side === 'buy' ? '买' : '卖'}</span>
                           <span>${t.volumeUsd.toFixed(2)}</span>
