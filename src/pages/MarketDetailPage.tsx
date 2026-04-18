@@ -115,6 +115,14 @@ export function MarketDetailPage() {
   const [communityLinks, setCommunityLinks] = useState<Array<{ label: string; url: string }>>([])
   const [pairDexId, setPairDexId] = useState<string | null>(null)
   const [tokenLogoSrc, setTokenLogoSrc] = useState<string>('')
+  const [tokenPools, setTokenPools] = useState<Array<{
+    pairAddress: string
+    dexId: string
+    baseSymbol: string
+    quoteSymbol: string
+    liquidityUsd: number
+    volume24h: number
+  }>>([])
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -256,12 +264,31 @@ export function MarketDetailPage() {
     const loadPair = async () => {
       try {
         setDexPairAddress(null)
+        setTokenPools([])
         const res = await fetch(`https://api.dexscreener.com/token-pairs/v1/${dexScreenerChainId}/${dexTokenAddress}`)
         if (!res.ok) return
-        const json = (await res.json()) as Array<{ pairAddress?: string } | null>
-        const first = Array.isArray(json) ? json.find((p) => p?.pairAddress) : null
-        const pair = (first as { pairAddress?: string } | null)?.pairAddress ?? null
+        const json = (await res.json()) as Array<{
+          pairAddress?: string
+          dexId?: string
+          baseToken?: { symbol?: string }
+          quoteToken?: { symbol?: string }
+          liquidity?: { usd?: number }
+          volume?: { h24?: number }
+        } | null>
+        const list = (Array.isArray(json) ? json : [])
+          .filter((p): p is NonNullable<typeof p> => Boolean(p?.pairAddress))
+          .map((p) => ({
+            pairAddress: String(p.pairAddress),
+            dexId: String(p.dexId ?? 'dex').trim() || 'dex',
+            baseSymbol: String(p.baseToken?.symbol ?? detailVM?.symbol ?? 'TOKEN').toUpperCase(),
+            quoteSymbol: String(p.quoteToken?.symbol ?? 'USD').toUpperCase(),
+            liquidityUsd: Number(p.liquidity?.usd ?? 0) || 0,
+            volume24h: Number(p.volume?.h24 ?? 0) || 0,
+          }))
+          .sort((a, b) => b.liquidityUsd - a.liquidityUsd)
+        const pair = list[0]?.pairAddress ?? null
         if (cancelled) return
+        setTokenPools(list)
         setDexPairAddress(pair)
       } catch {
         // ignore
@@ -270,7 +297,7 @@ export function MarketDetailPage() {
 
     void loadPair()
     return () => { cancelled = true }
-  }, [dexScreenerChainId, dexTokenAddress])
+  }, [dexScreenerChainId, dexTokenAddress, detailVM?.symbol])
 
   useEffect(() => {
     if (!dexScreenerChainId || !dexPairAddress) {
@@ -511,6 +538,10 @@ export function MarketDetailPage() {
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
   const pairDexIcon = pairDexId ? DEX_ICON_MAP[pairDexId.toLowerCase()] : null
+  const totalPoolsLiquidity = useMemo(
+    () => tokenPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
+    [tokenPools],
+  )
 
   useEffect(() => {
     setTokenLogoSrc(detailVM?.image ?? '')
@@ -730,19 +761,35 @@ export function MarketDetailPage() {
                   <>
                     <div className="ave-liquidity-title">
                       <span>总流动性</span>
-                      <strong>{formatCompact(detailVM.marketCap * 0.5)}</strong>
+                      <strong>{formatCompact(totalPoolsLiquidity)}</strong>
                     </div>
-                    <div className="ave-liquidity-row ave-liquidity-row-pool">
-                      <span>池子配对</span>
-                      <span className="ave-pool-dex-badge">
-                        {pairDexIcon ? (
-                          <img src={pairDexIcon} alt={pairDexId ?? 'dex'} />
-                        ) : (
-                          <i>{pairDexId ? pairDexId.slice(0, 3).toUpperCase() : 'DEX'}</i>
-                        )}
-                      </span>
-                      <span>{detailVM.symbol}/WBNB</span>
-                    </div>
+                    {subTab === 'pool' ? (
+                      <div className="trade-recent-list">
+                        {tokenPools.length > 0 ? tokenPools.map((pool, idx) => {
+                          const icon = DEX_ICON_MAP[pool.dexId.toLowerCase()] || null
+                          return (
+                            <a
+                              key={`${pool.pairAddress}-${idx}`}
+                              className="ave-liquidity-row ave-liquidity-row-pool"
+                              href={`https://dexscreener.com/${dexScreenerChainId}/${pool.pairAddress}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <span>{`${idx + 1}. ${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
+                              <span className="ave-pool-dex-badge">
+                                {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
+                              </span>
+                              <span>{`${formatCompact(pool.liquidityUsd)} · Vol ${formatCompact(pool.volume24h)}`}</span>
+                            </a>
+                          )
+                        }) : <span className="trade-empty">暂无池子数据</span>}
+                      </div>
+                    ) : (
+                      <div className="ave-tab-placeholder">
+                        <p>{subTab === 'mine' ? '我的池子' : subTab === 'orders' ? '挂单池子' : subTab === 'watch' ? '关注池子' : '创建者池子'}</p>
+                        <span>当前共检测到 {tokenPools.length} 个 DEX 池子</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
