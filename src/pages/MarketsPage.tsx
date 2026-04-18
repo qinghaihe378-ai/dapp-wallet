@@ -32,6 +32,7 @@ export function MarketsPage() {
   const [apiProvider, setApiProvider] = useState<string>('')
   const [addressSearchResults, setAddressSearchResults] = useState<MarketItem[] | null>(null)
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
+  const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
 
   const loadMarkets = async (silent = false) => {
     try {
@@ -95,6 +96,9 @@ export function MarketsPage() {
   const rows = useMemo(() => {
     const useAddressResults = searchQuery && isContractAddress(searchQuery) && addressSearchResults !== null
     let next: MarketItem[] = useAddressResults ? [...addressSearchResults] : [...list]
+
+    // 行情页默认仅展示 ETH/BSC/Base 三条公链
+    next = next.filter((item) => SUPPORTED_MARKET_CHAINS.includes(item.chain))
 
     if (chainFilter !== 'all') {
       next = next.filter((item) => item.chain === chainFilter)
@@ -205,9 +209,6 @@ export function MarketsPage() {
                           <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
                           <div className="market-watch-sub">
                             <span>{item.symbol.toUpperCase()}/USDC</span>
-                            <span className={`market-watch-chain market-watch-chain-${item.chain}`}>
-                              {item.chain.toUpperCase()}
-                            </span>
                           </div>
                         </div>
                       </div>
