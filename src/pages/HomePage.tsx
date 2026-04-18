@@ -43,6 +43,26 @@ function tokenFallbackSvgDataUrl(symbol: string) {
   return `data:image/svg+xml;utf8,${svg}`
 }
 
+function tokenAddressFromId(id: string): string {
+  const i = id.indexOf(':')
+  const addr = i >= 0 ? id.slice(i + 1) : id
+  return /^0x[a-fA-F0-9]{40}$/.test(addr) ? addr : ''
+}
+
+function trustWalletLogoUrl(chain: string | undefined, id: string): string {
+  const addr = tokenAddressFromId(id)
+  if (!addr) return ''
+  const key = String(chain ?? '').toLowerCase()
+  const folder =
+    key === 'bsc' ? 'smartchain' :
+    key === 'eth' ? 'ethereum' :
+    key === 'polygon' ? 'polygon' :
+    key === 'base' ? 'base' :
+    ''
+  if (!folder) return ''
+  return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${folder}/assets/${addr}/logo.png`
+}
+
 export function HomePage() {
   const { network } = useWallet()
   const { config } = usePageConfig('home')
@@ -293,15 +313,25 @@ export function HomePage() {
             <Link key={item.id} to={`/market/${encodeURIComponent(item.id)}`} className="home-token-row">
               <div className="home-token-main">
                 <img
-                  src={item.image}
+                  src={item.image?.trim() ? item.image : tokenFallbackSvgDataUrl(item.symbol)}
                   alt=""
                   className="home-token-icon"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
                     const t = e.currentTarget
-                    if (t.dataset.fallbackApplied === '1') return
-                    t.dataset.fallbackApplied = '1'
-                    t.src = tokenFallbackSvgDataUrl(item.symbol)
+                    const stage = Number(t.dataset.fallbackStage ?? '0')
+                    if (stage === 0) {
+                      const tw = trustWalletLogoUrl(item.chain, item.id)
+                      if (tw) {
+                        t.dataset.fallbackStage = '1'
+                        t.src = tw
+                        return
+                      }
+                    }
+                    if (stage <= 1) {
+                      t.dataset.fallbackStage = '2'
+                      t.src = tokenFallbackSvgDataUrl(item.symbol)
+                    }
                   }}
                 />
                 <div>
