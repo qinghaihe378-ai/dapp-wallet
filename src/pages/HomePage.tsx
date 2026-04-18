@@ -24,6 +24,12 @@ const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 const HOME_MAX_VISIBLE_TOKENS = 60
+const TOP_TICKER_REFRESH_MS = 8_000
+const CANONICAL_BSC = {
+  BTCB: 'bsc:0x7130d2a12b9bcBfae4f2634d864a1ee1ce3ead9c'.toLowerCase(),
+  ETH: 'bsc:0x2170ed0880ac9a755fd29b2688956bd959f933f8'.toLowerCase(),
+  WBNB: 'bsc:0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'.toLowerCase(),
+}
 function matchesSymbol(item: HomeItem, symbols: string[]): boolean {
   const s = item.symbol.toLowerCase()
   return symbols.some((x) => x.toLowerCase() === s)
@@ -58,6 +64,7 @@ export function HomePage() {
   const homeFilterKey = `${HOME_FILTER_KEY_PREFIX}:${network}`
   const homeSectionKey = `${HOME_SECTION_KEY_PREFIX}:${network}`
   const [items, setItems] = useState<HomeItem[]>([])
+  const [tickerItems, setTickerItems] = useState<HomeItem[]>([])
   const [activeSection, setActiveSection] = useState<HomeSection>(() => {
     if (typeof window === 'undefined') return 'hot'
     const stored = window.localStorage.getItem(homeSectionKey)
@@ -132,6 +139,23 @@ export function HomePage() {
     const t = setInterval(load, COLLECTION_INTERVAL_MS)
     return () => clearInterval(t)
   }, [activeSection])
+
+  useEffect(() => {
+    const loadTicker = async () => {
+      try {
+        const res = await fetch(apiUrl('/api/market?chain=all'), { cache: 'no-store' })
+        if (!res.ok) throw new Error('加载顶部行情失败')
+        const json = (await res.json()) as { items?: HomeItem[] }
+        setTickerItems((json.items ?? []).map((item) => ({ ...item, market_cap: (item as any).market_cap ?? 0 })))
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    void loadTicker()
+    const t = setInterval(loadTicker, TOP_TICKER_REFRESH_MS)
+    return () => clearInterval(t)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -214,7 +238,20 @@ export function HomePage() {
       BNB: ['wbnb', 'bnb'],
     }
     return TOP_TICKER_PRESET.map((preset) => {
-      const candidates = items.filter((item) => preset.match(item))
+      if (preset.label === 'BTC') {
+        const exact = tickerItems.find((it) => String(it.id).toLowerCase() === CANONICAL_BSC.BTCB)
+        if (exact) return { label: preset.label, price: exact.current_price, change: exact.price_change_percentage_24h ?? null }
+      }
+      if (preset.label === 'ETH') {
+        const exact = tickerItems.find((it) => String(it.id).toLowerCase() === CANONICAL_BSC.ETH)
+        if (exact) return { label: preset.label, price: exact.current_price, change: exact.price_change_percentage_24h ?? null }
+      }
+      if (preset.label === 'BNB') {
+        const exact = tickerItems.find((it) => String(it.id).toLowerCase() === CANONICAL_BSC.WBNB)
+        if (exact) return { label: preset.label, price: exact.current_price, change: exact.price_change_percentage_24h ?? null }
+      }
+
+      const candidates = tickerItems.filter((item) => preset.match(item))
       const prioritized = candidates.sort((a, b) => {
         const p = priority[preset.label]
         if (!p) return 0
@@ -231,7 +268,7 @@ export function HomePage() {
         change: matched?.price_change_percentage_24h ?? null,
       }
     })
-  }, [items])
+  }, [tickerItems])
 
   return (
     <div className="page ave-page ave-home-shell ave-home-v2">
