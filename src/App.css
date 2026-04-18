@@ -6760,6 +6760,62 @@ button:disabled,
   line-height: 1.5;
 }
 
+.holders-panel .holders-table-head,
+.holders-panel .holders-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 66px 86px;
+  gap: 8px;
+  align-items: center;
+}
+
+.holders-panel .holders-table-head {
+  margin-top: 12px;
+  color: #89a0c1;
+  font-size: 12px;
+}
+
+.holders-table-body {
+  margin-top: 8px;
+  max-height: 360px;
+  overflow: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.holders-panel .holders-row {
+  min-height: 34px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #dbe6fb;
+  font-size: 12px;
+}
+
+.detail-panel .detail-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.detail-panel .detail-grid div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.detail-panel .detail-grid span {
+  margin: 0;
+  color: #8fa0bc;
+  font-size: 11px;
+}
+
+.detail-panel .detail-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: #f0f5ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .ave-liquidity-title,
 .ave-liquidity-row {
   display: flex;
@@ -6982,5 +7038,15 @@ button:disabled,
   .ave-detail-bottom-cta .buy div,
   .ave-detail-bottom-cta .sell div {
     font-size: 14px;
+  }
+
+  .holders-panel .holders-table-head,
+  .holders-panel .holders-row {
+    grid-template-columns: 42px 1fr 56px 74px;
+    gap: 6px;
+  }
+
+  .detail-panel .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
