@@ -472,7 +472,43 @@ export function AdminPage() {
 
   return (
     <div className="page ave-page admin-page">
-      <div className="card">
+      <div className="admin-layout">
+        <aside className="card admin-sidebar">
+          <div className="admin-sidebar-title">后台控制台</div>
+          <div className="admin-sidebar-sub">常用操作与全站配置入口</div>
+          <label style={{ display: 'grid', gap: 6, marginTop: 12 }}>
+            <span className="tip">当前页面</span>
+            <select
+              value={pageId}
+              onChange={(e) => setPageId(e.target.value as PageId)}
+              style={{ padding: 12, borderRadius: 12 }}
+            >
+              {PAGES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </label>
+          <div className="admin-sidebar-actions">
+            <button type="button" className="btn-primary" disabled={saving} onClick={() => void onSave()}>
+              {saving ? '保存中…' : '保存页面配置'}
+            </button>
+            <button type="button" className="btn-ghost" disabled={apiConfigSaving} onClick={() => void onSaveApiConfig()}>
+              {apiConfigSaving ? '保存中…' : '保存 API 配置'}
+            </button>
+            <button type="button" className="btn-ghost" disabled={tokenLibrarySaving} onClick={() => void onSaveTokenLibrary()}>
+              {tokenLibrarySaving ? '保存中…' : '保存代币库'}
+            </button>
+            <button type="button" className="btn-ghost" disabled={loading} onClick={() => void loadConfig()}>
+              {loading ? '加载中…' : '重新加载'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => void onLogout()}>
+              退出登录
+            </button>
+          </div>
+          <div className="admin-sidebar-meta">
+            {config.updatedAt ? `上次保存：${new Date(config.updatedAt).toLocaleString('zh-CN')}` : '尚未保存过配置'}
+          </div>
+        </aside>
+
+        <div className="card admin-main-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0 }}>后台管理</h2>
@@ -992,6 +1028,7 @@ export function AdminPage() {
               {saving ? '保存中…' : '保存页面配置'}
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

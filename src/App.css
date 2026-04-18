@@ -4041,6 +4041,65 @@ button:disabled,
   border: 1px solid rgba(55, 65, 81, 0.95);
 }
 
+.admin-layout {
+  width: min(1360px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 14px;
+  padding: 14px;
+}
+
+.admin-sidebar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f3f4f6;
+}
+
+.admin-sidebar-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.admin-sidebar-actions {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-sidebar-actions .btn-primary,
+.admin-sidebar-actions .btn-ghost {
+  width: 100%;
+  justify-content: center;
+}
+
+.admin-sidebar-meta {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.admin-main-card {
+  padding: 14px;
+}
+
+@media (max-width: 1080px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+  .admin-sidebar {
+    position: static;
+  }
+}
+
 .swap-token-picker-sheet {
   position: fixed;
   left: 0;
