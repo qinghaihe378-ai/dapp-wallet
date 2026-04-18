@@ -18,7 +18,7 @@ interface HomeItem {
 }
 
 type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha'
-type TopTickerItem = { label: '龙虾' | 'BTC' | 'ETH' | 'BNB'; price: number | null; change: number | null }
+type TopTickerItem = { label: '龙虾' | 'BTCB' | 'ETH' | 'WBNB'; price: number | null; change: number | null }
 
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
@@ -41,9 +41,9 @@ export function HomePage() {
   const [items, setItems] = useState<HomeItem[]>([])
   const [topTicker, setTopTicker] = useState<TopTickerItem[]>([
     { label: '龙虾', price: null, change: null },
-    { label: 'BTC', price: null, change: null },
+    { label: 'BTCB', price: null, change: null },
     { label: 'ETH', price: null, change: null },
-    { label: 'BNB', price: null, change: null },
+    { label: 'WBNB', price: null, change: null },
   ])
   const [activeSection, setActiveSection] = useState<HomeSection>(() => {
     if (typeof window === 'undefined') return 'hot'
