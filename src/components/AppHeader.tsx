@@ -246,7 +246,6 @@ export function AppHeader() {
     return (
       <header className="ave-header ave-header-tabs">
         <div className="ave-header-tabbar">
-          <button type="button" className="ave-header-tab active">全链</button>
           <div className="ave-header-tab ave-header-network-wrap">
             <button
               ref={netBtnRef}
