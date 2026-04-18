@@ -13,8 +13,6 @@ function formatCompact(value: number) {
 }
 
 const MARKET_SORT_KEY_PREFIX = 'marketSort'
-const MARKET_FAVORITES_KEY_PREFIX = 'marketFavorites'
-const MARKET_FAVORITES_ONLY_KEY_PREFIX = 'marketFavoritesOnly'
 
 export function MarketsPage() {
   const { network } = useWallet()
@@ -22,8 +20,6 @@ export function MarketsPage() {
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? ''
   const marketSortKey = `${MARKET_SORT_KEY_PREFIX}:${network}`
-  const marketFavoritesKey = `${MARKET_FAVORITES_KEY_PREFIX}:${network}`
-  const marketFavoritesOnlyKey = `${MARKET_FAVORITES_ONLY_KEY_PREFIX}:${network}`
   const [list, setList] = useState<MarketItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,15 +27,6 @@ export function MarketsPage() {
     if (typeof window === 'undefined') return 'default'
     const stored = window.localStorage.getItem(marketSortKey)
     return stored === 'change' || stored === 'price' || stored === 'default' ? stored : 'default'
-  })
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return []
-    const stored = window.localStorage.getItem(marketFavoritesKey)
-    return stored ? JSON.parse(stored) as string[] : []
-  })
-  const [favoritesOnly, setFavoritesOnly] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem(marketFavoritesOnlyKey) === 'true'
   })
   const [chainFilter, setChainFilter] = useState<ChainId | 'all'>('all')
   const [apiProvider, setApiProvider] = useState<string>('')
@@ -56,7 +43,6 @@ export function MarketsPage() {
       const data = json.items ?? []
       setList(data)
       setApiProvider(json.provider ?? 'Redis')
-      setFavorites((current) => (current.length > 0 ? current : data.slice(0, 3).map((item) => item.id)))
     } catch (e) {
       console.error(e)
       setError(e instanceof Error ? e.message : '加载行情失败，请稍后重试。')
@@ -98,27 +84,13 @@ export function MarketsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const storedSort = window.localStorage.getItem(marketSortKey)
-    const storedFavorites = window.localStorage.getItem(marketFavoritesKey)
-    const storedFavoritesOnly = window.localStorage.getItem(marketFavoritesOnlyKey)
     setSortBy(storedSort === 'change' || storedSort === 'price' || storedSort === 'default' ? storedSort : 'default')
-    setFavorites(storedFavorites ? JSON.parse(storedFavorites) as string[] : [])
-    setFavoritesOnly(storedFavoritesOnly === 'true')
-  }, [marketFavoritesKey, marketFavoritesOnlyKey, marketSortKey])
+  }, [marketSortKey])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(marketSortKey, sortBy)
   }, [marketSortKey, sortBy])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(marketFavoritesKey, JSON.stringify(favorites))
-  }, [favorites, marketFavoritesKey])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(marketFavoritesOnlyKey, String(favoritesOnly))
-  }, [favoritesOnly, marketFavoritesOnlyKey])
 
   const rows = useMemo(() => {
     const useAddressResults = searchQuery && isContractAddress(searchQuery) && addressSearchResults !== null
@@ -144,9 +116,8 @@ export function MarketsPage() {
       next = [...next].sort((a, b) => b.current_price - a.current_price)
     }
 
-    const finalList = favoritesOnly ? next.filter((item) => favorites.includes(item.id)) : next
-    return useAddressResults ? finalList : finalList.slice(0, 120)
-  }, [addressSearchResults, chainFilter, favorites, favoritesOnly, list, searchQuery, sortBy])
+    return useAddressResults ? next : next.slice(0, 120)
+  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy])
 
   const CHAIN_OPTIONS: { value: ChainId | 'all'; label: string }[] = [
     { value: 'all', label: '全部' },
@@ -155,10 +126,6 @@ export function MarketsPage() {
     { value: 'base', label: 'Base' },
     { value: 'polygon', label: 'Polygon' },
   ]
-  const toggleFavorite = (id: string) => {
-    setFavorites((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
-  }
-
   const sections = useMemo(() => {
     const defaults = [
       { id: 'controls', enabled: true, order: 0 },
@@ -259,29 +226,20 @@ export function MarketsPage() {
                     </>
                   )
                   return (
-                    <div key={item.id} className="market-watch-row-wrap">
-                      <Link
-                        to={isDexToken ? `/market/${encodeURIComponent(item.id)}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
-                        className="market-watch-row"
-                      >
-                        {innerLink}
-                      </Link>
-                      <button
-                        type="button"
-                        className={`market-watch-fav ${favorites.includes(item.id) ? 'active' : ''}`}
-                        onClick={() => toggleFavorite(item.id)}
-                        aria-label="收藏"
-                      >
-                        {favorites.includes(item.id) ? '★' : '☆'}
-                      </button>
-                    </div>
+                    <Link
+                      key={item.id}
+                      to={isDexToken ? `/market/${encodeURIComponent(item.id)}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
+                      className="market-watch-row"
+                    >
+                      {innerLink}
+                    </Link>
                   )
                 })}
                 {!loading && !addressSearchLoading && rows.length === 0 && (
                   <div className="market-empty-note">
                     {searchQuery && isContractAddress(searchQuery)
                       ? '未找到该合约地址对应的交易对'
-                      : '暂无匹配的自选池子'}
+                      : '暂无匹配的交易池子'}
                   </div>
                 )}
               </div>
