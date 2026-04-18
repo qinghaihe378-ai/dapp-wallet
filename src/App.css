@@ -6915,6 +6915,31 @@ button:disabled,
   font-size: 13px;
 }
 
+.ave-liquidity-row .ave-pool-dex-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ave-liquidity-row .ave-pool-dex-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ave-liquidity-row .ave-pool-dex-badge i {
+  font-style: normal;
+  font-size: 9px;
+  color: #d8e4ff;
+  font-weight: 700;
+}
+
 .ave-detail-bottom-cta {
   position: fixed;
   left: 0;

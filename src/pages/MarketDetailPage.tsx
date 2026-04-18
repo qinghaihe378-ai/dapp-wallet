@@ -74,6 +74,14 @@ const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
   avalanche: 'avax',
 }
 
+const DEX_ICON_MAP: Record<string, string> = {
+  pancakeswap: 'https://pancakeswap.finance/favicon.ico',
+  uniswap: 'https://app.uniswap.org/favicon.ico',
+  sushiswap: 'https://www.sushi.com/favicon.ico',
+  aerodrome: 'https://aerodrome.finance/favicon.ico',
+  biswap: 'https://biswap.org/favicon.ico',
+}
+
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
@@ -105,6 +113,7 @@ export function MarketDetailPage() {
   const [totalSupply, setTotalSupply] = useState<string | null>(null)
   const [coinTypeInfo, setCoinTypeInfo] = useState<string | null>(null)
   const [communityLinks, setCommunityLinks] = useState<Array<{ label: string; url: string }>>([])
+  const [pairDexId, setPairDexId] = useState<string | null>(null)
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
@@ -266,6 +275,7 @@ export function MarketDetailPage() {
     if (!dexScreenerChainId || !dexPairAddress) {
       setPairVolume24h(null)
       setPairTxns24h(null)
+      setPairDexId(null)
       return
     }
     let cancelled = false
@@ -282,6 +292,7 @@ export function MarketDetailPage() {
               h24?: { buys?: number; sells?: number }
             }
             volume?: { m5?: number; h1?: number; h6?: number; h24?: number }
+            dexId?: string
           }>
         }
         const p = json?.pairs?.[0]
@@ -291,10 +302,12 @@ export function MarketDetailPage() {
         const sells = p.txns?.h24?.sells ?? 0
         setPairVolume24h(Number.isFinite(volume as number) ? Number(volume) : null)
         setPairTxns24h(Number.isFinite(buys + sells) ? buys + sells : null)
+        setPairDexId(typeof p.dexId === 'string' && p.dexId.trim() ? p.dexId : null)
       } catch {
         if (cancelled) return
         setPairVolume24h(null)
         setPairTxns24h(null)
+        setPairDexId(null)
       }
     }
     void loadPairStats()
@@ -496,6 +509,7 @@ export function MarketDetailPage() {
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
+  const pairDexIcon = pairDexId ? DEX_ICON_MAP[pairDexId.toLowerCase()] : null
 
   if (!coinId || (!isDexFormat && !isCoingeckoFormat)) {
     return (
@@ -694,6 +708,13 @@ export function MarketDetailPage() {
                     </div>
                     <div className="ave-liquidity-row">
                       <span>池子配对</span>
+                      <span className="ave-pool-dex-badge">
+                        {pairDexIcon ? (
+                          <img src={pairDexIcon} alt={pairDexId ?? 'dex'} />
+                        ) : (
+                          <i>{pairDexId ? pairDexId.slice(0, 3).toUpperCase() : 'DEX'}</i>
+                        )}
+                      </span>
                       <span>{detailVM.symbol}/WBNB</span>
                     </div>
                   </>
