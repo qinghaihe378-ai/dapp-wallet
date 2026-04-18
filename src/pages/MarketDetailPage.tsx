@@ -767,20 +767,33 @@ export function MarketDetailPage() {
                       <div className="trade-recent-list">
                         {tokenPools.length > 0 ? tokenPools.map((pool, idx) => {
                           const icon = DEX_ICON_MAP[pool.dexId.toLowerCase()] || null
+                          const active = dexPairAddress === pool.pairAddress
                           return (
-                            <a
+                            <button
                               key={`${pool.pairAddress}-${idx}`}
+                              type="button"
                               className="ave-liquidity-row ave-liquidity-row-pool"
-                              href={`https://dexscreener.com/${dexScreenerChainId}/${pool.pairAddress}`}
-                              target="_blank"
-                              rel="noreferrer"
+                              style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                background: active ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
+                                border: active ? '1px solid rgba(56, 189, 248, 0.55)' : '1px solid transparent',
+                                borderRadius: 10,
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => {
+                                setDexPairAddress(pool.pairAddress)
+                                setPairDexId(pool.dexId)
+                                setSubTab('trade')
+                              }}
+                              title="站内打开该池子"
                             >
                               <span>{`${idx + 1}. ${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
                               <span className="ave-pool-dex-badge">
                                 {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
                               </span>
                               <span>{`${formatCompact(pool.liquidityUsd)} · Vol ${formatCompact(pool.volume24h)}`}</span>
-                            </a>
+                            </button>
                           )
                         }) : <span className="trade-empty">暂无池子数据</span>}
                       </div>
