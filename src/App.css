@@ -7770,10 +7770,22 @@ button:disabled,
 
 .ave-markets-v2 .market-sort-row {
   overflow-x: auto;
+  overflow-y: hidden;
   flex-wrap: nowrap;
   gap: 10px;
   margin-bottom: 8px;
   padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.ave-markets-v2 .market-sort-row::-webkit-scrollbar {
+  display: none;
+}
+
+.ave-markets-v2 .market-sort-row > button {
+  flex: 0 0 auto;
 }
 
 .market-period-row {
