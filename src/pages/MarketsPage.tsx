@@ -119,12 +119,10 @@ export function MarketsPage() {
     return useAddressResults ? next : next.slice(0, 120)
   }, [addressSearchResults, chainFilter, list, searchQuery, sortBy])
 
-  const CHAIN_OPTIONS: { value: ChainId | 'all'; label: string }[] = [
-    { value: 'all', label: '全部' },
+  const CHAIN_OPTIONS: { value: ChainId; label: string }[] = [
     { value: 'eth', label: 'ETH' },
     { value: 'bsc', label: 'BSC' },
     { value: 'base', label: 'Base' },
-    { value: 'polygon', label: 'Polygon' },
   ]
   const sections = useMemo(() => {
     const defaults = [
@@ -159,7 +157,7 @@ export function MarketsPage() {
                       key={opt.value}
                       type="button"
                       className={`market-chain-pill ${chainFilter === opt.value ? 'active' : ''}`}
-                      onClick={() => setChainFilter(opt.value)}
+                      onClick={() => setChainFilter((current) => (current === opt.value ? 'all' : opt.value))}
                     >
                       {opt.label}
                     </button>
