@@ -7204,7 +7204,32 @@ button:disabled,
 }
 
 .ave-pool-pair-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal !important;
+  line-height: 1.25;
+}
+
+.ave-pool-pair-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
+}
+
+.ave-pool-pair-top em {
+  font-style: normal;
+  font-size: 11px;
+  color: #cdd9f7;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.ave-pool-pair-bottom {
+  color: #c7d4f3;
+  font-weight: 600;
 }
 
 .ave-pool-amount-cell {
@@ -7217,6 +7242,7 @@ button:disabled,
 
 .ave-pool-amount-cell > span {
   color: #d9e3f7;
+  text-align: left;
 }
 
 .ave-pool-dex-cell {

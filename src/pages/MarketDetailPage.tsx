@@ -90,6 +90,8 @@ const DEX_ICON_MAP: Record<string, string> = {
   biswap: 'https://biswap.org/favicon.ico',
 }
 
+const MAIN_PAIR_SYMBOLS = new Set(['WBNB', 'BNB', 'WETH', 'ETH', 'USDT', 'USDC', 'BUSD', 'DAI'])
+
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
@@ -126,10 +128,11 @@ export function MarketDetailPage() {
   const [tokenPools, setTokenPools] = useState<Array<{
     pairAddress: string
     dexId: string
-    baseSymbol: string
-    quoteSymbol: string
-    baseAmount: number
-    quoteAmount: number
+    topSymbol: string
+    bottomSymbol: string
+    topAmount: number
+    bottomAmount: number
+    feeLabel: string
     liquidityUsd: number
     volume24h: number
   }>>([])
@@ -284,27 +287,40 @@ export function MarketDetailPage() {
           quoteToken?: { symbol?: string }
           liquidity?: { usd?: number; base?: number; quote?: number }
           volume?: { h24?: number }
+          labels?: string[]
         } | null>
         const byPairAddress = new Map<string, {
           pairAddress: string
           dexId: string
-          baseSymbol: string
-          quoteSymbol: string
-          baseAmount: number
-          quoteAmount: number
+          topSymbol: string
+          bottomSymbol: string
+          topAmount: number
+          bottomAmount: number
+          feeLabel: string
           liquidityUsd: number
           volume24h: number
         }>()
         for (const p of Array.isArray(json) ? json : []) {
           if (!p?.pairAddress) continue
           const pairAddress = String(p.pairAddress).toLowerCase()
+          const baseSymbol = String(p.baseToken?.symbol ?? detailVM?.symbol ?? 'TOKEN').toUpperCase()
+          const quoteSymbol = String(p.quoteToken?.symbol ?? 'USD').toUpperCase()
+          const baseAmount = Number(p.liquidity?.base ?? 0) || 0
+          const quoteAmount = Number(p.liquidity?.quote ?? 0) || 0
+          const mainIsBase = MAIN_PAIR_SYMBOLS.has(baseSymbol) && !MAIN_PAIR_SYMBOLS.has(quoteSymbol)
+          const topSymbol = mainIsBase ? quoteSymbol : baseSymbol
+          const bottomSymbol = mainIsBase ? baseSymbol : quoteSymbol
+          const topAmount = mainIsBase ? quoteAmount : baseAmount
+          const bottomAmount = mainIsBase ? baseAmount : quoteAmount
+          const feeLabel = (p.labels ?? []).find((x) => typeof x === 'string' && x.includes('%')) ?? ''
           const nextItem = {
             pairAddress: String(p.pairAddress),
             dexId: String(p.dexId ?? 'dex').trim() || 'dex',
-            baseSymbol: String(p.baseToken?.symbol ?? detailVM?.symbol ?? 'TOKEN').toUpperCase(),
-            quoteSymbol: String(p.quoteToken?.symbol ?? 'USD').toUpperCase(),
-            baseAmount: Number(p.liquidity?.base ?? 0) || 0,
-            quoteAmount: Number(p.liquidity?.quote ?? 0) || 0,
+            topSymbol,
+            bottomSymbol,
+            topAmount,
+            bottomAmount,
+            feeLabel,
             liquidityUsd: Number(p.liquidity?.usd ?? 0) || 0,
             volume24h: Number(p.volume?.h24 ?? 0) || 0,
           }
@@ -821,10 +837,16 @@ export function MarketDetailPage() {
                               }}
                               title="站内打开该池子"
                             >
-                              <span className="ave-pool-pair-cell">{`${pool.baseSymbol}/${pool.quoteSymbol}`}</span>
+                              <span className="ave-pool-pair-cell">
+                                <span className="ave-pool-pair-top">
+                                  <span>{pool.topSymbol}</span>
+                                  {pool.feeLabel && <em>{pool.feeLabel}</em>}
+                                </span>
+                                <span className="ave-pool-pair-bottom">{pool.bottomSymbol}</span>
+                              </span>
                               <span className="ave-pool-amount-cell">
-                                <span>{`${formatTokenAmount(pool.baseAmount)} ${pool.baseSymbol}`}</span>
-                                <span>{`${formatTokenAmount(pool.quoteAmount)} ${pool.quoteSymbol}`}</span>
+                                <span>{formatTokenAmount(pool.topAmount)}</span>
+                                <span>{formatTokenAmount(pool.bottomAmount)}</span>
                               </span>
                               <span className="ave-pool-dex-cell">
                                 <span className="ave-pool-dex-badge">
