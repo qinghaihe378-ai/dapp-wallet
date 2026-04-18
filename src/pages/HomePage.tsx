@@ -16,6 +16,8 @@ interface HomeItem {
   chain?: string
 }
 
+type HomeSection = 'hot' | 'gain' | 'alpha'
+
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
@@ -32,10 +34,10 @@ export function HomePage() {
   const homeFilterKey = `${HOME_FILTER_KEY_PREFIX}:${network}`
   const homeSectionKey = `${HOME_SECTION_KEY_PREFIX}:${network}`
   const [items, setItems] = useState<HomeItem[]>([])
-  const [activeSection, setActiveSection] = useState<'hot' | 'gain'>(() => {
+  const [activeSection, setActiveSection] = useState<HomeSection>(() => {
     if (typeof window === 'undefined') return 'hot'
     const stored = window.localStorage.getItem(homeSectionKey)
-    return stored === 'gain' ? 'gain' : 'hot'
+    return stored === 'gain' || stored === 'alpha' ? stored : 'hot'
   })
   const [activeQuickAction, setActiveQuickAction] = useState<'receive' | 'invite' | null>(() => {
     if (typeof window === 'undefined') return null
@@ -70,6 +72,9 @@ export function HomePage() {
         (a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity)
       )
     }
+    if (activeSection === 'alpha') {
+      return next.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+    }
     // 热门：仅展示有头像（非空 image）的代币
     return next.filter((item) => hasTokenAvatar(item.image))
   }, [activeSection, baseFiltered, homeSearch])
@@ -77,7 +82,8 @@ export function HomePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(apiUrl('/api/market?chain=all'), { cache: 'no-store' })
+        const marketUrl = activeSection === 'alpha' ? '/api/market?chain=all&scope=alpha' : '/api/market?chain=all'
+        const res = await fetch(apiUrl(marketUrl), { cache: 'no-store' })
         if (!res.ok) throw new Error('加载行情失败')
         const json = (await res.json()) as { items?: HomeItem[] }
         const data = json.items ?? []
@@ -90,7 +96,7 @@ export function HomePage() {
     void load()
     const t = setInterval(load, COLLECTION_INTERVAL_MS)
     return () => clearInterval(t)
-  }, [])
+  }, [activeSection])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -104,7 +110,7 @@ export function HomePage() {
           ? storedFilter
           : 'all',
       )
-      setActiveSection(storedSection === 'gain' ? 'gain' : 'hot')
+      setActiveSection(storedSection === 'gain' || storedSection === 'alpha' ? storedSection : 'hot')
     })
   }, [homeFilterKey, homeQuickActionKey, homeSectionKey])
 
@@ -180,7 +186,7 @@ export function HomePage() {
       <div className="ave-home-shot-tabs">
         <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
         <button type="button">合约</button>
-        <button type="button">币安Alpha</button>
+        <button type="button" className={activeSection === 'alpha' ? 'active' : ''} onClick={() => setActiveSection('alpha')}>币安Alpha</button>
         <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
         <Link to="/new-tokens">新币</Link>
         <button type="button">Pre-IPO</button>
@@ -197,9 +203,15 @@ export function HomePage() {
 
       <div className="home-market-panel">
         <div className="home-panel-head">
-          <div className="home-panel-title">{activeSection === 'hot' ? '代币排行' : '涨幅排行'}</div>
+          <div className="home-panel-title">
+            {activeSection === 'alpha' ? '币安Alpha' : activeSection === 'hot' ? '代币排行' : '涨幅排行'}
+          </div>
           <div className="home-panel-sub">
-            {activeSection === 'hot' ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示` : '24h 涨幅由高到低'}
+            {activeSection === 'alpha'
+              ? `自动拉取币安 Alpha，按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
+              : activeSection === 'hot'
+              ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
+              : '24h 涨幅由高到低'}
           </div>
         </div>
         <div className="home-token-feed">

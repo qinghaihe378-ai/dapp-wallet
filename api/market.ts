@@ -12,6 +12,7 @@ const redis = new Redis(process.env.REDIS_URL as string)
 // 让前端 10 秒轮询真正生效：缓存只保留短时间
 const TTL_SECONDS = 12
 const FRESH_MS = 10_000
+const ALPHA_CACHE_KEY = 'clawdex:markets:alpha'
 
 const CHAINS: ChainId[] = ['eth', 'base', 'bsc', 'polygon']
 const HOME_PAGE_CONFIG_KEY = 'clawdex:pageConfig:home'
@@ -249,11 +250,104 @@ type MarketPayload = {
   items: MarketItem[]
 }
 
+type BinanceAlphaToken = {
+  tokenId?: string
+  alphaId?: string
+  chainId?: string
+  contractAddress?: string
+  name?: string
+  symbol?: string
+  iconUrl?: string
+  price?: string
+  percentChange24h?: string
+  marketCap?: string
+}
+
+function alphaChainToInternal(chainId: string | undefined): ChainId | null {
+  if (chainId === '1') return 'eth'
+  if (chainId === '56') return 'bsc'
+  if (chainId === '8453') return 'base'
+  if (chainId === '137') return 'polygon'
+  return null
+}
+
+async function fetchBinanceAlphaMarkets(limit = 250): Promise<MarketItem[]> {
+  const res = await fetch(
+    'https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list',
+    {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'clawdex-market-fetcher',
+      },
+    },
+  )
+  if (!res.ok) throw new Error(`Binance Alpha HTTP ${res.status}`)
+  const json = (await res.json()) as { code?: string; success?: boolean; data?: BinanceAlphaToken[] }
+  if (!json?.success || json.code !== '000000' || !Array.isArray(json.data)) {
+    throw new Error('Binance Alpha 响应格式异常')
+  }
+  const out: MarketItem[] = []
+  for (const token of json.data) {
+    const chain = alphaChainToInternal(token.chainId)
+    const address = String(token.contractAddress ?? '').trim().toLowerCase()
+    if (!chain || !address.startsWith('0x') || address.length !== 42) continue
+    const symbol = String(token.symbol ?? '').trim()
+    const name = String(token.name ?? '').trim() || symbol
+    if (!symbol || !name) continue
+    const price = Number(token.price ?? 0)
+    if (!Number.isFinite(price) || price <= 0) continue
+    const marketCap = Number(token.marketCap ?? 0)
+    const p24 = Number(token.percentChange24h ?? 0)
+    out.push({
+      id: `${chain}:${address}`,
+      symbol,
+      name,
+      image: String(token.iconUrl ?? '').trim(),
+      current_price: price,
+      price_change_percentage_24h: Number.isFinite(p24) ? p24 : null,
+      market_cap: Number.isFinite(marketCap) ? marketCap : 0,
+      chain,
+      coingeckoId: undefined,
+    })
+  }
+  return out
+    .sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+    .slice(0, limit)
+}
+
 export default async function handler(req: any, res: any) {
   try {
     const chainParam = String(req?.query?.chain ?? 'all') as ChainId | 'all'
+    const scope = String(req?.query?.scope ?? '').trim().toLowerCase()
     const refresh = String(req?.query?.refresh ?? '') === '1'
     const chain = chainParam === 'all' ? 'all' : (CHAINS.includes(chainParam) ? chainParam : 'all')
+
+    if (scope === 'alpha') {
+      if (!refresh) {
+        const cached = await redis.get(ALPHA_CACHE_KEY)
+        if (cached) {
+          const payload = JSON.parse(cached) as MarketPayload
+          const age = Date.now() - (payload.updatedAt || 0)
+          if (age >= 0 && age < FRESH_MS) {
+            const byChain = chain === 'all' ? payload.items : payload.items.filter((it) => it.chain === chain)
+            sendMarketPayload(res, { ...payload, chain, items: byChain } satisfies MarketPayload)
+            return
+          }
+        }
+      }
+      const now = Date.now()
+      const alphaItems = await fetchBinanceAlphaMarkets(250)
+      const alphaPayload: MarketPayload = {
+        updatedAt: now,
+        provider: 'BinanceAlpha',
+        chain: 'all',
+        items: alphaItems,
+      }
+      await redis.set(ALPHA_CACHE_KEY, JSON.stringify(alphaPayload), 'EX', TTL_SECONDS)
+      const byChain = chain === 'all' ? alphaItems : alphaItems.filter((it) => it.chain === chain)
+      sendMarketPayload(res, { ...alphaPayload, chain, items: byChain } satisfies MarketPayload)
+      return
+    }
 
     if (!refresh) {
       const manualItems = await getManualHotTokens()
@@ -355,4 +449,3 @@ export default async function handler(req: any, res: any) {
     })
   }
 }
-
