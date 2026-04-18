@@ -24,6 +24,20 @@ interface CoinDetail {
 const COINGECKO_ID_REG = /^[a-zA-Z0-9_-]+$/
 const DEX_ID_REG = /^[a-zA-Z0-9_-]+:[a-zA-Z0-9]+$/
 
+const formatCompact = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`
+  return `$${value.toFixed(2)}`
+}
+
+const formatPrice = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return '$0.00'
+  return value >= 1 ? `$${value.toFixed(2)}` : `$${value.toFixed(6)}`
+}
+
 export function MarketDetailPage() {
   const { coinId } = useParams<{ coinId: string }>()
   const [detail, setDetail] = useState<CoinDetail | null>(null)
@@ -40,6 +54,43 @@ export function MarketDetailPage() {
     if (!dexItem?.id) return null
     return dexItem.id.split(':')[1] ?? null
   }, [dexItem?.id])
+
+  const detailVM = useMemo(() => {
+    if (dexItem) {
+      return {
+        symbol: dexItem.symbol?.toUpperCase() ?? '--',
+        name: dexItem.name ?? dexItem.symbol?.toUpperCase() ?? '--',
+        image: dexItem.image || '',
+        chain: dexItem.chain?.toUpperCase() ?? '',
+        price: dexItem.current_price ?? 0,
+        change24h: dexItem.price_change_percentage_24h ?? 0,
+        marketCap: dexItem.market_cap ?? 0,
+        volume24h: 0,
+        fdv: 0,
+        high24h: 0,
+        low24h: 0,
+      }
+    }
+
+    if (detail) {
+      const md = detail.market_data
+      return {
+        symbol: detail.symbol?.toUpperCase() ?? '--',
+        name: detail.name ?? detail.symbol?.toUpperCase() ?? '--',
+        image: detail.image?.large ?? detail.image?.small ?? '',
+        chain: 'GLOBAL',
+        price: md?.current_price?.usd ?? 0,
+        change24h: md?.price_change_percentage_24h ?? 0,
+        marketCap: md?.market_cap?.usd ?? 0,
+        volume24h: md?.total_volume?.usd ?? 0,
+        fdv: md?.fully_diluted_valuation?.usd ?? 0,
+        high24h: md?.high_24h?.usd ?? 0,
+        low24h: md?.low_24h?.usd ?? 0,
+      }
+    }
+
+    return null
+  }, [detail, dexItem])
 
   const quickTradeTargets = useMemo(() => {
     if (dexItem) {
@@ -166,147 +217,64 @@ export function MarketDetailPage() {
       </div>
     )
   }
-
-  if (dexItem) {
-    const price = dexItem.current_price
-    const change24h = dexItem.price_change_percentage_24h ?? 0
-    const cap = dexItem.market_cap ?? 0
-
-    const formatCompact = (value: number) => {
-      if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
-      if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
-      if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
-      if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`
-      return `$${value.toFixed(2)}`
-    }
-
-    return (
-      <div className="page ave-page">
-        <div className="card market-detail-card">
-          <section className="market-detail-hero">
-            <div className="market-detail-header">
-              <img src={dexItem.image || ''} alt="" className="market-detail-icon" />
-              <div className="market-detail-summary">
-                <h1 className="market-detail-name">{dexItem.symbol?.toUpperCase() ?? dexItem.symbol}</h1>
-                <span className="market-detail-symbol">{dexItem.symbol?.toUpperCase()} · 实时概览</span>
-              </div>
-            </div>
-            <div className="market-detail-price">
-              ${price >= 1 ? price.toFixed(2) : price.toFixed(6)}
-            </div>
-            <div className={`market-detail-change ${change24h >= 0 ? 'up' : 'down'}`}>
-              {change24h >= 0 ? '+' : ''}{change24h.toFixed(2)}% (24h)
-            </div>
-            {cap > 0 && (
-              <div className="market-detail-cap">市值 {formatCompact(cap)}</div>
-            )}
-            <div className="market-detail-actions">
-              <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
-              <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
-            </div>
-          </section>
-          <div className="market-detail-chart">
-            <div className="detail-chip-row">
-              {[
-                { key: '1m' as const, label: '1m' },
-                { key: '5m' as const, label: '5m' },
-                { key: '30m' as const, label: '30m' },
-                { key: '1h' as const, label: '1H' },
-                { key: '2h' as const, label: '2H' },
-                { key: '1d' as const, label: '1D' },
-                { key: '1w' as const, label: '1W' },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={`detail-chip ${period === item.key ? 'active' : ''}`}
-                  onClick={() => setPeriod(item.key)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <KLineChart
-              syntheticData={{ currentPrice: price, change24h }}
-              geckoPool={geckoNetworkId && dexPairAddress ? { network: geckoNetworkId, poolAddress: dexPairAddress } : undefined}
-              dexScreener={dexScreenerChainId && dexTokenAddress ? { chainId: dexScreenerChainId, tokenAddress: dexTokenAddress } : undefined}
-              period={period}
-            />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!detail) return null
-  const md = detail.market_data
-  const price = md?.current_price?.usd ?? 0
-  const change24h = md?.price_change_percentage_24h ?? 0
-  const cap = md?.market_cap?.usd ?? 0
-  const volume = md?.total_volume?.usd ?? 0
-  const high = md?.high_24h?.usd ?? 0
-  const low = md?.low_24h?.usd ?? 0
-  const fdv = md?.fully_diluted_valuation?.usd ?? 0
-
-  const formatCompact = (value: number) => {
-    if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`
-    return `$${value.toFixed(2)}`
-  }
+  if (!detailVM) return null
 
   return (
-    <div className="page ave-page">
-      <div className="card market-detail-card">
-        <section className="market-detail-hero">
-          <div className="market-detail-header">
-            <img
-              src={detail.image?.large ?? detail.image?.small}
-              alt=""
-              className="market-detail-icon"
-            />
-            <div className="market-detail-summary">
-              <h1 className="market-detail-name">{detail.symbol?.toUpperCase() ?? detail.symbol}</h1>
-              <span className="market-detail-symbol">{detail.symbol?.toUpperCase()} · 实时概览</span>
+    <div className="page ave-page market-detail-page">
+      <div className="card market-detail-card ave-token-detail">
+        <section className="market-detail-hero ave-token-detail-hero">
+          <div className="market-detail-header ave-token-head">
+            <div className="ave-token-identity">
+              <img src={detailVM.image} alt="" className="market-detail-icon ave-token-icon" />
+              <div className="market-detail-summary">
+                <h1 className="market-detail-name">{detailVM.symbol}</h1>
+                <span className="market-detail-symbol">
+                  {detailVM.name}
+                  {detailVM.chain && <em>{detailVM.chain}</em>}
+                </span>
+              </div>
+            </div>
+            <div className="ave-token-mini-actions">
+              <button type="button" aria-label="关注">☆</button>
+              <button type="button" aria-label="分享">↗</button>
             </div>
           </div>
-          <div className="market-detail-price">
-            ${price >= 1 ? price.toFixed(2) : price.toFixed(6)}
-          </div>
-          <div className={`market-detail-change ${change24h >= 0 ? 'up' : 'down'}`}>
-            {change24h >= 0 ? '+' : ''}{change24h?.toFixed(2)}% (24h)
-          </div>
-          {cap > 0 && (
-            <div className="market-detail-cap">
-              市值 {formatCompact(cap)}
+
+          <div className="ave-token-price-wrap">
+            <div className="market-detail-price">{formatPrice(detailVM.price)}</div>
+            <div className={`market-detail-change ave-token-change ${detailVM.change24h >= 0 ? 'up' : 'down'}`}>
+              {detailVM.change24h >= 0 ? '+' : ''}{detailVM.change24h.toFixed(2)}%
             </div>
-          )}
-          <div className="market-detail-stats">
+          </div>
+
+          <div className="ave-token-meta-row">
+            <div className="market-detail-cap">市值 {formatCompact(detailVM.marketCap)}</div>
+            <div className="ave-token-meta-divider" />
+            <div className="market-detail-cap">24h 成交额 {formatCompact(detailVM.volume24h)}</div>
+          </div>
+
+          <div className="market-detail-stats ave-token-stats">
             <div className="stat-card">
               <div className="stat-label">24h 成交额</div>
-              <div className="stat-value">{formatCompact(volume)}</div>
+              <div className="stat-value">{formatCompact(detailVM.volume24h)}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">FDV</div>
-              <div className="stat-value">{fdv > 0 ? formatCompact(fdv) : '—'}</div>
+              <div className="stat-value">{formatCompact(detailVM.fdv)}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">24h 最高</div>
-              <div className="stat-value">{high > 0 ? formatCompact(high) : '—'}</div>
+              <div className="stat-value">{formatCompact(detailVM.high24h)}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">24h 最低</div>
-              <div className="stat-value">{low > 0 ? formatCompact(low) : '—'}</div>
+              <div className="stat-value">{formatCompact(detailVM.low24h)}</div>
             </div>
           </div>
-          <div className="market-detail-actions">
-            <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买</Link>
-            <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖</Link>
-          </div>
         </section>
-        <div className="market-detail-chart">
-          <div className="detail-chip-row">
+
+        <div className="market-detail-chart ave-token-chart-wrap">
+          <div className="detail-chip-row ave-token-time-tabs">
             {[
               { key: '1m' as const, label: '1m' },
               { key: '5m' as const, label: '5m' },
@@ -326,11 +294,19 @@ export function MarketDetailPage() {
               </button>
             ))}
           </div>
-          <KLineChart
-            syntheticData={{ currentPrice: price, change24h: change24h ?? 0 }}
-            period={period}
-          />
-        </div>
+
+            <KLineChart
+              syntheticData={{ currentPrice: detailVM.price, change24h: detailVM.change24h ?? 0 }}
+              geckoPool={geckoNetworkId && dexPairAddress ? { network: geckoNetworkId, poolAddress: dexPairAddress } : undefined}
+              dexScreener={dexScreenerChainId && dexTokenAddress ? { chainId: dexScreenerChainId, tokenAddress: dexTokenAddress } : undefined}
+              period={period}
+            />
+          </div>
+
+          <div className="market-detail-actions ave-token-cta-row">
+            <Link to={quickTradeTargets.buy} className="btn-primary market-detail-action">快捷买入</Link>
+            <Link to={quickTradeTargets.sell} className="btn-ghost market-detail-action">快捷卖出</Link>
+          </div>
       </div>
     </div>
   )

@@ -1152,6 +1152,205 @@ button:disabled,
   min-height: 48px;
 }
 
+.market-detail-page {
+  gap: 10px;
+}
+
+.market-detail-card.ave-token-detail {
+  padding: 12px;
+  border-radius: 20px;
+  border-color: rgba(255, 255, 255, 0.07);
+  background: #111722;
+  box-shadow: none;
+}
+
+.market-detail-card.ave-token-detail::before {
+  display: none;
+}
+
+.ave-token-detail-hero {
+  gap: 12px;
+}
+
+.ave-token-head {
+  justify-content: space-between;
+}
+
+.ave-token-identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ave-token-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1d2430;
+}
+
+.market-detail-name {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.market-detail-symbol {
+  margin-top: 3px;
+  color: #8f98a8;
+  font-size: 11px;
+}
+
+.market-detail-symbol em {
+  font-style: normal;
+  margin-left: 8px;
+  min-height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(75, 141, 255, 0.16);
+  color: #9ab8ff;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ave-token-mini-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ave-token-mini-actions button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9ea6b5;
+  font-size: 12px;
+}
+
+.ave-token-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.market-detail-price {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.market-detail-change.ave-token-change {
+  margin-top: 0;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.market-detail-change.ave-token-change.up {
+  background: rgba(46, 204, 113, 0.16);
+  color: #41d68a;
+}
+
+.market-detail-change.ave-token-change.down {
+  background: rgba(255, 92, 107, 0.16);
+  color: #ff7583;
+}
+
+.ave-token-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8f98a8;
+  font-size: 12px;
+}
+
+.ave-token-meta-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ave-token-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ave-token-stats .stat-card {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+}
+
+.ave-token-stats .stat-label {
+  font-size: 10px;
+  color: #7f8795;
+}
+
+.ave-token-stats .stat-value {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #eaf0ff;
+}
+
+.ave-token-chart-wrap {
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0d1117;
+  padding: 10px;
+}
+
+.market-detail-chart .chart-header {
+  margin-bottom: 8px;
+}
+
+.market-detail-chart .chart-title {
+  font-size: 13px;
+  color: #9ea6b5;
+}
+
+.market-detail-chart .chart-subtitle {
+  display: none;
+}
+
+.ave-token-time-tabs {
+  gap: 6px;
+}
+
+.ave-token-time-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ea6b5;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ave-token-time-chip.active {
+  background: rgba(75, 141, 255, 0.18);
+  border-color: rgba(75, 141, 255, 0.34);
+  color: #dfe9ff;
+}
+
+.ave-token-cta-row {
+  margin-top: 2px;
+}
+
+.ave-token-cta-row .market-detail-action {
+  min-height: 42px;
+}
+
 .ave-chart-card {
   padding: 18px;
 }
