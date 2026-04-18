@@ -19,7 +19,7 @@ const PERIOD_CONFIG: Record<KLinePeriod, { count: number; label: string }> = {
   '1h': { count: 24, label: '1H' },
   '4h': { count: 24, label: '4H' },
   '1d': { count: 7, label: '1D' },
-  '1w': { count: 4, label: '1W' },
+  '1w': { count: 16, label: '1W' },
 }
 
 type GeckoTimeframe = 'minute' | 'hour' | 'day'
@@ -33,8 +33,43 @@ function toGeckoParams(period: KLinePeriod): { timeframe: GeckoTimeframe; aggreg
     case '1h': return { timeframe: 'hour', aggregate: 1, limit, pollMs: 20000 }
     case '4h': return { timeframe: 'hour', aggregate: 4, limit, pollMs: 30000 }
     case '1d': return { timeframe: 'day', aggregate: 1, limit, pollMs: 60000 }
-    case '1w': return { timeframe: 'day', aggregate: 7, limit, pollMs: 120000 }
+    // 周线改为“日线拉取 + 前端聚合”，避免部分数据源 aggregate=7 不稳定
+    case '1w': return { timeframe: 'day', aggregate: 1, limit: Math.max(120, limit), pollMs: 120000 }
   }
+}
+
+function aggregateToWeekly(candles: CandlestickData[]): CandlestickData[] {
+  if (candles.length === 0) return candles
+  const sorted = [...candles].sort((a, b) => Number(a.time) - Number(b.time))
+  const map = new Map<number, CandlestickData[]>()
+
+  for (const c of sorted) {
+    const d = new Date(Number(c.time) * 1000)
+    const day = d.getUTCDay() // 0: Sun ... 6: Sat
+    const deltaToMonday = (day + 6) % 7
+    const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - deltaToMonday)
+    const bucket = Math.floor(monday / 1000)
+    const arr = map.get(bucket) ?? []
+    arr.push(c)
+    map.set(bucket, arr)
+  }
+
+  const weekly: CandlestickData[] = []
+  const keys = Array.from(map.keys()).sort((a, b) => a - b)
+  for (const k of keys) {
+    const rows = map.get(k)
+    if (!rows || rows.length === 0) continue
+    const open = rows[0].open
+    const close = rows[rows.length - 1].close
+    let high = rows[0].high
+    let low = rows[0].low
+    for (const r of rows) {
+      if (r.high > high) high = r.high
+      if (r.low < low) low = r.low
+    }
+    weekly.push({ time: k as UTCTimestamp, open, high, low, close })
+  }
+  return weekly
 }
 
 /** 根据当前价和 24h 涨跌幅生成 OHLC 蜡烛数据 */
@@ -123,8 +158,9 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
           })
         }
         candles.sort((a, b) => Number(a.time) - Number(b.time))
+        const normalized = period === '1w' ? aggregateToWeekly(candles) : candles
         if (cancelled) return
-        setGeckoCandles(candles)
+        setGeckoCandles(normalized)
       } catch {
         // ignore
       }
