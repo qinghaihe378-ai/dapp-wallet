@@ -3,6 +3,7 @@ import { dexMarketIdToTokenAddress, searchByAddressOrQuery, type ChainId, type M
 
 const CACHE_KEY = 'clawdex:topTicker:v1'
 const CACHE_TTL_SEC = 6
+const HOME_PAGE_CONFIG_KEY = 'clawdex:pageConfig:home'
 
 type TickerRow = {
   label: '龙虾' | 'BTCB' | 'ETH' | 'WBNB'
@@ -47,6 +48,25 @@ async function readLobsterFromRedis() {
   return { id: '', address: '', price: null, change: null }
 }
 
+async function readHomeFirstHotToken() {
+  const raw = await redis.get(HOME_PAGE_CONFIG_KEY)
+  if (!raw) return { id: '', address: '' }
+  try {
+    const cfg = JSON.parse(raw) as {
+      manualHotTokens?: Array<{ id?: string }>
+    }
+    const firstId = String(cfg?.manualHotTokens?.[0]?.id ?? '').trim()
+    if (!firstId) return { id: '', address: '' }
+    const address = dexMarketIdToTokenAddress(firstId)
+    return {
+      id: firstId,
+      address: address.startsWith('0x') ? address : '',
+    }
+  } catch {
+    return { id: '', address: '' }
+  }
+}
+
 function pickBest(rows: MarketItem[], preferChain?: ChainId): MarketItem | null {
   if (!rows.length) return null
   const scoped = preferChain ? rows.filter((r) => r.chain === preferChain) : rows
@@ -73,12 +93,13 @@ export default async function handler(_req: any, res: any) {
       return
     }
 
-    const lobsterSeed = await readLobsterFromRedis()
+    const [homeFirstHot, lobsterSeed] = await Promise.all([readHomeFirstHotToken(), readLobsterFromRedis()])
+    const lobsterAddress = homeFirstHot.address || lobsterSeed.address
     const [btcb, eth, wbnb, lobsterOnchain] = await Promise.all([
       readOnchainByAddress(TOKEN_ADDRESS.BTCB, 'bsc'),
       readOnchainByAddress(TOKEN_ADDRESS.ETH, 'bsc'),
       readOnchainByAddress(TOKEN_ADDRESS.WBNB, 'bsc'),
-      lobsterSeed.address ? readOnchainByAddress(lobsterSeed.address) : Promise.resolve({ price: null, change: null }),
+      lobsterAddress ? readOnchainByAddress(lobsterAddress) : Promise.resolve({ price: null, change: null }),
     ])
     const items: TickerRow[] = [
       { label: '龙虾', price: lobsterOnchain.price ?? lobsterSeed.price, change: lobsterOnchain.change ?? lobsterSeed.change },
