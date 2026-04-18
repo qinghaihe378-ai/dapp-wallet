@@ -93,18 +93,6 @@ export function MarketDetailPage() {
   const [sellTax, setSellTax] = useState<number | null>(null)
   const [pairVolume24h, setPairVolume24h] = useState<number | null>(null)
   const [pairTxns24h, setPairTxns24h] = useState<number | null>(null)
-  const [pairTxnsByWindow, setPairTxnsByWindow] = useState<Record<'m5' | 'h1' | 'h6' | 'h24', { buys: number; sells: number }>>({
-    m5: { buys: 0, sells: 0 },
-    h1: { buys: 0, sells: 0 },
-    h6: { buys: 0, sells: 0 },
-    h24: { buys: 0, sells: 0 },
-  })
-  const [pairVolumeByWindow, setPairVolumeByWindow] = useState<Record<'m5' | 'h1' | 'h6' | 'h24', number>>({
-    m5: 0,
-    h1: 0,
-    h6: 0,
-    h24: 0,
-  })
   const [recentTrades, setRecentTrades] = useState<Array<{
     txHash: string
     side: 'buy' | 'sell'
@@ -278,13 +266,6 @@ export function MarketDetailPage() {
     if (!dexScreenerChainId || !dexPairAddress) {
       setPairVolume24h(null)
       setPairTxns24h(null)
-      setPairTxnsByWindow({
-        m5: { buys: 0, sells: 0 },
-        h1: { buys: 0, sells: 0 },
-        h6: { buys: 0, sells: 0 },
-        h24: { buys: 0, sells: 0 },
-      })
-      setPairVolumeByWindow({ m5: 0, h1: 0, h6: 0, h24: 0 })
       return
     }
     let cancelled = false
@@ -310,29 +291,10 @@ export function MarketDetailPage() {
         const sells = p.txns?.h24?.sells ?? 0
         setPairVolume24h(Number.isFinite(volume as number) ? Number(volume) : null)
         setPairTxns24h(Number.isFinite(buys + sells) ? buys + sells : null)
-        setPairTxnsByWindow({
-          m5: { buys: p.txns?.m5?.buys ?? 0, sells: p.txns?.m5?.sells ?? 0 },
-          h1: { buys: p.txns?.h1?.buys ?? 0, sells: p.txns?.h1?.sells ?? 0 },
-          h6: { buys: p.txns?.h6?.buys ?? 0, sells: p.txns?.h6?.sells ?? 0 },
-          h24: { buys, sells },
-        })
-        setPairVolumeByWindow({
-          m5: p.volume?.m5 ?? 0,
-          h1: p.volume?.h1 ?? 0,
-          h6: p.volume?.h6 ?? 0,
-          h24: p.volume?.h24 ?? 0,
-        })
       } catch {
         if (cancelled) return
         setPairVolume24h(null)
         setPairTxns24h(null)
-        setPairTxnsByWindow({
-          m5: { buys: 0, sells: 0 },
-          h1: { buys: 0, sells: 0 },
-          h6: { buys: 0, sells: 0 },
-          h24: { buys: 0, sells: 0 },
-        })
-        setPairVolumeByWindow({ m5: 0, h1: 0, h6: 0, h24: 0 })
       }
     }
     void loadPairStats()
@@ -379,7 +341,7 @@ export function MarketDetailPage() {
       }
     }
     void loadTrades()
-    const iv = setInterval(loadTrades, 15000)
+    const iv = setInterval(loadTrades, 5000)
     return () => {
       cancelled = true
       clearInterval(iv)
@@ -712,17 +674,8 @@ export function MarketDetailPage() {
               <div className="ave-detail-liquidity-card">
                 {subTab === 'trade' && (
                   <div className="ave-tab-placeholder">
-                    <p>买卖数据（真实）</p>
-                    <div className="trade-stats-grid">
-                      <div><span>5m 买/卖</span><strong>{pairTxnsByWindow.m5.buys}/{pairTxnsByWindow.m5.sells}</strong></div>
-                      <div><span>1h 买/卖</span><strong>{pairTxnsByWindow.h1.buys}/{pairTxnsByWindow.h1.sells}</strong></div>
-                      <div><span>6h 买/卖</span><strong>{pairTxnsByWindow.h6.buys}/{pairTxnsByWindow.h6.sells}</strong></div>
-                      <div><span>24h 买/卖</span><strong>{pairTxnsByWindow.h24.buys}/{pairTxnsByWindow.h24.sells}</strong></div>
-                      <div><span>24h 成交量</span><strong>{formatCompact(pairVolumeByWindow.h24)}</strong></div>
-                      <div><span>24h 买卖比</span><strong>{pairTxnsByWindow.h24.sells > 0 ? (pairTxnsByWindow.h24.buys / pairTxnsByWindow.h24.sells).toFixed(2) : '—'}</strong></div>
-                    </div>
+                    <p>最新成交（实时）</p>
                     <div className="trade-recent-list">
-                      <p>最新成交</p>
                       {recentTrades.length > 0 ? recentTrades.slice(0, 8).map((t, i) => (
                         <div key={`${t.txHash}-${i}`} className="trade-row">
                           <span className={t.side === 'buy' ? 'up' : 'down'}>{t.side === 'buy' ? '买' : '卖'}</span>
