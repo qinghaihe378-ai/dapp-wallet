@@ -126,8 +126,21 @@ export function MarketsPage() {
       next = [...next].sort((a, b) => b.current_price - a.current_price)
     }
 
+    // 来源标签：给出明确可感知的列表变化
+    if (sourceTab === 'gold') {
+      next = [...next].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+    } else if (sourceTab === 'new') {
+      next = [...next].sort((a, b) => (a.market_cap ?? Infinity) - (b.market_cap ?? Infinity))
+    } else if (sourceTab === 'four') {
+      next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
+    } else if (sourceTab === 'flap') {
+      next = [...next].sort((a, b) => b.current_price - a.current_price)
+    } else if (sourceTab === 'pump') {
+      next = [...next].sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
+    }
+
     return useAddressResults ? next : next.slice(0, 120)
-  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy])
+  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab])
 
   const sections = useMemo(() => {
     const defaults = [

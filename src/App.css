@@ -7727,13 +7727,13 @@ button:disabled,
 
 .ave-markets-v2 .market-sort-row button,
 .ave-markets-v2 .market-chain-pill {
-  background: rgba(20, 30, 45, 0.95);
-  border: 1px solid rgba(55, 74, 103, 0.8);
+  background: transparent;
+  border: none;
   color: #a9b8ce;
-  border-radius: 999px;
+  border-radius: 0;
   min-height: 30px;
-  padding: 0 12px;
-  font-size: 12px;
+  padding: 0 6px;
+  font-size: 14px;
 }
 
 .ave-market-top-tabs {
@@ -7755,9 +7755,9 @@ button:disabled,
 
 .ave-markets-v2 .market-sort-row .active,
 .ave-markets-v2 .market-chain-pill.active {
-  background: rgba(59, 130, 246, 0.22);
-  border-color: rgba(96, 165, 250, 0.58);
-  color: #e8f1ff;
+  background: transparent;
+  color: #f2f7ff;
+  box-shadow: inset 0 -2px 0 #3b82f6;
 }
 
 .ave-markets-v2 .market-table-head {
