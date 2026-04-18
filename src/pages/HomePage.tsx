@@ -16,7 +16,7 @@ interface HomeItem {
   chain?: string
 }
 
-type HomeSection = 'hot' | 'gain' | 'alpha'
+type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha'
 
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
 const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
@@ -37,7 +37,7 @@ export function HomePage() {
   const [activeSection, setActiveSection] = useState<HomeSection>(() => {
     if (typeof window === 'undefined') return 'hot'
     const stored = window.localStorage.getItem(homeSectionKey)
-    return stored === 'gain' || stored === 'alpha' ? stored : 'hot'
+    return stored === 'gain' || stored === 'loss' || stored === 'alpha' ? stored : 'hot'
   })
   const [activeQuickAction, setActiveQuickAction] = useState<'receive' | 'invite' | null>(() => {
     if (typeof window === 'undefined') return null
@@ -70,6 +70,11 @@ export function HomePage() {
     if (activeSection === 'gain') {
       return next.sort(
         (a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity)
+      )
+    }
+    if (activeSection === 'loss') {
+      return next.sort(
+        (a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity)
       )
     }
     if (activeSection === 'alpha') {
@@ -110,7 +115,7 @@ export function HomePage() {
           ? storedFilter
           : 'all',
       )
-      setActiveSection(storedSection === 'gain' || storedSection === 'alpha' ? storedSection : 'hot')
+      setActiveSection(storedSection === 'gain' || storedSection === 'loss' || storedSection === 'alpha' ? storedSection : 'hot')
     })
   }, [homeFilterKey, homeQuickActionKey, homeSectionKey])
 
@@ -187,12 +192,13 @@ export function HomePage() {
         <button type="button" className={activeSection === 'hot' ? 'active' : ''} onClick={() => setActiveSection('hot')}>热门</button>
         <button type="button" className={activeSection === 'alpha' ? 'active' : ''} onClick={() => setActiveSection('alpha')}>币安Alpha</button>
         <button type="button" className={activeSection === 'gain' ? 'active' : ''} onClick={() => setActiveSection('gain')}>涨幅</button>
+        <button type="button" className={activeSection === 'loss' ? 'active' : ''} onClick={() => setActiveSection('loss')}>跌幅</button>
         <Link to="/new-tokens">新币</Link>
       </div>
 
       <div className="ave-home-v2-chain-switch">
         <button type="button" className={`home-filter-pill ${activeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveFilter('all')}>All</button>
-        <button type="button" className={`home-filter-pill ${activeFilter === 'sol' ? 'active' : ''}`} onClick={() => setActiveFilter('sol')}>Sol</button>
+        <button type="button" className={`home-filter-pill ${activeFilter === 'base' ? 'active' : ''}`} onClick={() => setActiveFilter('base')}>Base</button>
         <button type="button" className={`home-filter-pill ${activeFilter === 'eth' ? 'active' : ''}`} onClick={() => setActiveFilter('eth')}>ETH</button>
         <button type="button" className={`home-filter-pill ${activeFilter === 'bsc' ? 'active' : ''}`} onClick={() => setActiveFilter('bsc')}>BSC</button>
         <button type="button" className="home-filter-pill-right">价格</button>
@@ -202,14 +208,22 @@ export function HomePage() {
       <div className="home-market-panel">
         <div className="home-panel-head">
           <div className="home-panel-title">
-            {activeSection === 'alpha' ? '币安Alpha' : activeSection === 'hot' ? '代币排行' : '涨幅排行'}
+            {activeSection === 'alpha'
+              ? '币安Alpha'
+              : activeSection === 'hot'
+              ? '代币排行'
+              : activeSection === 'gain'
+              ? '涨幅排行'
+              : '跌幅排行'}
           </div>
           <div className="home-panel-sub">
             {activeSection === 'alpha'
               ? `自动拉取币安 Alpha，按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
               : activeSection === 'hot'
               ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
-              : '24h 涨幅由高到低'}
+              : activeSection === 'gain'
+              ? '24h 涨幅由高到低'
+              : '24h 跌幅由高到低'}
           </div>
         </div>
         <div className="home-token-feed">
