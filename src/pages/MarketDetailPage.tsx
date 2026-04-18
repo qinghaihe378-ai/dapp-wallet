@@ -120,6 +120,8 @@ export function MarketDetailPage() {
     dexId: string
     baseSymbol: string
     quoteSymbol: string
+    baseAmount: number
+    quoteAmount: number
     liquidityUsd: number
     volume24h: number
   }>>([])
@@ -272,7 +274,7 @@ export function MarketDetailPage() {
           dexId?: string
           baseToken?: { symbol?: string }
           quoteToken?: { symbol?: string }
-          liquidity?: { usd?: number }
+          liquidity?: { usd?: number; base?: number; quote?: number }
           volume?: { h24?: number }
         } | null>
         const byPairAddress = new Map<string, {
@@ -280,6 +282,8 @@ export function MarketDetailPage() {
           dexId: string
           baseSymbol: string
           quoteSymbol: string
+          baseAmount: number
+          quoteAmount: number
           liquidityUsd: number
           volume24h: number
         }>()
@@ -291,6 +295,8 @@ export function MarketDetailPage() {
             dexId: String(p.dexId ?? 'dex').trim() || 'dex',
             baseSymbol: String(p.baseToken?.symbol ?? detailVM?.symbol ?? 'TOKEN').toUpperCase(),
             quoteSymbol: String(p.quoteToken?.symbol ?? 'USD').toUpperCase(),
+            baseAmount: Number(p.liquidity?.base ?? 0) || 0,
+            quoteAmount: Number(p.liquidity?.quote ?? 0) || 0,
             liquidityUsd: Number(p.liquidity?.usd ?? 0) || 0,
             volume24h: Number(p.volume?.h24 ?? 0) || 0,
           }
@@ -810,7 +816,11 @@ export function MarketDetailPage() {
                               <span className="ave-pool-dex-badge">
                                 {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
                               </span>
-                              <span>{`${formatCompact(pool.liquidityUsd)} · Vol ${formatCompact(pool.volume24h)}`}</span>
+                              <span>
+                                {`${pool.baseAmount > 0 ? formatCompact(pool.baseAmount).replace('$', '') : '—'} ${pool.baseSymbol} / `}
+                                {`${pool.quoteAmount > 0 ? formatCompact(pool.quoteAmount).replace('$', '') : '—'} ${pool.quoteSymbol}`}
+                                {` · ${formatCompact(pool.liquidityUsd)} · Vol ${formatCompact(pool.volume24h)}`}
+                              </span>
                             </button>
                           )
                         }) : <span className="trade-empty">暂无池子数据</span>}
