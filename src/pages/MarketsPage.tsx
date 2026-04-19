@@ -37,8 +37,26 @@ export function MarketsPage() {
   const [addressSearchResults, setAddressSearchResults] = useState<MarketItem[] | null>(null)
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
   const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
-  const [sourceTab, setSourceTab] = useState<'gold' | 'new' | 'four' | 'flap' | 'pump'>('gold')
+  const [sourceTab, setSourceTab] = useState<'gold' | 'new' | 'four' | 'flap'>('gold')
   const [period, setPeriod] = useState<'5m' | '1h' | '4h' | '24h'>('24h')
+  const [newOpenKeys, setNewOpenKeys] = useState<Set<string>>(new Set())
+  const [fourKeys, setFourKeys] = useState<Set<string>>(new Set())
+  const [flapKeys, setFlapKeys] = useState<Set<string>>(new Set())
+
+  const normalizeNewTokenChain = (raw: string): ChainId | null => {
+    const c = String(raw).toLowerCase()
+    if (c === 'eth' || c === 'ethereum' || c === 'mainnet') return 'eth'
+    if (c === 'bsc') return 'bsc'
+    if (c === 'base') return 'base'
+    return null
+  }
+
+  const marketItemKey = (item: MarketItem) => {
+    const i = item.id.indexOf(':')
+    if (i < 0) return ''
+    const addr = item.id.slice(i + 1).toLowerCase()
+    return addr.startsWith('0x') ? `${item.chain}:${addr}` : ''
+  }
 
   const loadMarkets = async (silent = false) => {
     try {
@@ -62,6 +80,39 @@ export function MarketsPage() {
     void loadMarkets()
     const t = setInterval(() => void loadMarkets(true), COLLECTION_INTERVAL_MS)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadNewOpen = async () => {
+      try {
+        const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
+        if (!res.ok) return
+        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string }> }
+        const all = new Set<string>()
+        const four = new Set<string>()
+        const flap = new Set<string>()
+        for (const row of json.items ?? []) {
+          const chain = normalizeNewTokenChain(String(row.chainId ?? ''))
+          const addr = String(row.tokenAddress ?? '').toLowerCase()
+          if (!chain || !addr.startsWith('0x') || addr.length !== 42) continue
+          const key = `${chain}:${addr}`
+          all.add(key)
+          const dex = String(row.dexId ?? '').toLowerCase()
+          if (dex.includes('four')) four.add(key)
+          if (dex.includes('flap')) flap.add(key)
+        }
+        if (cancelled) return
+        setNewOpenKeys(all)
+        setFourKeys(four)
+        setFlapKeys(flap)
+      } catch (e) {
+        console.error('加载新开盘来源失败', e)
+      }
+    }
+    void loadNewOpen()
+    const t = setInterval(loadNewOpen, 30_000)
+    return () => { cancelled = true; clearInterval(t) }
   }, [])
 
   useEffect(() => {
@@ -126,21 +177,22 @@ export function MarketsPage() {
       next = [...next].sort((a, b) => b.current_price - a.current_price)
     }
 
-    // 来源标签：给出明确可感知的列表变化
+    // 来源标签：按真实来源过滤
     if (sourceTab === 'gold') {
       next = [...next].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
     } else if (sourceTab === 'new') {
+      next = next.filter((item) => newOpenKeys.has(marketItemKey(item)))
       next = [...next].sort((a, b) => (a.market_cap ?? Infinity) - (b.market_cap ?? Infinity))
     } else if (sourceTab === 'four') {
+      next = next.filter((item) => fourKeys.has(marketItemKey(item)))
       next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
     } else if (sourceTab === 'flap') {
+      next = next.filter((item) => flapKeys.has(marketItemKey(item)))
       next = [...next].sort((a, b) => b.current_price - a.current_price)
-    } else if (sourceTab === 'pump') {
-      next = [...next].sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
     }
 
     return useAddressResults ? next : next.slice(0, 120)
-  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab])
+  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab, newOpenKeys, fourKeys, flapKeys])
 
   const sections = useMemo(() => {
     const defaults = [
@@ -169,7 +221,6 @@ export function MarketsPage() {
                   <button type="button" className={sourceTab === 'new' ? 'active' : ''} onClick={() => setSourceTab('new')}>新开盘</button>
                   <button type="button" className={sourceTab === 'four' ? 'active' : ''} onClick={() => setSourceTab('four')}>Four.meme</button>
                   <button type="button" className={sourceTab === 'flap' ? 'active' : ''} onClick={() => setSourceTab('flap')}>Flap</button>
-                  <button type="button" className={sourceTab === 'pump' ? 'active' : ''} onClick={() => setSourceTab('pump')}>Pump.fun</button>
                 </div>
                 <div className="market-period-row">
                   <button type="button" className={period === '5m' ? 'active' : ''} onClick={() => { setPeriod('5m'); setSortBy('default') }}>5m</button>

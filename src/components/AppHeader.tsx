@@ -202,16 +202,68 @@ export function AppHeader() {
   }
 
   if (headerMode === 'market') {
+    const marketChain = (new URLSearchParams(location.search).get('chain') ?? '').toLowerCase()
+    const marketChainLabel =
+      marketChain === 'bsc' ? 'BSC' :
+      marketChain === 'base' ? 'Base' :
+      marketChain === 'eth' ? 'ETH' :
+      '全链'
+    const marketDropdown = showNet && createPortal(
+      <div
+        className="ave-network-overlay"
+        role="presentation"
+        onClick={(e) => { if (e.target === e.currentTarget) setShowNet(false) }}
+      >
+        <div
+          className="ave-network-dropdown ave-header-network-dropdown ave-header-network-dropdown-fixed ave-network-dropdown-portal"
+          style={{ top: netPos.top, left: netPos.left }}
+          role="menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {[
+            { key: 'all', label: '全链' },
+            { key: 'bsc', label: 'BSC' },
+            { key: 'base', label: 'Base' },
+            { key: 'eth', label: 'ETH' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              role="menuitem"
+              className={(marketChain || 'all') === opt.key ? 'active' : ''}
+              onClick={() => {
+                navigate(opt.key === 'all' ? '/market?chain=all' : `/market?chain=${opt.key}`)
+                setShowNet(false)
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>,
+      document.body
+    )
     return (
       <header className="ave-header ave-header-tabs">
         <div className="ave-header-tabbar ave-market-top-tabs">
-          <button type="button" className="ave-header-tab">自选</button>
-          <button type="button" className="ave-header-tab active">全链</button>
+          <div className="ave-header-tab ave-header-network-wrap">
+            <button
+              ref={netBtnRef}
+              type="button"
+              className="ave-header-network-btn"
+              onClick={() => setShowNet(!showNet)}
+              aria-expanded={showNet}
+            >
+              {marketChainLabel}
+              <span className="ave-header-network-arrow">▼</span>
+            </button>
+          </div>
           <Link to="/new-tokens" className="ave-header-tab">扫链</Link>
           <button type="button" className="ave-header-tab">合约</button>
           <div className="ave-market-search-btn-wrap">
             <button type="button" className="ave-market-search-btn" aria-label="搜索">⌕</button>
           </div>
+          {marketDropdown}
         </div>
       </header>
     )
