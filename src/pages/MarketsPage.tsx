@@ -38,6 +38,7 @@ export function MarketsPage() {
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
   const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
   const [sourceTab, setSourceTab] = useState<'gold' | 'new' | 'four' | 'flap'>('gold')
+  const [rankTab, setRankTab] = useState<'gain' | 'included' | 'loss'>('included')
   const [period, setPeriod] = useState<'5m' | '1h' | '4h' | '24h'>('24h')
   const [newOpenKeys, setNewOpenKeys] = useState<Set<string>>(new Set())
   const [fourKeys, setFourKeys] = useState<Set<string>>(new Set())
@@ -171,28 +172,33 @@ export function MarketsPage() {
       )
     }
 
-    if (sortBy === 'change') {
-      next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
-    } else if (sortBy === 'price') {
-      next = [...next].sort((a, b) => b.current_price - a.current_price)
-    }
-
     // 来源标签：按真实来源过滤
     if (sourceTab === 'gold') {
-      next = [...next].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+      // 淘金默认不过滤，走榜单排序
     } else if (sourceTab === 'new') {
       next = next.filter((item) => newOpenKeys.has(marketItemKey(item)))
-      next = [...next].sort((a, b) => (a.market_cap ?? Infinity) - (b.market_cap ?? Infinity))
     } else if (sourceTab === 'four') {
       next = next.filter((item) => fourKeys.has(marketItemKey(item)))
-      next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
     } else if (sourceTab === 'flap') {
       next = next.filter((item) => flapKeys.has(marketItemKey(item)))
+    }
+
+    // 榜单排序：涨幅榜 / 收录榜 / 跌幅榜
+    if (rankTab === 'gain') {
+      next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
+    } else if (rankTab === 'loss') {
+      next = [...next].sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
+    } else if (sortBy === 'price') {
       next = [...next].sort((a, b) => b.current_price - a.current_price)
+    } else if (sortBy === 'change') {
+      next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
+    } else {
+      // 收录榜
+      next = [...next].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
     }
 
     return useAddressResults ? next : next.slice(0, 120)
-  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab, newOpenKeys, fourKeys, flapKeys])
+  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab, rankTab, newOpenKeys, fourKeys, flapKeys])
 
   const sections = useMemo(() => {
     const defaults = [
@@ -221,6 +227,10 @@ export function MarketsPage() {
                   <button type="button" className={sourceTab === 'new' ? 'active' : ''} onClick={() => setSourceTab('new')}>新开盘</button>
                   <button type="button" className={sourceTab === 'four' ? 'active' : ''} onClick={() => setSourceTab('four')}>Four.meme</button>
                   <button type="button" className={sourceTab === 'flap' ? 'active' : ''} onClick={() => setSourceTab('flap')}>Flap</button>
+                  <span className="market-source-split" />
+                  <button type="button" className={rankTab === 'gain' ? 'active' : ''} onClick={() => setRankTab('gain')}>涨幅榜</button>
+                  <button type="button" className={rankTab === 'included' ? 'active' : ''} onClick={() => setRankTab('included')}>收录榜</button>
+                  <button type="button" className={rankTab === 'loss' ? 'active' : ''} onClick={() => setRankTab('loss')}>跌幅榜</button>
                 </div>
                 <div className="market-period-row">
                   <button type="button" className={period === '5m' ? 'active' : ''} onClick={() => { setPeriod('5m'); setSortBy('default') }}>5m</button>

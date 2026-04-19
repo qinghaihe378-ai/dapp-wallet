@@ -7788,6 +7788,14 @@ button:disabled,
   flex: 0 0 auto;
 }
 
+.market-source-split {
+  width: 1px;
+  height: 16px;
+  background: rgba(94, 114, 145, 0.55);
+  margin: 0 4px;
+  flex: 0 0 auto;
+}
+
 .market-period-row {
   display: flex;
   align-items: center;
