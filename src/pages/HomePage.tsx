@@ -18,7 +18,7 @@ interface HomeItem {
   chain?: string
 }
 
-type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha'
+type HomeSection = 'hot' | 'gain' | 'loss' | 'alpha' | 'new'
 type TopTickerItem = { label: '龙虾' | 'BTCB' | 'ETH' | 'WBNB'; price: number | null; change: number | null }
 
 const HOME_QUICK_ACTION_KEY_PREFIX = 'homeQuickAction'
@@ -64,6 +64,15 @@ function trustWalletLogoUrl(chain: string | undefined, id: string): string {
   return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${folder}/assets/${addr}/logo.png`
 }
 
+function mapNewTokenChain(raw: string | undefined): string {
+  const c = String(raw ?? '').toLowerCase()
+  if (c === 'ethereum' || c === 'eth' || c === 'mainnet') return 'eth'
+  if (c === 'bsc') return 'bsc'
+  if (c === 'base') return 'base'
+  if (c === 'polygon' || c === 'polygon_pos') return 'polygon'
+  return c || 'other'
+}
+
 export function HomePage() {
   const { network } = useWallet()
   const { config } = usePageConfig('home')
@@ -81,7 +90,7 @@ export function HomePage() {
   const [activeSection, setActiveSection] = useState<HomeSection>(() => {
     if (typeof window === 'undefined') return 'hot'
     const stored = window.localStorage.getItem(homeSectionKey)
-    return stored === 'gain' || stored === 'loss' || stored === 'alpha' ? stored : 'hot'
+    return stored === 'gain' || stored === 'loss' || stored === 'alpha' || stored === 'new' ? stored : 'hot'
   })
   const [activeQuickAction, setActiveQuickAction] = useState<'receive' | 'invite' | null>(() => {
     if (typeof window === 'undefined') return null
@@ -130,6 +139,11 @@ export function HomePage() {
         .sort((a, b) => (b.volume_24h ?? 0) - (a.volume_24h ?? 0))
         .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
+    if (activeSection === 'new') {
+      return next
+        .sort((a, b) => (Number((b as any).launched_at ?? 0) - Number((a as any).launched_at ?? 0)))
+        .slice(0, HOME_MAX_VISIBLE_TOKENS)
+    }
     // 热门：仅展示有头像（非空 image）的代币
     return next.filter((item) => hasTokenAvatar(item.image)).slice(0, HOME_MAX_VISIBLE_TOKENS)
   }, [activeSection, baseFiltered, homeSearch])
@@ -137,6 +151,47 @@ export function HomePage() {
   useEffect(() => {
     const load = async () => {
       try {
+        if (activeSection === 'new') {
+          const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
+          if (!res.ok) throw new Error('加载新币失败')
+          const json = (await res.json()) as {
+            items?: Array<{
+              chainId?: string
+              tokenAddress?: string
+              symbol?: string
+              priceUsd?: string
+              reserveUsd?: string
+              priceChange24h?: string | null
+              poolCreatedAt?: string
+            }>
+          }
+          const now = Date.now()
+          const oneDayMs = 24 * 60 * 60 * 1000
+          const data = (json.items ?? [])
+            .map((it) => {
+              const chain = mapNewTokenChain(it.chainId)
+              const addr = String(it.tokenAddress ?? '').toLowerCase()
+              const launchedAt = new Date(String(it.poolCreatedAt ?? '')).getTime()
+              return {
+                id: `${chain}:${addr}`,
+                symbol: String(it.symbol ?? '').trim() || 'NEW',
+                name: String(it.symbol ?? '').trim() || 'New Token',
+                image: '',
+                current_price: Number(it.priceUsd ?? 0) || 0,
+                price_change_percentage_24h:
+                  it.priceChange24h == null ? null : Number(it.priceChange24h),
+                market_cap: Number(it.reserveUsd ?? 0) || 0,
+                volume_24h: 0,
+                chain,
+                launched_at: launchedAt,
+              }
+            })
+            .filter((it) => it.id.includes(':0x') && Number.isFinite((it as any).launched_at))
+            .filter((it) => now - Number((it as any).launched_at) <= oneDayMs)
+          setItems(data as HomeItem[])
+          return
+        }
+
         const marketUrl = activeSection === 'alpha' ? '/api/market?chain=all&scope=alpha' : '/api/market?chain=all'
         const res = await fetch(apiUrl(marketUrl), { cache: 'no-store' })
         if (!res.ok) throw new Error('加载行情失败')
@@ -189,7 +244,7 @@ export function HomePage() {
           ? storedFilter
           : 'all',
       )
-      setActiveSection(storedSection === 'gain' || storedSection === 'loss' || storedSection === 'alpha' ? storedSection : 'hot')
+      setActiveSection(storedSection === 'gain' || storedSection === 'loss' || storedSection === 'alpha' || storedSection === 'new' ? storedSection : 'hot')
     })
   }, [homeFilterKey, homeQuickActionKey, homeSectionKey])
 
@@ -227,12 +282,12 @@ export function HomePage() {
   }, [config?.sections])
 
   const homeTabs = useMemo(() => {
-    const defaults: Array<{ id: 'hot' | 'alpha' | 'gain' | 'loss' | 'newTokens'; label: string; enabled: boolean }> = [
+    const defaults: Array<{ id: 'hot' | 'alpha' | 'gain' | 'loss' | 'new'; label: string; enabled: boolean }> = [
       { id: 'hot', label: '热门', enabled: true },
       { id: 'alpha', label: '币安Alpha', enabled: true },
       { id: 'gain', label: '涨幅', enabled: true },
       { id: 'loss', label: '跌幅', enabled: true },
-      { id: 'newTokens', label: '新币', enabled: true },
+      { id: 'new', label: '新币', enabled: true },
     ]
     const fromCfg = systemConfig?.ui?.homeTabs
     const list = Array.isArray(fromCfg) && fromCfg.length > 0 ? fromCfg : defaults
@@ -274,8 +329,7 @@ export function HomePage() {
 
       <div className="ave-home-shot-tabs">
         {homeTabs.map((tab) => {
-          if (tab.id === 'newTokens') return <Link key={tab.id} to="/new-tokens">{tab.label}</Link>
-          const sectionId: HomeSection = tab.id
+          const sectionId: HomeSection = (tab.id === 'newTokens' ? 'new' : tab.id) as HomeSection
           return (
             <button key={tab.id} type="button" className={activeSection === sectionId ? 'active' : ''} onClick={() => setActiveSection(sectionId)}>
               {tab.label}
@@ -303,6 +357,8 @@ export function HomePage() {
               ? '代币排行'
               : activeSection === 'gain'
               ? '涨幅排行'
+              : activeSection === 'new'
+              ? '新币榜'
               : '跌幅排行'}
           </div>
           <div className="home-panel-sub">
@@ -312,6 +368,8 @@ export function HomePage() {
               ? `按 ${activeFilter === 'all' ? '全链' : activeFilter.toUpperCase()} 展示`
               : activeSection === 'gain'
               ? '24h 涨幅由高到低'
+              : activeSection === 'new'
+              ? '最近 24 小时上线代币'
               : '24h 跌幅由高到低'}
           </div>
         </div>
@@ -349,6 +407,8 @@ export function HomePage() {
                     <span>
                       {activeSection === 'alpha'
                         ? `Vol $${((item.volume_24h ?? 0) / 1e6).toFixed(2)}M`
+                        : activeSection === 'new'
+                        ? `Liq $${(item.market_cap / 1e6).toFixed(2)}M`
                         : `$${(item.market_cap / 1e6).toFixed(2)}M`}
                     </span>
                   </div>
