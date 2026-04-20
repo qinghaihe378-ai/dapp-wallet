@@ -48,20 +48,24 @@ async function fetchFourMemeOnchainNewTokens() {
 
   const knownRaw = await redis.get(FOUR_KNOWN_TOKENS_KEY)
   if (!knownRaw) {
-    // 首次仅从当前“已有列表”开始，不回填历史
+    // 首次仅用于记录游标，但仍返回最近一批，避免前端空白
     await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
-    return []
   }
 
   let knownTokens: string[] = []
-  try {
-    knownTokens = JSON.parse(knownRaw) as string[]
-  } catch {
-    knownTokens = []
+  if (knownRaw) {
+    try {
+      knownTokens = JSON.parse(knownRaw) as string[]
+    } catch {
+      knownTokens = []
+    }
   }
   const knownSet = new Set((knownTokens ?? []).map((a) => String(a).toLowerCase()))
   const newTokens = allTokens.filter((a) => !knownSet.has(a))
-  if (newTokens.length === 0) return []
+  // 前端展示使用最近 120 个 token，保证 Four 标签稳定有数据
+  const recentTokens = allTokens.slice(Math.max(0, allTokens.length - 120))
+  const targetTokens = recentTokens.length ? recentTokens : newTokens
+  if (targetTokens.length === 0) return []
 
   await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
 
@@ -81,7 +85,7 @@ async function fetchFourMemeOnchainNewTokens() {
     priceChange24h: string | null
   }> = []
 
-  for (const token of newTokens) {
+  for (const token of targetTokens) {
     let symbol = 'NEW'
     try {
       const erc20 = new Contract(token, ERC20_SYMBOL_ABI as any, provider)
@@ -89,7 +93,8 @@ async function fetchFourMemeOnchainNewTokens() {
       const t = String(s ?? '').trim()
       if (t) symbol = t
     } catch {
-      // 某些 token 可能未实现标准 symbol，忽略并用默认值
+      const short = `${token.slice(0, 6)}...${token.slice(-4)}`
+      symbol = short
     }
 
     items.push({
@@ -124,13 +129,18 @@ export default async function handler(_req: any, res: any) {
     }
 
     const cached = await redis.get(KEY)
+    let cachedItems: any[] = []
     if (cached) {
-      res.status(200).json(JSON.parse(cached))
-      return
+      try {
+        const parsed = JSON.parse(cached) as { items?: any[] }
+        cachedItems = Array.isArray(parsed?.items) ? parsed.items : []
+      } catch {
+        cachedItems = []
+      }
     }
 
     const [dexItems, fourItems] = await Promise.all([
-      fetchDexScreenerAllNewTokens(),
+      cachedItems.length > 0 ? Promise.resolve(cachedItems) : fetchDexScreenerAllNewTokens(),
       fetchFourMemeOnchainNewTokens().catch((e) => {
         console.error('four.meme onchain fetch failed', e)
         return []
