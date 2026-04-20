@@ -34,6 +34,7 @@
 
 /* 个人中心：去掉左右内边距，列表行铺满全宽 */
 .ave-app .app-main.app-main-profile {
+  background: #111827;
   padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
 }
 
@@ -6186,10 +6187,11 @@ button:disabled,
   width: 100%;
   min-height: calc(100svh - 56px - var(--bottom-nav-h) - var(--safe-bottom));
   padding: 0 0 calc(10px + var(--safe-bottom));
-  background: linear-gradient(180deg, #111926, #101722);
+  background: linear-gradient(180deg, #111827 0%, #0f1725 100%);
 }
 
 .ave-profile-group {
+  background: #131c2a;
   border-top: 1px solid rgba(85, 100, 126, 0.28);
   border-bottom: 1px solid rgba(85, 100, 126, 0.28);
 }
@@ -6209,7 +6211,7 @@ button:disabled,
   box-sizing: border-box;
   border: 0;
   border-bottom: 1px solid rgba(76, 90, 116, 0.24);
-  background: transparent;
+  background: #131c2a;
   text-align: left;
 }
 
