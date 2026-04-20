@@ -28,6 +28,10 @@ const HOME_MAX_VISIBLE_TOKENS = 60
 const TOP_TICKER_REFRESH_MS = 8_000
 const HOME_NEW_TOKENS_REFRESH_MS = 30_000
 
+function hasTokenAvatar(image: string | undefined | null): boolean {
+  return typeof image === 'string' && image.trim().length > 0
+}
+
 function tokenFallbackSvgDataUrl(symbol: string) {
   const text = (symbol || '?').trim().slice(0, 4).toUpperCase()
   const safe = encodeURIComponent(text)
@@ -140,8 +144,10 @@ export function HomePage() {
         .sort((a, b) => (Number((b as any).launched_at ?? 0) - Number((a as any).launched_at ?? 0)))
         .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
-    // 热门：写死支持头像兜底，不再过滤无头像代币
-    return next.slice(0, HOME_MAX_VISIBLE_TOKENS)
+    // 热门：写死优先显示有头像的代币，再展示无头像代币
+    const withAvatar = next.filter((item) => hasTokenAvatar(item.image))
+    const withoutAvatar = next.filter((item) => !hasTokenAvatar(item.image))
+    return [...withAvatar, ...withoutAvatar].slice(0, HOME_MAX_VISIBLE_TOKENS)
   }, [activeSection, baseFiltered, homeSearch])
 
   useEffect(() => {
