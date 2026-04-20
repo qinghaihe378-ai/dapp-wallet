@@ -85,6 +85,7 @@ const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
 }
 
 const DEX_ICON_MAP: Record<string, string> = {
+  four: fourLogo,
   'four.meme': fourLogo,
   pancakeswap: 'https://pancakeswap.finance/favicon.ico',
   uniswap: 'https://app.uniswap.org/favicon.ico',
@@ -595,7 +596,8 @@ export function MarketDetailPage() {
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
-  const displayDexId = pairDexId ?? (routeSource || null)
+  const displayDexIdRaw = pairDexId ?? (routeSource || null)
+  const displayDexId = displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw
   const displayPools = useMemo(() => {
     if (tokenPools.length > 0) return tokenPools
     if (routeSource.includes('four') && detailVM) {

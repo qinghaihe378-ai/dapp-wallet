@@ -7547,9 +7547,10 @@ button:disabled,
 }
 
 .ave-liquidity-row .ave-pool-dex-badge img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
 }
 
 .ave-liquidity-row .ave-pool-dex-badge i {
@@ -7586,9 +7587,10 @@ button:disabled,
 }
 
 .ave-detail-bottom-cta .dapp img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
 }
 
 .ave-detail-bottom-cta .dapp span {
