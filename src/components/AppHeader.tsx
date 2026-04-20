@@ -282,21 +282,13 @@ export function AppHeader() {
   if (headerMode === 'swap') {
     return (
       <header className="ave-header ave-header-tabs ave-header-swap">
-        <div className="ave-header-tabbar">
+        <div className="ave-header-tabbar ave-swap-top-tabs">
           <button type="button" className="ave-header-tab active">兑换</button>
-          <div className="ave-header-tab ave-header-network-wrap">
-            <button
-              ref={netBtnRef}
-              type="button"
-              className="ave-header-network-btn"
-              onClick={() => setShowNet(!showNet)}
-              aria-expanded={showNet}
-            >
-              {NETWORK_CONFIG[network].chainName.replace(' Mainnet', '')}
-              <span className="ave-header-network-arrow">▼</span>
-            </button>
+          <button type="button" className="ave-header-tab">合约</button>
+          <button type="button" className="ave-header-tab">跟单</button>
+          <div className="ave-market-search-btn-wrap">
+            <button type="button" className="ave-market-search-btn" aria-label="搜索">⌕</button>
           </div>
-          {renderNetworkDropdown(netPos, () => setShowNet(false))}
         </div>
       </header>
     )

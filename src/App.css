@@ -8180,6 +8180,215 @@ button:disabled,
   color: #94a3b8;
 }
 
+/* ===== Swap 1:1 Ave Light Replica ===== */
+.ave-header-swap .ave-swap-top-tabs {
+  gap: 20px;
+}
+
+.ave-header-swap .ave-swap-top-tabs .ave-header-tab {
+  font-size: 17px;
+  font-weight: 700;
+  color: rgba(226, 236, 255, 0.68);
+}
+
+.ave-header-swap .ave-swap-top-tabs .ave-header-tab.active {
+  color: #ffffff;
+}
+
+.ave-header-swap .ave-market-search-btn-wrap {
+  margin-left: auto;
+}
+
+.ave-header-swap .ave-market-search-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(241, 246, 255, 0.92);
+  font-size: 18px;
+}
+
+.ave-swap-v2 {
+  background: #ffffff !important;
+  color: #161b26;
+  max-width: 100%;
+}
+
+.ave-swap-v2 .swap-mode-segment {
+  background: #f4f6f9;
+  border: 1px solid #edf1f5;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.ave-swap-v2 .swap-mode-segment button {
+  color: #6f7788;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ave-swap-v2 .swap-mode-segment .active {
+  background: #ffffff;
+  color: #222734;
+  border: 1px solid #e8edf4;
+}
+
+.ave-swap-v2 .swap-white-panel {
+  margin-top: 8px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  box-shadow: none;
+  padding: 8px;
+}
+
+.ave-swap-v2 .swap-lite-card {
+  background: #ffffff;
+  border: 1px solid #edf1f6;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.ave-swap-v2 .swap-lite-label-row {
+  color: #8f97a8;
+  font-size: 13px;
+}
+
+.ave-swap-v2 .swap-max-btn {
+  background: #f3f6fb;
+  color: #545c6d;
+  border: 1px solid #e7ecf3;
+}
+
+.ave-swap-v2 .swap-token-main {
+  color: #1a2232;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.ave-swap-v2 .swap-token-sub,
+.ave-swap-v2 .swap-token-caret,
+.ave-swap-v2 .swap-amount-hint,
+.ave-swap-v2 .swap-amount-meta {
+  color: #9aa3b4;
+}
+
+.ave-swap-v2 .swap-lite-input,
+.ave-swap-v2 .swap-lite-output {
+  color: #9ea7b7;
+  font-size: 50px;
+  font-weight: 700;
+}
+
+.ave-swap-v2 .swap-lite-switch {
+  width: 42px;
+  height: 42px;
+  background: #ffffff;
+  border-color: #edf1f6;
+  color: #6a7892;
+  margin-top: -4px;
+  margin-bottom: -4px;
+}
+
+.ave-swap-v2 .swap-receiver-row {
+  margin-top: 10px;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  height: 48px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 42px;
+  align-items: center;
+  padding: 0 8px;
+  gap: 8px;
+}
+
+.ave-swap-v2 .swap-receiver-row label {
+  color: #9ea6b6;
+  font-size: 14px;
+}
+
+.ave-swap-v2 .swap-receiver-row input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #2c3445;
+  font-size: 15px;
+}
+
+.ave-swap-v2 .swap-receiver-row input::placeholder {
+  color: #c0c7d4;
+}
+
+.ave-swap-v2 .swap-receiver-row button {
+  border: none;
+  background: transparent;
+  color: #8891a3;
+  font-size: 18px;
+}
+
+.ave-swap-v2 .swap-rate-note {
+  margin-top: 10px;
+  color: #a0a8b8;
+  font-size: 13px;
+}
+
+.ave-swap-v2 .swap-estimate-grid {
+  margin-top: 8px;
+  border-top: 1px solid #edf1f6;
+  padding-top: 8px;
+}
+
+.ave-swap-v2 .swap-estimate-row {
+  color: #8f98aa;
+  font-size: 14px;
+}
+
+.ave-swap-v2 .swap-estimate-row span:last-child {
+  color: #343d4f;
+}
+
+.ave-swap-v2 .swap-risk-note {
+  margin-top: 8px;
+  background: #f8fafc;
+  border: 1px solid #e8edf4;
+}
+
+.ave-swap-v2 .swap-risk-title {
+  color: #202938;
+}
+
+.ave-swap-v2 .swap-risk-desc {
+  color: #7e889d;
+}
+
+.ave-swap-v2 .swap-one-click-btn {
+  margin-top: 10px;
+  background: #e6e8eb;
+  color: #8d96a7;
+  box-shadow: none;
+}
+
+.ave-swap-v2 .swap-one-click-btn:not(.swap-one-click-btn-disabled) {
+  background: linear-gradient(180deg, #4f94ff, #3376e9);
+  color: #ffffff;
+}
+
+.ave-swap-v2 .swap-bottom-row {
+  margin-top: 12px;
+  color: #7f8798;
+}
+
+.ave-swap-v2 .swap-history-block {
+  margin-top: 12px;
+  border-top: 1px solid #eef2f7;
+  padding-top: 12px;
+}
+
+.ave-swap-v2 .swap-history-title {
+  color: #1f2737;
+}
+
 .ave-wallet-v2 .wallet-send-input,
 .ave-wallet-v2 .wallet-send-token-select {
   border: 1px solid #1f2937;
