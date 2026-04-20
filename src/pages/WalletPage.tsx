@@ -370,7 +370,7 @@ export function WalletPage() {
       <div className="wallet-hero-card">
         <div className="wallet-shot-topline">
           <div className="wallet-shot-left">
-            <span className="wallet-shot-back">h</span>
+            <span className="wallet-shot-back" />
             <span className="wallet-shot-tag">未备份</span>
           </div>
           <div className="wallet-shot-right">
@@ -379,7 +379,6 @@ export function WalletPage() {
         </div>
         <div className="wallet-shot-address">
           {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : '0x9e3c...76d6'}
-          <span className="wallet-shot-meta">793 ms · 0.05 Gwei</span>
         </div>
         <div className="wallet-balance-block">
           <div className="wallet-balance-label">总资产</div>
