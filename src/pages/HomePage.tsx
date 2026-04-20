@@ -188,7 +188,8 @@ export function HomePage() {
             })
             .filter((it) => it.id.includes(':0x') && Number.isFinite((it as any).launched_at))
             .filter((it) => now - Number((it as any).launched_at) <= oneDayMs)
-          setItems(data as HomeItem[])
+          // 接口短暂空返回时不覆盖旧数据，避免“若隐若现”闪烁
+          setItems((prev) => (data.length > 0 ? (data as HomeItem[]) : prev))
           return
         }
 
@@ -290,8 +291,16 @@ export function HomePage() {
       { id: 'new', label: '新币', enabled: true },
     ]
     const fromCfg = systemConfig?.ui?.homeTabs
-    const list = Array.isArray(fromCfg) && fromCfg.length > 0 ? fromCfg : defaults
-    return list.filter((t) => t.enabled !== false)
+    const list = (Array.isArray(fromCfg) && fromCfg.length > 0 ? fromCfg : defaults).filter((t) => t.enabled !== false)
+    // 强制确保“新币”标签存在，避免后台配置未包含时标签消失
+    const hasNew = list.some((t) => String((t as any).id) === 'new' || String((t as any).id) === 'newTokens')
+    if (!hasNew) {
+      const insertIndex = list.findIndex((t) => String((t as any).id) === 'loss')
+      const newTab = { id: 'new', label: '新币', enabled: true }
+      if (insertIndex >= 0) list.splice(insertIndex + 1, 0, newTab as any)
+      else list.push(newTab as any)
+    }
+    return list
   }, [systemConfig?.ui?.homeTabs])
 
   const homeFilters = useMemo(() => {
