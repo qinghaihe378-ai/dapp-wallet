@@ -6200,6 +6200,7 @@ button:disabled,
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
+  box-sizing: border-box;
   border: 0;
   border-bottom: 1px solid rgba(76, 90, 116, 0.24);
   background: transparent;
@@ -6236,12 +6237,17 @@ button:disabled,
 }
 
 .ave-profile-toggle {
+  -webkit-appearance: none;
+  appearance: none;
   width: 54px;
   height: 32px;
   border-radius: 999px;
   border: 1px solid rgba(132, 145, 168, 0.4);
   background: rgba(85, 95, 111, 0.45);
   padding: 0 3px;
+  margin: 0;
+  box-sizing: border-box;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
@@ -6249,6 +6255,7 @@ button:disabled,
 }
 
 .ave-profile-toggle > span {
+  display: block;
   width: 24px;
   height: 24px;
   border-radius: 999px;
