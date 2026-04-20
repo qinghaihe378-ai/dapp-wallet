@@ -1059,7 +1059,7 @@ export function SwapPage() {
         </div>
       )}
       <div className="swap-mode-segment ave-swap-v2-mode">
-        <button type="button" className="active">兑换&跨链</button>
+        <button type="button" className="active">兑换</button>
         <button type="button">池子</button>
       </div>
 
