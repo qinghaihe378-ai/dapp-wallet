@@ -216,6 +216,20 @@ export function MarketsPage() {
   const rows = useMemo(() => {
     const useAddressResults = searchQuery && isContractAddress(searchQuery) && addressSearchResults !== null
     let next: MarketItem[] = useAddressResults ? [...addressSearchResults] : [...list]
+    let usingSourceSeedOnly = false
+
+    if (!useAddressResults) {
+      if (sourceTab === 'four' && fourSeedItems.length > 0) {
+        next = [...fourSeedItems]
+        usingSourceSeedOnly = true
+      } else if (sourceTab === 'new' && newOpenSeedItems.length > 0) {
+        next = [...newOpenSeedItems]
+        usingSourceSeedOnly = true
+      } else if (sourceTab === 'flap' && flapSeedItems.length > 0) {
+        next = [...flapSeedItems]
+        usingSourceSeedOnly = true
+      }
+    }
 
     // 行情页默认仅展示 ETH/BSC/Base 三条公链
     next = next.filter((item) => SUPPORTED_MARKET_CHAINS.includes(item.chain))
@@ -237,17 +251,17 @@ export function MarketsPage() {
     // 来源标签：按真实来源过滤
     if (sourceTab === 'gold') {
       // 淘金默认不过滤，走榜单排序
-    } else if (sourceTab === 'new') {
+    } else if (sourceTab === 'new' && !usingSourceSeedOnly) {
       next = mergeRowsByKey(
         next.filter((item) => newOpenKeys.has(marketItemKey(item))),
         newOpenSeedItems,
       )
-    } else if (sourceTab === 'four') {
+    } else if (sourceTab === 'four' && !usingSourceSeedOnly) {
       next = mergeRowsByKey(
         next.filter((item) => fourKeys.has(marketItemKey(item))),
         fourSeedItems,
       )
-    } else if (sourceTab === 'flap') {
+    } else if (sourceTab === 'flap' && !usingSourceSeedOnly) {
       next = mergeRowsByKey(
         next.filter((item) => flapKeys.has(marketItemKey(item))),
         flapSeedItems,
