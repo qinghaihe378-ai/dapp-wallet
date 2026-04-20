@@ -129,7 +129,7 @@ export function MarketsPage() {
       try {
         const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
         if (!res.ok) return
-        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string }> }
+        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; priceUsd?: string; priceChange24h?: string }> }
         const all = new Set<string>()
         const four = new Set<string>()
         const flap = new Set<string>()
@@ -144,18 +144,23 @@ export function MarketsPage() {
           all.add(key)
           const dex = String(row.dexId ?? '').toLowerCase()
           const symbol = String((row as any).symbol ?? '').trim() || 'NEW'
+          const name = String((row as any).name ?? (row as any).poolName ?? symbol).trim() || symbol
+          const quoteSymbol = String((row as any).quoteSymbol ?? 'BNB').trim() || 'BNB'
           const seed: MarketItem = {
             id: key,
             symbol,
-            name: String((row as any).poolName ?? symbol).trim() || symbol,
+            name,
             image: '',
             current_price: Number((row as any).priceUsd ?? 0) || 0,
             price_change_percentage_24h:
               (row as any).priceChange24h == null ? null : (Number((row as any).priceChange24h) || 0),
             market_cap: Number((row as any).reserveUsd ?? 0) || 0,
+            volume_24h: Number((row as any).reserveUsd ?? 0) || 0,
             chain,
+            dexId: String(row.dexId ?? ''),
             coingeckoId: undefined,
           }
+          ;(seed as any).quoteSymbol = quoteSymbol
           allSeeds.push(seed)
           if (dex.includes('four')) four.add(key)
           if (dex.includes('four')) fourSeeds.push(seed)
@@ -397,15 +402,17 @@ export function MarketsPage() {
                           }}
                         />
                         <div>
-                          <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
+                          <div className="market-watch-name">{item.name?.trim() || item.symbol?.toUpperCase() || item.symbol}</div>
                           <div className="market-watch-sub">
-                            <span>{item.symbol.toUpperCase()}/USDC</span>
+                            <span>{item.symbol.toUpperCase()}/{String((item as any).quoteSymbol ?? 'USDC').toUpperCase()}</span>
                           </div>
                         </div>
                       </div>
                       <div className="market-watch-price">
                         {formatPriceByCurrency(item.current_price, currencyUnit)}
-                        <div className="market-watch-price-sub">Vol {formatCurrencyCompact(item.current_price * 125000, currencyUnit)}</div>
+                        <div className="market-watch-price-sub">
+                          Liq {formatCurrencyCompact((item.market_cap ?? 0) > 0 ? (item.market_cap ?? 0) : (item.current_price * 125000), currencyUnit)}
+                        </div>
                       </div>
                       <div
                         className={`market-watch-change ${
@@ -419,10 +426,11 @@ export function MarketsPage() {
                       </div>
                     </>
                   )
+                  const extraQuery = (item as any).dexId ? `?src=${encodeURIComponent(String((item as any).dexId))}` : ''
                   return (
                     <Link
                       key={item.id}
-                      to={isDexToken ? `/market/${encodeURIComponent(item.id)}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
+                      to={isDexToken ? `/market/${encodeURIComponent(item.id)}${extraQuery}` : `/market/${encodeURIComponent(item.coingeckoId ?? item.id)}`}
                       className="market-watch-row"
                     >
                       {innerLink}

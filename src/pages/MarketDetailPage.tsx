@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
@@ -84,6 +84,7 @@ const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
 }
 
 const DEX_ICON_MAP: Record<string, string> = {
+  'four.meme': 'https://four.meme/favicon.ico',
   pancakeswap: 'https://pancakeswap.finance/favicon.ico',
   uniswap: 'https://app.uniswap.org/favicon.ico',
   sushiswap: 'https://www.sushi.com/favicon.ico',
@@ -96,6 +97,7 @@ const MAIN_PAIR_SYMBOLS = new Set(['WBNB', 'BNB', 'WETH', 'ETH', 'USDT', 'USDC',
 export function MarketDetailPage() {
   const { currencyUnit, redUpGreenDown } = useAppSettings()
   const { coinId } = useParams<{ coinId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [detail, setDetail] = useState<CoinDetail | null>(null)
   const [dexItem, setDexItem] = useState<MarketItem | null>(null)
@@ -141,6 +143,7 @@ export function MarketDetailPage() {
 
   const isDexFormat = coinId && DEX_ID_REG.test(coinId)
   const isCoingeckoFormat = coinId && COINGECKO_ID_REG.test(coinId)
+  const routeSource = (searchParams.get('src') ?? '').trim().toLowerCase()
 
   const dexTokenAddress = useMemo(() => {
     if (!dexItem?.id) return null
@@ -591,10 +594,30 @@ export function MarketDetailPage() {
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
-  const pairDexIcon = pairDexId ? DEX_ICON_MAP[pairDexId.toLowerCase()] : null
+  const displayDexId = pairDexId ?? (routeSource || null)
+  const displayPools = useMemo(() => {
+    if (tokenPools.length > 0) return tokenPools
+    if (routeSource.includes('four') && detailVM) {
+      return [
+        {
+          pairAddress: dexPairAddress ?? dexTokenAddress ?? coinId,
+          dexId: 'four.meme',
+          topSymbol: detailVM.symbol?.toUpperCase() ?? 'TOKEN',
+          bottomSymbol: 'BNB',
+          topAmount: 0,
+          bottomAmount: 0,
+          feeLabel: '内盘',
+          liquidityUsd: Number(detailVM.marketCap ?? 0) || 0,
+          volume24h: Number(volume24hValue ?? 0) || 0,
+        },
+      ]
+    }
+    return tokenPools
+  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue])
+  const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
-    () => tokenPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
-    [tokenPools],
+    () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
+    [displayPools],
   )
 
   useEffect(() => {
@@ -825,7 +848,7 @@ export function MarketDetailPage() {
                           <span>DEX</span>
                           <span>流动性总额</span>
                         </div>
-                        {tokenPools.length > 0 ? tokenPools.map((pool, idx) => {
+                        {displayPools.length > 0 ? displayPools.map((pool, idx) => {
                           const icon = DEX_ICON_MAP[pool.dexId.toLowerCase()] || null
                           const active = dexPairAddress === pool.pairAddress
                           return (
@@ -842,8 +865,8 @@ export function MarketDetailPage() {
                                 cursor: 'pointer',
                               }}
                               onClick={() => {
-                                setDexPairAddress(pool.pairAddress)
-                                setPairDexId(pool.dexId)
+                                setDexPairAddress(pool.pairAddress ?? null)
+                                setPairDexId(pool.dexId ?? null)
                               }}
                               title="站内打开该池子"
                             >
@@ -871,7 +894,7 @@ export function MarketDetailPage() {
                     ) : (
                       <div className="ave-tab-placeholder">
                         <p>{subTab === 'mine' ? '我的池子' : subTab === 'orders' ? '挂单池子' : subTab === 'watch' ? '关注池子' : '创建者池子'}</p>
-                        <span>当前共检测到 {tokenPools.length} 个 DEX 池子</span>
+                        <span>当前共检测到 {displayPools.length} 个 DEX 池子</span>
                       </div>
                     )}
                   </>
@@ -963,13 +986,13 @@ export function MarketDetailPage() {
             type="button"
             className="dapp"
             onClick={() => navigate('/bot')}
-            aria-label={pairDexId ? `打开 ${pairDexId}` : '打开 DApp'}
-            title={pairDexId ?? 'DApp'}
+            aria-label={displayDexId ? `打开 ${displayDexId}` : '打开 DApp'}
+            title={displayDexId ?? 'DApp'}
           >
             {pairDexIcon ? (
-              <img src={pairDexIcon} alt={pairDexId ?? 'dex'} />
+              <img src={pairDexIcon} alt={displayDexId ?? 'dex'} />
             ) : (
-              <span>{pairDexId ? pairDexId.slice(0, 3).toUpperCase() : 'DEX'}</span>
+              <span>{displayDexId ? displayDexId.slice(0, 4).toUpperCase() : 'DEX'}</span>
             )}
           </button>
           <Link to={quickTradeTargets.buy} className="buy">买入{buyTaxLabel && <div>{buyTaxLabel}</div>}</Link>

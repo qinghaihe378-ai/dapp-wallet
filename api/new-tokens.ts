@@ -1,12 +1,13 @@
 import { Redis } from 'ioredis'
 import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens.js'
-import { JsonRpcProvider } from 'ethers'
+import { Contract, JsonRpcProvider } from 'ethers'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 const KEY = 'clawdex:new-tokens:latest'
 const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
 const DEFAULT_TTL_SECONDS = 60
 const FOUR_MAIN_CONTRACT = '0x5c952063c7fc8610ffdb798152d69f0b9550762b'
+const FOUR_META_KEY_PREFIX = 'clawdex:fourmeme:meta:'
 // 通过实测主合约日志得到的“新币创建候选事件”topic（两种路径）
 const FOUR_CREATE_TOPICS = [
   '0x0a5575b3648bae2210cee56bf33254cc1ddfbc7bf637c0af2ac18b14fb1bae19',
@@ -20,6 +21,55 @@ function getBscRpcUrl() {
     process.env.BSC_RPC_HTTP ||
     'https://bsc-rpc.publicnode.com'
   )
+}
+
+const ERC20_META_ABI = [
+  {
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'name',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const
+
+async function getFourTokenMeta(provider: JsonRpcProvider, token: string) {
+  const cacheKey = `${FOUR_META_KEY_PREFIX}${token}`
+  const cached = await redis.get(cacheKey)
+  if (cached) {
+    try {
+      return JSON.parse(cached) as { symbol: string; name: string }
+    } catch {
+      // ignore broken cache
+    }
+  }
+
+  const contract = new Contract(token, ERC20_META_ABI as any, provider)
+  let symbol = `${token.slice(2, 6).toUpperCase()}`
+  let name = symbol
+  try {
+    const [s, n] = await Promise.allSettled([contract.symbol(), contract.name()])
+    if (s.status === 'fulfilled') {
+      const v = String(s.value ?? '').trim()
+      if (v) symbol = v
+    }
+    if (n.status === 'fulfilled') {
+      const v = String(n.value ?? '').trim()
+      if (v) name = v
+    }
+  } catch {
+    // keep fallback
+  }
+  const meta = { symbol, name }
+  await redis.set(cacheKey, JSON.stringify(meta), 'EX', 86400)
+  return meta
 }
 
 async function fetchFourMemeOnchainNewTokens() {
@@ -65,9 +115,11 @@ async function fetchFourMemeOnchainNewTokens() {
     chainName: string
     tokenAddress: string
     symbol: string
+    name: string
     poolName: string
     poolAddress: string
     dexId: string
+    quoteSymbol: string
     priceUsd: string
     fdvUsd: string | null
     reserveUsd: string
@@ -75,17 +127,28 @@ async function fetchFourMemeOnchainNewTokens() {
     priceChange24h: string | null
   }> = []
 
+  const metas = new Map<string, { symbol: string; name: string }>()
+  for (let i = 0; i < targetTokens.length; i += 12) {
+    const batch = targetTokens.slice(i, i + 12)
+    const results = await Promise.all(batch.map(async (token) => [token, await getFourTokenMeta(provider, token)] as const))
+    for (const [token, meta] of results) metas.set(token, meta)
+  }
+
   for (const token of targetTokens) {
-    const symbol = `${token.slice(2, 6).toUpperCase()}`
+    const meta = metas.get(token)
+    const symbol = meta?.symbol || `${token.slice(2, 6).toUpperCase()}`
+    const name = meta?.name || symbol
 
     items.push({
       chainId: 'bsc',
       chainName: 'BSC',
       tokenAddress: token,
       symbol,
-      poolName: symbol,
+      name,
+      poolName: name,
       poolAddress: token,
       dexId: 'four.meme',
+      quoteSymbol: 'BNB',
       priceUsd: '0',
       fdvUsd: null,
       reserveUsd: '0',

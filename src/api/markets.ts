@@ -26,6 +26,7 @@ export interface MarketItem {
   market_cap?: number
   volume_24h?: number
   chain: ChainId
+  dexId?: string
   /** CoinGecko 兼容 id，用于详情页 */
   coingeckoId?: string
 }
