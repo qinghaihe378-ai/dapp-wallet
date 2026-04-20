@@ -18,6 +18,7 @@ export function PersonalCenterPage() {
 
   const renderArrow = () => <span className="ave-profile-arrow">›</span>
   const renderValue = (value: string) => <span className="ave-profile-value">{value}</span>
+  const jumpToCommunity = () => window.open('https://t.me/CLAWDEX', '_blank', 'noopener,noreferrer')
 
   return (
     <div className="page ave-page ave-profile-ave-shell">
@@ -75,7 +76,7 @@ export function PersonalCenterPage() {
       </div>
 
       <div className="ave-profile-group ave-profile-group-secondary">
-        <button type="button" className="ave-profile-row">
+        <button type="button" className="ave-profile-row" onClick={jumpToCommunity}>
           <span className="ave-profile-label">{t('全球社区', 'Global Community')}</span>
           {renderArrow()}
         </button>
@@ -83,7 +84,7 @@ export function PersonalCenterPage() {
           <span className="ave-profile-label">{t('关于我们', 'About Us')}</span>
           {renderArrow()}
         </button>
-        <button type="button" className="ave-profile-row">
+        <button type="button" className="ave-profile-row" onClick={jumpToCommunity}>
           <span className="ave-profile-label">{t('联系客服', 'Support')}</span>
           {renderArrow()}
         </button>
