@@ -6175,6 +6175,97 @@ button:disabled,
   font-size: 13px;
 }
 
+/* 个人中心：AVE 设置页样式 */
+.ave-profile-ave-shell {
+  margin: 0 -16px;
+  min-height: calc(100svh - 56px - var(--bottom-nav-h) - var(--safe-bottom));
+  padding: 0 0 calc(10px + var(--safe-bottom));
+  background: linear-gradient(180deg, #111926, #101722);
+}
+
+.ave-profile-group {
+  border-top: 1px solid rgba(85, 100, 126, 0.28);
+  border-bottom: 1px solid rgba(85, 100, 126, 0.28);
+}
+
+.ave-profile-group-secondary {
+  margin-top: 14px;
+}
+
+.ave-profile-row {
+  width: 100%;
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid rgba(76, 90, 116, 0.24);
+  background: transparent;
+  text-align: left;
+}
+
+.ave-profile-group .ave-profile-row:last-child {
+  border-bottom: 0;
+}
+
+.ave-profile-label {
+  color: #eef3ff;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.ave-profile-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ave-profile-value {
+  color: #8f9ab0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.ave-profile-arrow {
+  color: #6e788f;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.ave-profile-toggle {
+  width: 58px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(132, 145, 168, 0.4);
+  background: rgba(85, 95, 111, 0.45);
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.ave-profile-toggle > span {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transition: transform .18s ease;
+}
+
+.ave-profile-toggle.active {
+  background: rgba(69, 142, 255, 0.55);
+  border-color: rgba(112, 170, 255, 0.75);
+}
+
+.ave-profile-toggle.active > span {
+  transform: translateX(24px);
+}
+
 /* ========== 移动端适配 ========== */
 @media (max-width: 480px) {
   .ave-kline-container {
