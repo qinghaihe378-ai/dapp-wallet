@@ -9,6 +9,7 @@ import { isSupportedSwapNetwork } from '../lib/evm/config'
 import { getSwapTokens, getTokenBySymbol } from '../lib/evm/tokens'
 import { ERC20_ABI } from '../lib/evm/abis'
 import { usePageConfig } from '../hooks/usePageConfig'
+import { formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 
 interface Holding {
   symbol: string
@@ -91,6 +92,7 @@ export function WalletPage() {
   const { config } = usePageConfig('wallet')
   const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance, canUseInjected, connectInjected } = useWallet()
   const { getPrice } = usePrices()
+  const { currencyUnit } = useAppSettings()
   const walletValuesVisibleKey = `walletValuesVisible:${network}`
   const walletHideSmallKey = `walletHideSmall:${network}`
   const walletQuickActionKey = `walletQuickAction:${network}`
@@ -180,9 +182,9 @@ export function WalletPage() {
     const nativePrice = getPrice(symbol, network)
     const nativeRow: WalletRow[] = [{
       symbol,
-      subtitle: nativePrice ? `$${nativePrice >= 1 ? nativePrice.toFixed(2) : nativePrice.toFixed(4)}` : '—',
+      subtitle: nativePrice ? formatPriceByCurrency(nativePrice, currencyUnit) : '—',
       amount: balance ? Number(balance).toFixed(4) : '0.0000',
-      value: `≈ $${totalUsd.toFixed(2)}`,
+      value: `≈ ${formatPriceByCurrency(totalUsd, currencyUnit)}`,
       numericValue: totalUsd,
       avatar: symbol[0],
       avatarTone: getAvatarTone(symbol),
@@ -197,9 +199,9 @@ export function WalletPage() {
       const usdValue = price ? numAmount * price : 0
       return {
         symbol: item.symbol,
-        subtitle: price ? `$${price >= 1 ? price.toFixed(2) : price.toFixed(4)}` : '—',
+        subtitle: price ? formatPriceByCurrency(price, currencyUnit) : '—',
         amount: item.amount,
-        value: usdValue > 0 ? `≈ $${usdValue >= 1 ? usdValue.toFixed(2) : usdValue.toFixed(4)}` : '—',
+        value: usdValue > 0 ? `≈ ${formatPriceByCurrency(usdValue, currencyUnit)}` : '—',
         numericValue: usdValue,
         avatar: item.symbol[0],
         avatarTone: getAvatarTone(item.symbol),
@@ -210,7 +212,7 @@ export function WalletPage() {
     })
 
     return [...nativeRow, ...holdingRows]
-  }, [address, balance, chainInfo.chainBadge, chainInfo.chainTone, getPrice, holdings, network, symbol, totalUsd])
+  }, [address, balance, chainInfo.chainBadge, chainInfo.chainTone, getPrice, holdings, network, symbol, totalUsd, currencyUnit])
 
   const filteredRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -382,7 +384,7 @@ export function WalletPage() {
         <div className="wallet-balance-block">
           <div className="wallet-balance-label">总资产</div>
           <div className={`wallet-total-value ${isObserveWallet ? 'wallet-total-value-observe' : ''}`}>
-            {isObserveWallet ? '—' : valuesVisible ? `$${totalUsd > 0 ? totalUsd.toFixed(2) : '0.00'}` : '••••'}
+            {isObserveWallet ? '—' : valuesVisible ? formatPriceByCurrency(totalUsd > 0 ? totalUsd : 0, currencyUnit) : '••••'}
             {!isObserveWallet && (
               <button type="button" className="wallet-total-eye" onClick={() => setValuesVisible((v) => !v)} aria-label="切换显示">
                 {valuesVisible ? '◔' : '◕'}

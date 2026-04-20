@@ -4,6 +4,7 @@ import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
 import { marketChainIdToWalletNetwork } from '../lib/marketChainMap'
+import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 
 interface CoinDetail {
   id: string
@@ -60,12 +61,6 @@ const formatInt = (value: number) => {
   return Math.round(value).toLocaleString('en-US')
 }
 
-const formatWan = (value: number) => {
-  if (!Number.isFinite(value) || value <= 0) return '—'
-  if (value >= 10000) return `${(value / 10000).toFixed(2)}万`
-  return value.toFixed(0)
-}
-
 const shortAddress = (addr: string) => {
   const s = String(addr ?? '').trim()
   if (!s.startsWith('0x') || s.length < 12) return '—'
@@ -99,6 +94,7 @@ const DEX_ICON_MAP: Record<string, string> = {
 const MAIN_PAIR_SYMBOLS = new Set(['WBNB', 'BNB', 'WETH', 'ETH', 'USDT', 'USDC', 'BUSD', 'DAI'])
 
 export function MarketDetailPage() {
+  const { currencyUnit, redUpGreenDown } = useAppSettings()
   const { coinId } = useParams<{ coinId: string }>()
   const navigate = useNavigate()
   const [detail, setDetail] = useState<CoinDetail | null>(null)
@@ -591,6 +587,9 @@ export function MarketDetailPage() {
 
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
+  const detailChangeTone = detailVM?.change24h != null && detailVM.change24h >= 0
+    ? (redUpGreenDown ? 'down' : 'up')
+    : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
   const pairDexIcon = pairDexId ? DEX_ICON_MAP[pairDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
@@ -672,7 +671,7 @@ export function MarketDetailPage() {
               onClick={async () => {
                 const sharePayload = {
                   title: `${detailVM.name} 行情`,
-                  text: `${detailVM.name} ${formatPrice(detailVM.price)}`,
+                  text: `${detailVM.name} ${formatPriceByCurrency(detailVM.price, currencyUnit)}`,
                   url: window.location.href,
                 }
                 try {
@@ -711,14 +710,14 @@ export function MarketDetailPage() {
 
         <div className="ave-detail-price-panel">
           <div className="ave-detail-price-left">
-            <div className="ave-detail-big-price">{formatPrice(detailVM.price)}</div>
-            <div className={`ave-detail-change ${detailVM.change24h >= 0 ? 'up' : 'down'}`}>
+            <div className="ave-detail-big-price">{formatPriceByCurrency(detailVM.price, currencyUnit)}</div>
+            <div className={`ave-detail-change ${detailChangeTone}`}>
               {detailVM.change24h >= 0 ? '+' : ''}{detailVM.change24h.toFixed(2)}%
             </div>
           </div>
           <div className="ave-detail-price-right">
-            <div><span>流通市值</span><strong>${formatWan(detailVM.marketCap)}</strong></div>
-            <div><span>24h成交量</span><strong>${formatWan(volume24hValue)}</strong></div>
+            <div><span>流通市值</span><strong>{formatCurrencyCompact(detailVM.marketCap, currencyUnit)}</strong></div>
+            <div><span>24h成交量</span><strong>{formatCurrencyCompact(volume24hValue, currencyUnit)}</strong></div>
             <div><span>24h持币数</span><strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong></div>
             <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
           </div>
@@ -726,11 +725,11 @@ export function MarketDetailPage() {
         <div className="ave-detail-v2-data-cards">
           <div className="ave-detail-v2-data-card">
             <span>流通市值</span>
-            <strong>{formatCompact(detailVM.marketCap)}</strong>
+            <strong>{formatCurrencyCompact(detailVM.marketCap, currencyUnit)}</strong>
           </div>
           <div className="ave-detail-v2-data-card">
             <span>24h成交量</span>
-            <strong>{formatCompact(volume24hValue)}</strong>
+            <strong>{formatCurrencyCompact(volume24hValue, currencyUnit)}</strong>
           </div>
           <div className="ave-detail-v2-data-card">
             <span>持币人数</span>

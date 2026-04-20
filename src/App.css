@@ -25,6 +25,10 @@
   background: #101722;
 }
 
+:root[data-theme='light'] .ave-app .app-main.app-main-market {
+  background: #eef3fb;
+}
+
 /* 交易页：首屏固定，不让整页再二次下拉 */
 .ave-app .app-main.app-main-swap {
   overflow-y: auto;
@@ -36,6 +40,14 @@
 .ave-app .app-main.app-main-profile {
   background: #111827;
   padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+}
+
+:root[data-theme='light'] .ave-app .app-main.app-main-profile {
+  background: #eef3fb;
+}
+
+:root[data-theme='light'] .ave-app .app-main {
+  background: #eef3fb;
 }
 
 /* 站内嵌入龙虾 iframe：减少内边距，让 iframe 尽量占满可视区 */
@@ -3197,19 +3209,6 @@ button:disabled,
   color: #fff;
 }
 
-/* 红涨绿跌：开启后交换涨跌颜色 */
-.rise-green-up .home-token-badge.up,
-.rise-green-up .market-watch-change.up {
-  background: #ff5c6b;
-  color: #fff;
-}
-
-.rise-green-up .home-token-badge.down,
-.rise-green-up .market-watch-change.down {
-  background: #2ccf8c;
-  color: #fff;
-}
-
 .home-status-note,
 .wallet-token-side-sub {
   margin-top: 3px;
@@ -6302,6 +6301,36 @@ button:disabled,
   transform: translateX(22px);
 }
 
+/* 主题模式：日间模式全站覆盖（统一到浅色体系） */
+:root[data-theme='light'] .ave-header {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+  border-bottom-color: rgba(148, 163, 184, 0.28);
+}
+
+:root[data-theme='light'] .ave-bottom-nav {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+  border-top-color: rgba(148, 163, 184, 0.28);
+}
+
+:root[data-theme='light'] .ave-home-v2,
+:root[data-theme='light'] .ave-markets-v2,
+:root[data-theme='light'] .ave-detail-v2,
+:root[data-theme='light'] .ave-wallet-v2,
+:root[data-theme='light'] .ave-swap-v2,
+:root[data-theme='light'] .ave-profile-ave-shell {
+  background: #f5f8fd !important;
+  color: #1f2937;
+}
+
+:root[data-theme='light'] .home-market-panel,
+:root[data-theme='light'] .market-panel,
+:root[data-theme='light'] .wallet-panel,
+:root[data-theme='light'] .swap-white-panel,
+:root[data-theme='light'] .ave-profile-group {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+}
+
 /* ========== 移动端适配 ========== */
 @media (max-width: 480px) {
   .ave-kline-container {
@@ -6960,14 +6989,6 @@ button:disabled,
 
 .ave-detail-change.down {
   color: #ff6a79;
-}
-
-.rise-green-up .ave-detail-change.up {
-  color: #ff6a79;
-}
-
-.rise-green-up .ave-detail-change.down {
-  color: #20d89a;
 }
 
 .ave-detail-price-right {
@@ -8071,14 +8092,6 @@ button:disabled,
   background: linear-gradient(135deg, rgba(176, 42, 77, 0.92), rgba(101, 25, 45, 0.92));
 }
 
-.rise-green-up .ave-markets-v2 .market-watch-change.up {
-  background: linear-gradient(135deg, rgba(176, 42, 77, 0.92), rgba(101, 25, 45, 0.92));
-}
-
-.rise-green-up .ave-markets-v2 .market-watch-change.down {
-  background: linear-gradient(135deg, rgba(19, 167, 108, 0.92), rgba(8, 94, 64, 0.92));
-}
-
 .ave-detail-v2,
 .ave-detail-v2.ave-detail-shell {
   background: #111827;
@@ -8226,16 +8239,6 @@ button:disabled,
 .ave-home-v2 .home-token-badge.down {
   background: rgba(220, 38, 38, 0.2);
   color: #fca5a5;
-}
-
-.rise-green-up .ave-home-v2 .home-token-badge.up {
-  background: rgba(220, 38, 38, 0.2);
-  color: #fca5a5;
-}
-
-.rise-green-up .ave-home-v2 .home-token-badge.down {
-  background: rgba(22, 163, 74, 0.24);
-  color: #86efac;
 }
 
 .ave-home-v2-nav {

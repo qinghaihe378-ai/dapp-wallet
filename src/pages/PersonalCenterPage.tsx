@@ -14,7 +14,7 @@ export function PersonalCenterPage() {
 
   const isEn = language === 'en-US'
   const t = (zh: string, en: string) => (isEn ? en : zh)
-  const themeLabel = themeMode === 'system' ? t('跟随系统', 'System') : themeMode === 'dark' ? t('深色', 'Dark') : t('浅色', 'Light')
+  const themeLabel = themeMode === 'system' ? t('跟随系统', 'System') : themeMode === 'dark' ? t('夜间模式', 'Dark') : t('日间模式', 'Light')
 
   const renderArrow = () => <span className="ave-profile-arrow">›</span>
   const renderValue = (value: string) => <span className="ave-profile-value">{value}</span>
