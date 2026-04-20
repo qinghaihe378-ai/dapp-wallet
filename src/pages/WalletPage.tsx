@@ -362,7 +362,11 @@ export function WalletPage() {
     { label: '扫码', kind: 'scan' as const },
     { label: '跨链', kind: 'bridge' as const },
   ]
-  const walletNetworkOptions: Network[] = ['mainnet', 'bsc', 'base', 'polygon']
+  const walletNetworkOptions: Array<{ value: Network; label: string }> = [
+    { value: 'mainnet', label: 'ETH' },
+    { value: 'bsc', label: 'BSC' },
+    { value: 'base', label: 'BASE' },
+  ]
 
   return (
     <div className="page ave-page ave-wallet-shell-page ave-wallet-v2">
@@ -382,8 +386,8 @@ export function WalletPage() {
               aria-label="切换网络"
             >
               {walletNetworkOptions.map((n) => (
-                <option key={n} value={n}>
-                  {NETWORK_CONFIG[n].symbol}
+                <option key={n.value} value={n.value}>
+                  {n.label}
                 </option>
               ))}
             </select>
