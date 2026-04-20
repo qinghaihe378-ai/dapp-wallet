@@ -69,6 +69,9 @@ export function MarketsPage() {
   const [newOpenKeys, setNewOpenKeys] = useState<Set<string>>(new Set())
   const [fourKeys, setFourKeys] = useState<Set<string>>(new Set())
   const [flapKeys, setFlapKeys] = useState<Set<string>>(new Set())
+  const [newOpenSeedItems, setNewOpenSeedItems] = useState<MarketItem[]>([])
+  const [fourSeedItems, setFourSeedItems] = useState<MarketItem[]>([])
+  const [flapSeedItems, setFlapSeedItems] = useState<MarketItem[]>([])
 
   const normalizeNewTokenChain = (raw: string): ChainId | null => {
     const c = String(raw).toLowerCase()
@@ -83,6 +86,18 @@ export function MarketsPage() {
     if (i < 0) return ''
     const addr = item.id.slice(i + 1).toLowerCase()
     return addr.startsWith('0x') ? `${item.chain}:${addr}` : ''
+  }
+
+  const mergeRowsByKey = (base: MarketItem[], seeds: MarketItem[]) => {
+    const byKey = new Map<string, MarketItem>()
+    for (const it of base) {
+      byKey.set(marketItemKey(it), it)
+    }
+    for (const it of seeds) {
+      const k = marketItemKey(it)
+      if (!byKey.has(k)) byKey.set(k, it)
+    }
+    return [...byKey.values()]
   }
 
   const loadMarkets = async (silent = false) => {
@@ -118,6 +133,9 @@ export function MarketsPage() {
         const all = new Set<string>()
         const four = new Set<string>()
         const flap = new Set<string>()
+        const allSeeds: MarketItem[] = []
+        const fourSeeds: MarketItem[] = []
+        const flapSeeds: MarketItem[] = []
         for (const row of json.items ?? []) {
           const chain = normalizeNewTokenChain(String(row.chainId ?? ''))
           const addr = String(row.tokenAddress ?? '').toLowerCase()
@@ -125,13 +143,32 @@ export function MarketsPage() {
           const key = `${chain}:${addr}`
           all.add(key)
           const dex = String(row.dexId ?? '').toLowerCase()
+          const symbol = String((row as any).symbol ?? '').trim() || 'NEW'
+          const seed: MarketItem = {
+            id: key,
+            symbol,
+            name: String((row as any).poolName ?? symbol).trim() || symbol,
+            image: '',
+            current_price: Number((row as any).priceUsd ?? 0) || 0,
+            price_change_percentage_24h:
+              (row as any).priceChange24h == null ? null : (Number((row as any).priceChange24h) || 0),
+            market_cap: Number((row as any).reserveUsd ?? 0) || 0,
+            chain,
+            coingeckoId: undefined,
+          }
+          allSeeds.push(seed)
           if (dex.includes('four')) four.add(key)
+          if (dex.includes('four')) fourSeeds.push(seed)
           if (dex.includes('flap')) flap.add(key)
+          if (dex.includes('flap')) flapSeeds.push(seed)
         }
         if (cancelled) return
         setNewOpenKeys(all)
         setFourKeys(four)
         setFlapKeys(flap)
+        setNewOpenSeedItems(allSeeds)
+        setFourSeedItems(fourSeeds)
+        setFlapSeedItems(flapSeeds)
       } catch (e) {
         console.error('加载新开盘来源失败', e)
       }
@@ -201,11 +238,20 @@ export function MarketsPage() {
     if (sourceTab === 'gold') {
       // 淘金默认不过滤，走榜单排序
     } else if (sourceTab === 'new') {
-      next = next.filter((item) => newOpenKeys.has(marketItemKey(item)))
+      next = mergeRowsByKey(
+        next.filter((item) => newOpenKeys.has(marketItemKey(item))),
+        newOpenSeedItems,
+      )
     } else if (sourceTab === 'four') {
-      next = next.filter((item) => fourKeys.has(marketItemKey(item)))
+      next = mergeRowsByKey(
+        next.filter((item) => fourKeys.has(marketItemKey(item))),
+        fourSeedItems,
+      )
     } else if (sourceTab === 'flap') {
-      next = next.filter((item) => flapKeys.has(marketItemKey(item)))
+      next = mergeRowsByKey(
+        next.filter((item) => flapKeys.has(marketItemKey(item))),
+        flapSeedItems,
+      )
     }
 
     // 榜单排序：涨幅榜 / 收录榜 / 跌幅榜
@@ -223,7 +269,21 @@ export function MarketsPage() {
     }
 
     return useAddressResults ? next : next.slice(0, 120)
-  }, [addressSearchResults, chainFilter, list, searchQuery, sortBy, sourceTab, rankTab, newOpenKeys, fourKeys, flapKeys])
+  }, [
+    addressSearchResults,
+    chainFilter,
+    list,
+    searchQuery,
+    sortBy,
+    sourceTab,
+    rankTab,
+    newOpenKeys,
+    fourKeys,
+    flapKeys,
+    newOpenSeedItems,
+    fourSeedItems,
+    flapSeedItems,
+  ])
 
   const sections = useMemo(() => {
     const defaults = [
