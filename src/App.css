@@ -6307,6 +6307,13 @@ button:disabled,
   border-bottom-color: rgba(148, 163, 184, 0.28);
 }
 
+/* 行情页/钱包页顶部：固定夜间配色 */
+:root[data-theme='light'] .ave-header.ave-header-tabs,
+:root[data-theme='light'] .ave-header.ave-header-wallet {
+  background: linear-gradient(180deg, #0f1725 0%, #111827 100%) !important;
+  border-bottom-color: rgba(55, 74, 103, 0.65) !important;
+}
+
 :root[data-theme='light'] .ave-bottom-nav {
   background: linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
   border-top-color: rgba(148, 163, 184, 0.28);
@@ -6343,6 +6350,11 @@ button:disabled,
 :root[data-theme='light'] .ave-profile-label,
 :root[data-theme='light'] .ave-profile-value {
   color: #0f172a !important;
+}
+
+:root[data-theme='light'] .ave-header.ave-header-tabs .ave-header-tab,
+:root[data-theme='light'] .ave-header.ave-header-wallet .ave-network-btn {
+  color: #e5edf8 !important;
 }
 
 :root[data-theme='light'] .ave-home-search-input,
