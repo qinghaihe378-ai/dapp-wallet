@@ -6189,12 +6189,12 @@ button:disabled,
 }
 
 .ave-profile-group-secondary {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .ave-profile-row {
   width: 100%;
-  min-height: 66px;
+  min-height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6212,7 +6212,7 @@ button:disabled,
 
 .ave-profile-label {
   color: #eef3ff;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -6225,19 +6225,19 @@ button:disabled,
 
 .ave-profile-value {
   color: #8f9ab0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 500;
 }
 
 .ave-profile-arrow {
   color: #6e788f;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .ave-profile-toggle {
-  width: 58px;
-  height: 34px;
+  width: 54px;
+  height: 32px;
   border-radius: 999px;
   border: 1px solid rgba(132, 145, 168, 0.4);
   background: rgba(85, 95, 111, 0.45);
@@ -6249,8 +6249,8 @@ button:disabled,
 }
 
 .ave-profile-toggle > span {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
@@ -6263,7 +6263,7 @@ button:disabled,
 }
 
 .ave-profile-toggle.active > span {
-  transform: translateX(24px);
+  transform: translateX(22px);
 }
 
 /* ========== 移动端适配 ========== */
