@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { ethers } from 'ethers'
 import { useWallet } from '../components/WalletProvider'
-import { NETWORK_CONFIG } from '../lib/walletConfig'
+import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { usePrices } from '../hooks/usePrices'
 import { readTrackedTokenBalances } from '../lib/evm/balances'
 import { isSupportedSwapNetwork } from '../lib/evm/config'
@@ -90,7 +90,7 @@ function WalletQuickIcon({ kind }: { kind: WalletQuickAction }) {
 
 export function WalletPage() {
   const { config } = usePageConfig('wallet')
-  const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance, canUseInjected, connectInjected } = useWallet()
+  const { address, balance, createWallet, importWallet, network, provider, signer, connecting, refreshNonce, refreshBalance, canUseInjected, connectInjected, switchNetwork } = useWallet()
   const { getPrice } = usePrices()
   const { currencyUnit } = useAppSettings()
   const walletValuesVisibleKey = `walletValuesVisible:${network}`
@@ -362,6 +362,7 @@ export function WalletPage() {
     { label: '扫码', kind: 'scan' as const },
     { label: '跨链', kind: 'bridge' as const },
   ]
+  const walletNetworkOptions: Network[] = ['mainnet', 'bsc', 'base', 'polygon']
 
   return (
     <div className="page ave-page ave-wallet-shell-page ave-wallet-v2">
@@ -374,7 +375,18 @@ export function WalletPage() {
             <span className="wallet-shot-tag">未备份</span>
           </div>
           <div className="wallet-shot-right">
-            <span>{network.toUpperCase()}</span>
+            <select
+              className="wallet-shot-network-select"
+              value={network}
+              onChange={(e) => { void switchNetwork(e.target.value as Network) }}
+              aria-label="切换网络"
+            >
+              {walletNetworkOptions.map((n) => (
+                <option key={n} value={n}>
+                  {NETWORK_CONFIG[n].symbol}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="wallet-shot-address">
