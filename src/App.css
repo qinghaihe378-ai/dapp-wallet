@@ -6331,6 +6331,40 @@ button:disabled,
   border-color: rgba(148, 163, 184, 0.24) !important;
 }
 
+/* 日间模式：全站文字改深色，避免白字 */
+:root[data-theme='light'] .ave-header-page,
+:root[data-theme='light'] .ave-header-brand,
+:root[data-theme='light'] .ave-header-tab,
+:root[data-theme='light'] .ave-home-banner-title,
+:root[data-theme='light'] .home-panel-title,
+:root[data-theme='light'] .market-watch-name,
+:root[data-theme='light'] .wallet-token-symbol,
+:root[data-theme='light'] .swap-token-main,
+:root[data-theme='light'] .ave-profile-label,
+:root[data-theme='light'] .ave-profile-value {
+  color: #0f172a !important;
+}
+
+:root[data-theme='light'] .ave-home-search-input,
+:root[data-theme='light'] .home-token-price,
+:root[data-theme='light'] .market-watch-price,
+:root[data-theme='light'] .wallet-total-value,
+:root[data-theme='light'] .swap-receiver-row input,
+:root[data-theme='light'] .ave-detail-big-price {
+  color: #111827 !important;
+}
+
+:root[data-theme='light'] .ave-header-subtitle,
+:root[data-theme='light'] .home-banner-desc,
+:root[data-theme='light'] .home-token-sub,
+:root[data-theme='light'] .market-watch-sub,
+:root[data-theme='light'] .market-watch-price-sub,
+:root[data-theme='light'] .wallet-token-sub,
+:root[data-theme='light'] .swap-rate-note,
+:root[data-theme='light'] .ave-profile-arrow {
+  color: #64748b !important;
+}
+
 /* ========== 移动端适配 ========== */
 @media (max-width: 480px) {
   .ave-kline-container {
