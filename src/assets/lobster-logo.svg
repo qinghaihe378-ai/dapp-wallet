@@ -1,18 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF7A59"/>
-      <stop offset="1" stop-color="#E03A3A"/>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientTransform="translate(256 156) rotate(90) scale(320)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#273447"/>
+      <stop offset="1" stop-color="#0E1722"/>
+    </radialGradient>
+    <linearGradient id="shell" x1="182" y1="110" x2="350" y2="418" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9A4A"/>
+      <stop offset="0.52" stop-color="#F25430"/>
+      <stop offset="1" stop-color="#CA2E2B"/>
     </linearGradient>
+    <linearGradient id="shellLight" x1="204" y1="98" x2="282" y2="278" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD9A8" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#FFD9A8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#B8E2FF" flood-opacity=".45"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#041224" flood-opacity=".6"/>
+    </filter>
   </defs>
-  <circle cx="32" cy="32" r="30" fill="url(#bg)"/>
-  <path d="M20.5 22.5L14 19L12 24L18.5 27.5" stroke="#FFF7EC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M43.5 22.5L50 19L52 24L45.5 27.5" stroke="#FFF7EC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="25" y="18" width="14" height="27" rx="7" fill="#FFF7EC"/>
-  <rect x="22" y="26" width="20" height="11" rx="5.5" fill="#FFE2CC"/>
-  <circle cx="28" cy="16" r="2.5" fill="#FFF7EC"/>
-  <circle cx="36" cy="16" r="2.5" fill="#FFF7EC"/>
-  <circle cx="28" cy="16" r="1" fill="#D53B3B"/>
-  <circle cx="36" cy="16" r="1" fill="#D53B3B"/>
-  <path d="M32 45V51" stroke="#FFF7EC" stroke-width="3" stroke-linecap="round"/>
+
+  <circle cx="256" cy="256" r="252" fill="url(#bg)"/>
+
+  <g filter="url(#glow)" stroke="#ECF6FF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left claw -->
+    <path d="M140 122c-30 10-54 40-58 73-3 23 7 45 27 58l20 14 45-26 20-37-54-82z" fill="url(#shell)"/>
+    <path d="M199 114c16 16 26 39 26 63 0 21-8 41-23 56l-31-16c12-11 18-27 18-43 0-17-6-33-17-45l27-15z" fill="url(#shell)"/>
+    <path d="M172 145l-23 15 18 28 23-15-18-28z" fill="#D93E2D"/>
+    <path d="M140 122c-30 10-54 40-58 73-3 23 7 45 27 58" fill="none"/>
+
+    <!-- Right claw -->
+    <path d="M372 122c30 10 54 40 58 73 3 23-7 45-27 58l-20 14-45-26-20-37 54-82z" fill="url(#shell)"/>
+    <path d="M313 114c-16 16-26 39-26 63 0 21 8 41 23 56l31-16c-12-11-18-27-18-43 0-17 6-33 17-45l-27-15z" fill="url(#shell)"/>
+    <path d="M340 145l23 15-18 28-23-15 18-28z" fill="#D93E2D"/>
+    <path d="M372 122c30 10 54 40 58 73 3 23-7 45-27 58" fill="none"/>
+
+    <!-- Head and eyes -->
+    <path d="M256 160c-31 0-56 25-56 56v30h112v-30c0-31-25-56-56-56z" fill="url(#shell)"/>
+    <circle cx="222" cy="204" r="12" fill="#D5332B"/>
+    <circle cx="290" cy="204" r="12" fill="#D5332B"/>
+    <circle cx="222" cy="201" r="4" fill="#FFF"/>
+    <circle cx="290" cy="201" r="4" fill="#FFF"/>
+    <path d="M246 148l-12 33M266 148l12 33" fill="none"/>
+
+    <!-- Torso -->
+    <path d="M188 248c0-10 8-18 18-18h100c10 0 18 8 18 18v60c0 13-11 24-24 24h-88c-13 0-24-11-24-24v-60z" fill="url(#shell)"/>
+    <path d="M188 280h136M186 314h140M194 348h124M205 380h102" fill="none"/>
+
+    <!-- Tail -->
+    <path d="M216 386h80c10 0 18 8 18 18 0 13-5 25-14 34-13 14-27 24-44 29-17-5-31-15-44-29-9-9-14-21-14-34 0-10 8-18 18-18z" fill="url(#shell)"/>
+    <path d="M256 418v48" fill="none"/>
+
+    <!-- Legs left -->
+    <path d="M178 282l-56 18-18 22M178 316l-64 22-20 28M178 350l-60 24-18 30M186 380l-46 22-12 26" fill="none"/>
+    <!-- Legs right -->
+    <path d="M334 282l56 18 18 22M334 316l64 22 20 28M334 350l60 24 18 30M326 380l46 22 12 26" fill="none"/>
+  </g>
+
+  <path d="M191 116c27-7 55-11 84-11 30 0 59 4 86 13" stroke="#BFE7FF" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="240" cy="228" rx="42" ry="66" fill="url(#shellLight)"/>
 </svg>
