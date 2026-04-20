@@ -7983,12 +7983,15 @@ button:disabled,
 }
 
 .ave-market-search-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(55, 74, 103, 0.85);
-  background: rgba(20, 30, 45, 0.95);
+  width: 60px;
+  height: 60px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
   color: #d6deea;
+  font-size: 32px;
+  line-height: 1;
+  padding: 0;
 }
 
 .ave-markets-v2 .market-sort-row .active,
