@@ -60,7 +60,6 @@ export function MarketsPage() {
     chainFromQuery === 'eth' || chainFromQuery === 'bsc' || chainFromQuery === 'base'
       ? (chainFromQuery as ChainId)
       : 'all'
-  const [apiProvider, setApiProvider] = useState<string>('')
   const [addressSearchResults, setAddressSearchResults] = useState<MarketItem[] | null>(null)
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
   const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
@@ -95,7 +94,6 @@ export function MarketsPage() {
       const json = (await res.json()) as { items?: MarketItem[]; provider?: string }
       const data = json.items ?? []
       setList(data)
-      setApiProvider(json.provider ?? 'Redis')
     } catch (e) {
       console.error(e)
       setError(e instanceof Error ? e.message : '加载行情失败，请稍后重试。')
@@ -268,9 +266,6 @@ export function MarketsPage() {
                     <button type="button" aria-label="筛选">⌯</button>
                   </span>
                 </div>
-                {apiProvider && (
-                  <div className="market-api-hint">数据源: {apiProvider}</div>
-                )}
               </div>
             )
           }
