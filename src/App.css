@@ -8263,12 +8263,12 @@ button:disabled,
   border: 1px solid #edf1f6;
   border-radius: 14px;
   padding: 9px 10px;
-  min-height: 114px;
+  min-height: 76px;
 }
 
 .ave-swap-v2 .swap-lite-label-row {
   color: #8f97a8;
-  font-size: 12px;
+  font-size: 8px;
 }
 
 .ave-swap-v2 .swap-max-btn {
@@ -8279,7 +8279,7 @@ button:disabled,
 
 .ave-swap-v2 .swap-token-main {
   color: #222a3a;
-  font-size: 33px;
+  font-size: 22px;
   line-height: 1.02;
 }
 
@@ -8288,12 +8288,13 @@ button:disabled,
 .ave-swap-v2 .swap-amount-hint,
 .ave-swap-v2 .swap-amount-meta {
   color: #9aa3b4;
+  font-size: 8px;
 }
 
 .ave-swap-v2 .swap-lite-input,
 .ave-swap-v2 .swap-lite-output {
   color: #b0b8c7;
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 700;
 }
 
