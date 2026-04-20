@@ -1,29 +1,33 @@
 import { Redis } from 'ioredis'
 import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens.js'
-import { Interface, JsonRpcProvider, id } from 'ethers'
+import { Contract, JsonRpcProvider } from 'ethers'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 const KEY = 'clawdex:new-tokens:latest'
 const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
 const DEFAULT_TTL_SECONDS = 60
-const FOUR_CURSOR_KEY = 'clawdex:fourmeme:cursor'
+const FOUR_KNOWN_TOKENS_KEY = 'clawdex:fourmeme:knownTokens'
 
 const FOUR_MAIN_CONTRACT = '0x5c952063c7fc8610ffdb798152d69f0b9550762b'
 const FOUR_ABI = [
   {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: 'address', name: 'creator', type: 'address' },
-      { indexed: true, internalType: 'address', name: 'token', type: 'address' },
-      { indexed: false, internalType: 'string', name: 'name', type: 'string' },
-      { indexed: false, internalType: 'string', name: 'symbol', type: 'string' },
-      { indexed: false, internalType: 'string', name: 'uri', type: 'string' },
-    ],
-    name: 'TokenCreate',
-    type: 'event',
+    inputs: [],
+    name: 'getAllTokens',
+    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
+    stateMutability: 'view',
+    type: 'function',
   },
 ] as const
-const FOUR_TOKEN_CREATE_TOPIC = id('TokenCreate(address,address,string,string,string)')
+
+const ERC20_SYMBOL_ABI = [
+  {
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const
 
 function getBscRpcUrl() {
   return (
@@ -36,29 +40,32 @@ function getBscRpcUrl() {
 
 async function fetchFourMemeOnchainNewTokens() {
   const provider = new JsonRpcProvider(getBscRpcUrl(), 56)
-  const latest = await provider.getBlockNumber()
-  const cursorRaw = await redis.get(FOUR_CURSOR_KEY)
-  const cursor = cursorRaw ? Number(cursorRaw) : null
+  const main = new Contract(FOUR_MAIN_CONTRACT, FOUR_ABI as any, provider)
+  const allTokensRaw = (await main.getAllTokens()) as string[]
+  const allTokens = (Array.isArray(allTokensRaw) ? allTokensRaw : [])
+    .map((a) => String(a).toLowerCase())
+    .filter((a) => a.startsWith('0x') && a.length === 42)
 
-  // 按你的要求：首次仅从“最新区块”开始监听，不回扫历史
-  if (!Number.isFinite(cursor) || cursor == null) {
-    await redis.set(FOUR_CURSOR_KEY, String(latest))
+  const knownRaw = await redis.get(FOUR_KNOWN_TOKENS_KEY)
+  if (!knownRaw) {
+    // 首次仅从当前“已有列表”开始，不回填历史
+    await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
     return []
   }
 
-  if (latest <= cursor) return []
+  let knownTokens: string[] = []
+  try {
+    knownTokens = JSON.parse(knownRaw) as string[]
+  } catch {
+    knownTokens = []
+  }
+  const knownSet = new Set((knownTokens ?? []).map((a) => String(a).toLowerCase()))
+  const newTokens = allTokens.filter((a) => !knownSet.has(a))
+  if (newTokens.length === 0) return []
 
-  const fromBlock = cursor + 1
-  const toBlock = latest
-  const logs = await provider.getLogs({
-    address: FOUR_MAIN_CONTRACT,
-    topics: [FOUR_TOKEN_CREATE_TOPIC],
-    fromBlock,
-    toBlock,
-  })
+  await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
 
-  const iface = new Interface(FOUR_ABI as any)
-  const blockTs = new Map<number, number>()
+  const nowIso = new Date().toISOString()
   const items: Array<{
     chainId: string
     chainName: string
@@ -74,18 +81,15 @@ async function fetchFourMemeOnchainNewTokens() {
     priceChange24h: string | null
   }> = []
 
-  for (const lg of logs) {
-    const parsed = iface.parseLog({ topics: [...lg.topics], data: lg.data })
-    if (!parsed || parsed.name !== 'TokenCreate') continue
-    const token = String(parsed.args.token ?? '').toLowerCase()
-    const symbol = String(parsed.args.symbol ?? '').trim() || '—'
-    if (!token.startsWith('0x') || token.length !== 42) continue
-
-    let ts = blockTs.get(Number(lg.blockNumber))
-    if (!ts) {
-      const b = await provider.getBlock(lg.blockNumber)
-      ts = Number(b?.timestamp ?? Math.floor(Date.now() / 1000))
-      blockTs.set(Number(lg.blockNumber), ts)
+  for (const token of newTokens) {
+    let symbol = 'NEW'
+    try {
+      const erc20 = new Contract(token, ERC20_SYMBOL_ABI as any, provider)
+      const s = await erc20.symbol()
+      const t = String(s ?? '').trim()
+      if (t) symbol = t
+    } catch {
+      // 某些 token 可能未实现标准 symbol，忽略并用默认值
     }
 
     items.push({
@@ -99,12 +103,10 @@ async function fetchFourMemeOnchainNewTokens() {
       priceUsd: '0',
       fdvUsd: null,
       reserveUsd: '0',
-      poolCreatedAt: new Date((ts ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      poolCreatedAt: nowIso,
       priceChange24h: null,
     })
   }
-
-  await redis.set(FOUR_CURSOR_KEY, String(latest))
   return items
 }
 
