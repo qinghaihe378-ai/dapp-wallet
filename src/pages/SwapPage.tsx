@@ -159,7 +159,6 @@ export function SwapPage() {
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const [copiedHistoryId, setCopiedHistoryId] = useState<string | null>(null)
-  const [receiverAddress, setReceiverAddress] = useState('')
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null)
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState<string | null>(null)
@@ -643,11 +642,9 @@ export function SwapPage() {
   const maxSpendableAmount = Math.max(0, fromTokenBalanceNumber - gasReserveNative)
   const insufficientInputBalance = amountInNumber > (fromToken.isNative ? maxSpendableAmount : fromTokenBalanceNumber) + 1e-9
   const quoteExpired = liveQuote ? liveQuote.expiresAt < currentTime : false
-  const receiverAddressValid = /^0x[a-fA-F0-9]{40}$/.test(receiverAddress.trim())
   const canSubmit = Boolean(
     amountIn &&
     liveQuote &&
-    receiverAddressValid &&
     !quoteLoading &&
     !quoteError &&
     !quoteExpired &&
@@ -1139,18 +1136,6 @@ export function SwapPage() {
           </div>
         </div>
 
-        <div className="swap-receiver-row">
-          <label htmlFor="swap-receiver-input">接收地址</label>
-          <input
-            id="swap-receiver-input"
-            type="text"
-            value={receiverAddress}
-            onChange={(e) => setReceiverAddress(e.target.value)}
-            placeholder="请勿填写交易所地址"
-          />
-          <button type="button" aria-label="地址簿">👥</button>
-        </div>
-
         <div className="swap-estimate-grid">
           <div className="swap-estimate-row">
             <span>最优路由</span>
@@ -1199,8 +1184,6 @@ export function SwapPage() {
         >
           {!hasWallet
             ? '请先在钱包页创建或导入钱包'
-            : !receiverAddressValid
-              ? '请输入正确的接收地址'
             : loading
               ? executionStage === 'approving'
                 ? `授权 ${fromToken.symbol} 中…`
