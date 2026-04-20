@@ -2288,14 +2288,15 @@ button:disabled,
 
 .ave-tab {
   gap: 2px;
-  border-radius: 0;
-  color: #9ea6b5;
-  padding: 4px 0;
+  border-radius: 10px;
+  color: #a2acbc;
+  padding: 4px 0 3px;
+  transition: color .16s ease, background .16s ease;
 }
 
 .ave-tab.active {
-  background: transparent;
-  color: #4b8dff;
+  background: rgba(75, 141, 255, 0.08);
+  color: #63a4ff;
 }
 
 .ave-tab::after {
@@ -2305,6 +2306,8 @@ button:disabled,
 .ave-tab-label {
   font-size: 10px;
   line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: .01em;
 }
 
 .ave-tab-icon {
@@ -2314,6 +2317,8 @@ button:disabled,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  transition: transform .16s ease, background .16s ease, color .16s ease;
 }
 
 .ave-tab-icon-core,
@@ -2326,14 +2331,24 @@ button:disabled,
   width: 24px;
   height: 24px;
   stroke: currentColor;
-  stroke-width: 1.9;
+  stroke-width: 1.85;
   stroke-linecap: round;
   stroke-linejoin: round;
   overflow: visible;
+  fill: none;
 }
 
 .ave-tab.active .ave-tab-icon svg {
-  filter: drop-shadow(0 1px 4px rgba(75, 141, 255, 0.16));
+  filter: drop-shadow(0 1px 4px rgba(75, 141, 255, 0.2));
+}
+
+.ave-tab.active .ave-tab-icon {
+  background: rgba(75, 141, 255, 0.14);
+  transform: translateY(-1px);
+}
+
+.ave-tab:not(.active) .ave-tab-icon {
+  opacity: .92;
 }
 
 .ave-tab-icon-track .ave-tab-icon-core {
