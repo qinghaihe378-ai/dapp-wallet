@@ -66,6 +66,12 @@ const formatWan = (value: number) => {
   return value.toFixed(0)
 }
 
+const shortAddress = (addr: string) => {
+  const s = String(addr ?? '').trim()
+  if (!s.startsWith('0x') || s.length < 12) return '—'
+  return `${s.slice(0, 6)}...${s.slice(-4)}`
+}
+
 const chainToHoneypotId: Record<string, number> = {
   eth: 1,
   bsc: 56,
@@ -153,6 +159,11 @@ export function MarketDetailPage() {
 
   const securityAddress = dexTokenAddress ?? detailPlatformAddress
   const securityChain = dexItem?.chain ?? (detail?.asset_platform_id ? platformToChain[detail.asset_platform_id] : undefined) ?? null
+  const tokenContractLine = useMemo(() => {
+    if (!securityAddress) return '—'
+    const chain = securityChain ? securityChain.toUpperCase() : ''
+    return chain ? `${chain} · ${shortAddress(securityAddress)}` : shortAddress(securityAddress)
+  }, [securityAddress, securityChain])
 
   const detailVM = useMemo(() => {
     if (dexItem) {
@@ -643,7 +654,7 @@ export function MarketDetailPage() {
             )}
             <div className="ave-detail-token-copy">
               <div className="ave-detail-token-name">{detailVM.name}</div>
-              <div className="ave-detail-token-sub">0xb...777 · 16时40分</div>
+              <div className="ave-detail-token-sub">{tokenContractLine}</div>
             </div>
           </div>
           <div className="ave-detail-top-icons">
