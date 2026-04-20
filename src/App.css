@@ -1905,7 +1905,7 @@ button:disabled,
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #70b6ff, #5d74ff);
+  background: #fff;
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -1915,6 +1915,13 @@ button:disabled,
   flex: 0 0 auto;
   text-decoration: none;
   cursor: pointer;
+}
+
+.ave-home-avatar-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 999px;
 }
 
 .ave-back-btn {
