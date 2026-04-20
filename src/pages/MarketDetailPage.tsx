@@ -592,6 +592,13 @@ export function MarketDetailPage() {
 
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
+  const totalSupplyNum = totalSupply ? (Number.parseFloat(totalSupply) || 0) : 0
+  const derivedFourLiquidityUsd =
+    (detailVM?.marketCap ?? 0) > 0
+      ? Number(detailVM?.marketCap ?? 0)
+      : (detailVM?.price ?? 0) > 0 && totalSupplyNum > 0
+        ? Number(detailVM?.price ?? 0) * totalSupplyNum
+        : (volume24hValue > 0 ? volume24hValue : 0)
   const detailChangeTone = detailVM?.change24h != null && detailVM.change24h >= 0
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
@@ -607,16 +614,19 @@ export function MarketDetailPage() {
           dexId: 'four.meme',
           topSymbol: detailVM.symbol?.toUpperCase() ?? 'TOKEN',
           bottomSymbol: 'BNB',
-          topAmount: 0,
+          topAmount: totalSupplyNum > 0 ? totalSupplyNum : 0,
           bottomAmount: 0,
           feeLabel: '内盘',
-          liquidityUsd: Number(detailVM.marketCap ?? 0) || 0,
+          liquidityUsd: derivedFourLiquidityUsd,
           volume24h: Number(volume24hValue ?? 0) || 0,
+          topAmountText: totalSupplyNum > 0 ? undefined : '总量待同步',
+          bottomAmountText: 'BNB 同步中',
+          liquidityText: derivedFourLiquidityUsd > 0 ? undefined : '内盘同步中',
         },
       ]
     }
     return tokenPools
-  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue])
+  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
@@ -881,15 +891,15 @@ export function MarketDetailPage() {
                                 <span className="ave-pool-pair-bottom">{pool.bottomSymbol}</span>
                               </span>
                               <span className="ave-pool-amount-cell">
-                                <span>{formatTokenAmount(pool.topAmount)}</span>
-                                <span>{formatTokenAmount(pool.bottomAmount)}</span>
+                                <span>{(pool as any).topAmountText ?? formatTokenAmount(pool.topAmount)}</span>
+                                <span>{(pool as any).bottomAmountText ?? formatTokenAmount(pool.bottomAmount)}</span>
                               </span>
                               <span className="ave-pool-dex-cell">
                                 <span className="ave-pool-dex-badge">
                                   {icon ? <img src={icon} alt={pool.dexId} /> : <i>{pool.dexId.slice(0, 3).toUpperCase()}</i>}
                                 </span>
                               </span>
-                              <span>{formatCompact(pool.liquidityUsd)}</span>
+                              <span>{(pool as any).liquidityText ?? formatCompact(pool.liquidityUsd)}</span>
                             </button>
                           )
                         }) : <span className="trade-empty">暂无池子数据</span>}
