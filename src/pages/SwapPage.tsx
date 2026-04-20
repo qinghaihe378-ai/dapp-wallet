@@ -1223,13 +1223,27 @@ export function SwapPage() {
                   ? `${liveQuote.protocolLabel} 兑换`
                   : `一键兑换 ${fromToken.symbol}`}
         </button>
-      </div>
 
-      <div className="swap-bottom-row">
-        <button type="button" className="swap-bottom-action" onClick={() => setInfoOpen(true)}>滑点 ？</button>
-        <button type="button" className="swap-bottom-action swap-bottom-action-right" onClick={() => setSlippageOpen(true)}>
-          自动滑点({slippage}%) ⚙
-        </button>
+        <div className="swap-ave-meta">
+          <div className="swap-ave-meta-row">
+            <span>滑点容差</span>
+            <button type="button" className="swap-ave-meta-action" onClick={() => setSlippageOpen(true)}>
+              {slippage}% ⚙
+            </button>
+          </div>
+          <div className="swap-ave-meta-row">
+            <span>实时汇率</span>
+            <span>
+              {liveQuote
+                ? `1 ${fromToken.symbol} ≈ ${(Number(liveQuote.estimatedOut === '—' ? '0' : liveQuote.estimatedOut) / Math.max(amountInNumber, 1e-9)).toFixed(4)} ${toToken.symbol}`
+                : `1 ${fromToken.symbol} = -- ${toToken.symbol}`}
+            </span>
+          </div>
+          <div className="swap-ave-meta-row">
+            <span>兑换道</span>
+            <span>{liveQuote ? liveQuote.protocolLabel : '--'}</span>
+          </div>
+        </div>
       </div>
 
       <div className="swap-history-block ave-swap-v2-history">
