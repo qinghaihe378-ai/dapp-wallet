@@ -5,6 +5,7 @@ import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
 import { marketChainIdToWalletNetwork } from '../lib/marketChainMap'
 import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
+import fourLogo from '../assets/four-logo.svg'
 
 interface CoinDetail {
   id: string
@@ -84,7 +85,7 @@ const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
 }
 
 const DEX_ICON_MAP: Record<string, string> = {
-  'four.meme': 'https://four.meme/favicon.ico',
+  'four.meme': fourLogo,
   pancakeswap: 'https://pancakeswap.finance/favicon.ico',
   uniswap: 'https://app.uniswap.org/favicon.ico',
   sushiswap: 'https://www.sushi.com/favicon.ico',

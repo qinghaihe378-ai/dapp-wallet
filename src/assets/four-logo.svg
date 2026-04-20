@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="FOUR logo">
+  <defs>
+    <linearGradient id="four-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#89ff58"/>
+      <stop offset="100%" stop-color="#38d8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="32" fill="#05070b"/>
+  <g transform="translate(52 28)">
+    <path d="M46 134c-18 0-31-13-31-31V61c0-7 5-12 12-12s12 5 12 12v-27c0-7 5-12 12-12s12 5 12 12v23c0-7 5-12 12-12s12 5 12 12v11c0-7 5-12 12-12s12 5 12 12v18c0-7 5-12 12-12s12 5 12 12v28c0 31-25 56-56 56H46z" fill="url(#four-g)" stroke="#f5f7fb" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M39 168h82" stroke="#f5f7fb" stroke-width="8" stroke-linecap="round" opacity=".2"/>
+  </g>
+  <path d="M36 214l18-38h67l-5 12H72l-4 9h39l-5 11H63l-4 10h-23zm92 0l15-38h25l-11 27h36l-4 11h-61zm61 0l15-38h24l-15 38h-24z" fill="url(#four-g)"/>
+</svg>
