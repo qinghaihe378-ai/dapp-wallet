@@ -7,17 +7,14 @@ const KEY = 'clawdex:new-tokens:latest'
 const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
 const DEFAULT_TTL_SECONDS = 60
 const FOUR_KNOWN_TOKENS_KEY = 'clawdex:fourmeme:knownTokens'
+const FOUR_CURSOR_KEY = 'clawdex:fourmeme:cursor'
 
 const FOUR_MAIN_CONTRACT = '0x5c952063c7fc8610ffdb798152d69f0b9550762b'
-const FOUR_ABI = [
-  {
-    inputs: [],
-    name: 'getAllTokens',
-    outputs: [{ internalType: 'address[]', name: '', type: 'address[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-] as const
+// 通过实测主合约日志得到的“新币创建候选事件”topic（两种路径）
+const FOUR_CREATE_TOPICS = [
+  '0x0a5575b3648bae2210cee56bf33254cc1ddfbc7bf637c0af2ac18b14fb1bae19',
+  '0x7db52723a3b2cdd6164364b3b766e65e540d7be48ffa89582956d8eaebe62942',
+]
 
 const ERC20_SYMBOL_ABI = [
   {
@@ -34,40 +31,54 @@ function getBscRpcUrl() {
     process.env.BSC_RPC_URL ||
     process.env.RPC_BSC_URL ||
     process.env.BSC_RPC_HTTP ||
-    'https://bsc-dataseed.binance.org'
+    'https://bsc-rpc.publicnode.com'
   )
 }
 
 async function fetchFourMemeOnchainNewTokens() {
   const provider = new JsonRpcProvider(getBscRpcUrl(), 56)
-  const main = new Contract(FOUR_MAIN_CONTRACT, FOUR_ABI as any, provider)
-  const allTokensRaw = (await main.getAllTokens()) as string[]
-  const allTokens = (Array.isArray(allTokensRaw) ? allTokensRaw : [])
-    .map((a) => String(a).toLowerCase())
-    .filter((a) => a.startsWith('0x') && a.length === 42)
-
+  const latest = await provider.getBlockNumber()
+  const cursorRaw = await redis.get(FOUR_CURSOR_KEY)
   const knownRaw = await redis.get(FOUR_KNOWN_TOKENS_KEY)
-  if (!knownRaw) {
-    // 首次仅用于记录游标，但仍返回最近一批，避免前端空白
-    await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
+  let cursor = cursorRaw ? Number(cursorRaw) : NaN
+  if (!Number.isFinite(cursor)) {
+    cursor = Math.max(0, latest - 300)
   }
+  const fromBlock = Math.max(0, cursor + 1)
+  const toBlock = latest
+  if (toBlock < fromBlock) return []
 
   let knownTokens: string[] = []
-  if (knownRaw) {
-    try {
-      knownTokens = JSON.parse(knownRaw) as string[]
-    } catch {
-      knownTokens = []
-    }
+  try {
+    knownTokens = knownRaw ? (JSON.parse(knownRaw) as string[]) : []
+  } catch {
+    knownTokens = []
   }
   const knownSet = new Set((knownTokens ?? []).map((a) => String(a).toLowerCase()))
-  const newTokens = allTokens.filter((a) => !knownSet.has(a))
-  // 前端展示使用最近 120 个 token，保证 Four 标签稳定有数据
-  const recentTokens = allTokens.slice(Math.max(0, allTokens.length - 120))
-  const targetTokens = recentTokens.length ? recentTokens : newTokens
-  if (targetTokens.length === 0) return []
 
-  await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify(allTokens))
+  const logs = await provider.getLogs({
+    address: FOUR_MAIN_CONTRACT,
+    topics: [FOUR_CREATE_TOPICS],
+    fromBlock,
+    toBlock,
+  })
+
+  const tokensFromLogs: string[] = []
+  for (const lg of logs) {
+    const hex = String(lg.data ?? '').replace(/^0x/, '')
+    // data 至少含两个 32-byte slot：creator + token
+    if (hex.length < 128) continue
+    const word2 = hex.slice(64, 128)
+    const token = `0x${word2.slice(24)}`.toLowerCase()
+    if (token.startsWith('0x') && token.length === 42) {
+      tokensFromLogs.push(token)
+    }
+  }
+
+  const uniqueTokens = [...new Set(tokensFromLogs)]
+  const targetTokens = uniqueTokens.filter((a) => !knownSet.has(a))
+  await redis.set(FOUR_CURSOR_KEY, String(latest))
+  if (targetTokens.length === 0) return []
 
   const nowIso = new Date().toISOString()
   const items: Array<{
@@ -111,7 +122,9 @@ async function fetchFourMemeOnchainNewTokens() {
       poolCreatedAt: nowIso,
       priceChange24h: null,
     })
+    knownSet.add(token)
   }
+  await redis.set(FOUR_KNOWN_TOKENS_KEY, JSON.stringify([...knownSet].slice(-3000)))
   return items
 }
 
