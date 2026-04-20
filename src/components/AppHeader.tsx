@@ -6,11 +6,13 @@ import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { type MarketItem, searchByAddressOrQuery } from '../api/markets'
 import { getLongxiaIframeSrc } from '../lib/longxiaIframeSrc'
 import lobsterLogo from '../assets/lobster-logo.svg'
+import { useAppSettings } from './AppSettingsProvider'
 
 const NETWORKS: Network[] = ['mainnet', 'bsc', 'base']
 
 export function AppHeader() {
   const { network, switchNetwork, address } = useWallet()
+  const { language } = useAppSettings()
   const [showNet, setShowNet] = useState(false)
   const [netPos, setNetPos] = useState({ top: 0, left: 0 })
   const netBtnRef = useRef<HTMLButtonElement>(null)
@@ -152,7 +154,7 @@ export function AppHeader() {
   if (headerMode === 'home') {
     return (
       <header className="ave-header ave-header-home">
-        <Link to="/profile" className="ave-home-avatar" aria-label="个人中心" title="龙虾">
+        <Link to="/profile" className="ave-home-avatar" aria-label={language === 'en-US' ? 'Profile' : '个人中心'} title="龙虾">
           <img src={lobsterLogo} alt="龙虾" className="ave-home-avatar-logo" />
         </Link>
         <div className="ave-home-search-wrap" ref={searchRef}>
@@ -323,7 +325,7 @@ export function AppHeader() {
           <Link to="/" className="ave-back-btn" aria-label="返回">‹</Link>
         </div>
         <div className="ave-header-center">
-          <span className="ave-header-page">个人中心</span>
+          <span className="ave-header-page">{language === 'en-US' ? 'Profile' : '个人中心'}</span>
         </div>
         <div className="ave-header-right" />
       </header>

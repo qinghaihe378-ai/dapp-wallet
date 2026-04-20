@@ -48,6 +48,28 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme='light'] {
+  --bg: #f4f7fb;
+  --bg-elevated: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-soft: #eef3fb;
+  --bg-input: #ffffff;
+  --text: #334155;
+  --text-soft: #64748b;
+  --text-h: #0f172a;
+  --border: rgba(100, 116, 139, 0.22);
+  --border-strong: rgba(59, 130, 246, 0.34);
+  --code-bg: #e5edf9;
+  --accent: #3b82f6;
+  --accent-strong: #1d4ed8;
+  --accent-bg: rgba(59, 130, 246, 0.14);
+  --accent-border: rgba(59, 130, 246, 0.3);
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  color-scheme: light;
+}
+
 #root {
   width: 100%;
   max-width: 100vw;
@@ -74,6 +96,12 @@ body {
   background:
     radial-gradient(circle at top, rgba(124, 140, 255, 0.14), transparent 32%),
     linear-gradient(180deg, #090d18 0%, #070b14 100%);
+}
+
+:root[data-theme='light'] body {
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
 }
 
 h1,

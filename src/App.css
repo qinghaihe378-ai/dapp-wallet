@@ -195,6 +195,14 @@
   color: var(--danger);
 }
 
+.rise-green-up .up {
+  color: var(--danger);
+}
+
+.rise-green-up .down {
+  color: var(--success);
+}
+
 button,
 .btn-primary,
 .btn-secondary,
@@ -3186,6 +3194,19 @@ button:disabled,
 .home-token-badge.down,
 .market-watch-change.down {
   background: #ff5c6b;
+  color: #fff;
+}
+
+/* 红涨绿跌：开启后交换涨跌颜色 */
+.rise-green-up .home-token-badge.up,
+.rise-green-up .market-watch-change.up {
+  background: #ff5c6b;
+  color: #fff;
+}
+
+.rise-green-up .home-token-badge.down,
+.rise-green-up .market-watch-change.down {
+  background: #2ccf8c;
   color: #fff;
 }
 
@@ -6941,6 +6962,14 @@ button:disabled,
   color: #ff6a79;
 }
 
+.rise-green-up .ave-detail-change.up {
+  color: #ff6a79;
+}
+
+.rise-green-up .ave-detail-change.down {
+  color: #20d89a;
+}
+
 .ave-detail-price-right {
   min-width: 152px;
   display: flex;
@@ -8042,6 +8071,14 @@ button:disabled,
   background: linear-gradient(135deg, rgba(176, 42, 77, 0.92), rgba(101, 25, 45, 0.92));
 }
 
+.rise-green-up .ave-markets-v2 .market-watch-change.up {
+  background: linear-gradient(135deg, rgba(176, 42, 77, 0.92), rgba(101, 25, 45, 0.92));
+}
+
+.rise-green-up .ave-markets-v2 .market-watch-change.down {
+  background: linear-gradient(135deg, rgba(19, 167, 108, 0.92), rgba(8, 94, 64, 0.92));
+}
+
 .ave-detail-v2,
 .ave-detail-v2.ave-detail-shell {
   background: #111827;
@@ -8189,6 +8226,16 @@ button:disabled,
 .ave-home-v2 .home-token-badge.down {
   background: rgba(220, 38, 38, 0.2);
   color: #fca5a5;
+}
+
+.rise-green-up .ave-home-v2 .home-token-badge.up {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+}
+
+.rise-green-up .ave-home-v2 .home-token-badge.down {
+  background: rgba(22, 163, 74, 0.24);
+  color: #86efac;
 }
 
 .ave-home-v2-nav {

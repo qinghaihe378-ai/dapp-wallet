@@ -13,6 +13,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { AdminPage } from './pages/AdminPage'
 import { LongxiaEmbedPage } from './pages/LongxiaEmbedPage'
 import { useSystemConfig } from './hooks/useSystemConfig'
+import { AppSettingsProvider, useAppSettings } from './components/AppSettingsProvider'
 import './App.css'
 
 type BottomTabItem = {
@@ -97,6 +98,7 @@ function TabIcon({ name }: { name: string }) {
 
 function AppContent() {
   const { config: systemConfig } = useSystemConfig()
+  const { language } = useAppSettings()
   const location = useLocation()
   const isBot = location.pathname === '/bot'
   const isLobsterEmbed = location.pathname === '/lobster'
@@ -107,6 +109,21 @@ function AppContent() {
   const routeToggles = systemConfig?.ui?.routeToggles
   const dynamicTabs = (systemConfig?.ui?.bottomTabs && Array.isArray(systemConfig.ui.bottomTabs) ? systemConfig.ui.bottomTabs : tabs)
     .filter((tab) => tab && tab.enabled !== false)
+    .map((tab) => ({
+      ...tab,
+      label:
+        language === 'en-US'
+          ? tab.id === 'home'
+            ? 'Home'
+            : tab.id === 'market'
+              ? 'Market'
+              : tab.id === 'swap'
+                ? 'Trade'
+                : tab.id === 'wallet'
+                  ? 'Wallet'
+                  : String(tab.label)
+          : tab.label,
+    }))
   const hideNav = location.pathname === '/admin' || isMarketDetail
   const hideHeader = location.pathname === '/admin' || isLobsterEmbed || isMarketDetail
   return (
@@ -159,11 +176,13 @@ function AppContent() {
 function App() {
   return (
     <HashRouter>
-      <WalletProvider>
-        <div className="app ave-app">
-          <AppContent />
-        </div>
-      </WalletProvider>
+      <AppSettingsProvider>
+        <WalletProvider>
+          <div className="app ave-app">
+            <AppContent />
+          </div>
+        </WalletProvider>
+      </AppSettingsProvider>
     </HashRouter>
   )
 }

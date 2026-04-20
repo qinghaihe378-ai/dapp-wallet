@@ -4,13 +4,7 @@ import { useWallet } from '../components/WalletProvider'
 import { type ChainId, type MarketItem, COLLECTION_INTERVAL_MS, isContractAddress, searchByAddressOrQuery } from '../api/markets'
 import { usePageConfig } from '../hooks/usePageConfig'
 import { apiUrl } from '../lib/apiBase'
-
-function formatCompact(value: number) {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K`
-  return value.toFixed(2)
-}
+import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 
 const MARKET_SORT_KEY_PREFIX = 'marketSort'
 
@@ -48,6 +42,7 @@ function trustWalletLogoUrl(chain: string | undefined, id: string): string {
 
 export function MarketsPage() {
   const { network } = useWallet()
+  const { currencyUnit, redUpGreenDown } = useAppSettings()
   const { config } = usePageConfig('market')
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? ''
@@ -340,10 +335,16 @@ export function MarketsPage() {
                         </div>
                       </div>
                       <div className="market-watch-price">
-                        ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
-                        <div className="market-watch-price-sub">Vol {formatCompact(item.current_price * 125000)}</div>
+                        {formatPriceByCurrency(item.current_price, currencyUnit)}
+                        <div className="market-watch-price-sub">Vol {formatCurrencyCompact(item.current_price * 125000, currencyUnit)}</div>
                       </div>
-                      <div className={`market-watch-change ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                      <div
+                        className={`market-watch-change ${
+                          (item.price_change_percentage_24h ?? 0) >= 0
+                            ? (redUpGreenDown ? 'down' : 'up')
+                            : (redUpGreenDown ? 'up' : 'down')
+                        }`}
+                      >
                         {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
                         {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
                       </div>

@@ -5,6 +5,7 @@ import { COLLECTION_INTERVAL_MS } from '../api/markets'
 import { apiUrl } from '../lib/apiBase'
 import { usePageConfig } from '../hooks/usePageConfig'
 import { useSystemConfig } from '../hooks/useSystemConfig'
+import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 
 interface HomeItem {
   id: string
@@ -75,6 +76,7 @@ function mapNewTokenChain(raw: string | undefined): string {
 
 export function HomePage() {
   const { network } = useWallet()
+  const { currencyUnit, redUpGreenDown } = useAppSettings()
   const { config } = usePageConfig('home')
   const { config: systemConfig } = useSystemConfig()
   const homeQuickActionKey = `${HOME_QUICK_ACTION_KEY_PREFIX}:${network}`
@@ -334,7 +336,7 @@ export function HomePage() {
       <div className="home-price-ticker">
         {topTicker.map((item) => (
           <span key={`t-${item.label}`} className={(item.change ?? 0) >= 0 ? 'up' : 'down'}>
-            {item.label} {item.price == null ? '--' : `$${item.price < 1 ? item.price.toFixed(4) : item.price.toFixed(2)}`}
+            {item.label} {item.price == null ? '--' : formatPriceByCurrency(item.price, currencyUnit)}
           </span>
         ))}
       </div>
@@ -418,19 +420,25 @@ export function HomePage() {
                     <span className="home-token-sub-sep">/</span>
                     <span>
                       {activeSection === 'alpha'
-                        ? `Vol $${((item.volume_24h ?? 0) / 1e6).toFixed(2)}M`
+                        ? `Vol ${formatCurrencyCompact(item.volume_24h ?? 0, currencyUnit)}`
                         : activeSection === 'new'
-                        ? `Liq $${(item.market_cap / 1e6).toFixed(2)}M`
-                        : `$${(item.market_cap / 1e6).toFixed(2)}M`}
+                        ? `Liq ${formatCurrencyCompact(item.market_cap, currencyUnit)}`
+                        : formatCurrencyCompact(item.market_cap, currencyUnit)}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="home-token-side">
                 <span className="home-token-price">
-                  ${item.current_price < 1 ? item.current_price.toFixed(6) : item.current_price.toFixed(4)}
+                  {formatPriceByCurrency(item.current_price, currencyUnit)}
                 </span>
-                <span className={`home-token-badge ${(item.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+                <span
+                  className={`home-token-badge ${
+                    (item.price_change_percentage_24h ?? 0) >= 0
+                      ? (redUpGreenDown ? 'down' : 'up')
+                      : (redUpGreenDown ? 'up' : 'down')
+                  }`}
+                >
                   {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
                   {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
                 </span>
