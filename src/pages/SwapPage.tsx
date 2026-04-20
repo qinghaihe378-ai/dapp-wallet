@@ -1139,14 +1139,6 @@ export function SwapPage() {
           </div>
         </div>
 
-        <div className="swap-rate-note">
-          {liveQuote
-            ? (liveQuote.estimatedOut === '—'
-              ? `1 ${fromToken.symbol} ≈ — ${toToken.symbol}`
-              : `1 ${fromToken.symbol} ≈ ${(Number(liveQuote.estimatedOut) / Math.max(amountInNumber, 1e-9)).toFixed(6)} ${toToken.symbol}`)
-            : '输入数量后获取真实链上报价'}
-        </div>
-
         <div className="swap-receiver-row">
           <label htmlFor="swap-receiver-input">接收地址</label>
           <input

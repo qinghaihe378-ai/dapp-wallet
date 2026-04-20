@@ -8182,11 +8182,12 @@ button:disabled,
 
 /* ===== Swap 1:1 Ave Light Replica ===== */
 .ave-header-swap .ave-swap-top-tabs {
-  gap: 20px;
+  gap: 18px;
+  min-height: 36px;
 }
 
 .ave-header-swap .ave-swap-top-tabs .ave-header-tab {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   color: rgba(226, 236, 255, 0.68);
 }
@@ -8213,21 +8214,22 @@ button:disabled,
   background: #ffffff !important;
   color: #161b26;
   max-width: 100%;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .ave-swap-v2 .swap-mode-segment {
   background: #f4f6f9;
   border: 1px solid #edf1f5;
   border-radius: 12px;
-  padding: 4px;
+  padding: 5px;
 }
 
 .ave-swap-v2 .swap-mode-segment button {
   color: #6f7788;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+  height: 38px;
 }
 
 .ave-swap-v2 .swap-mode-segment .active {
@@ -8242,14 +8244,15 @@ button:disabled,
   border: 1px solid #eef2f7;
   border-radius: 14px;
   box-shadow: none;
-  padding: 8px;
+  padding: 10px;
 }
 
 .ave-swap-v2 .swap-lite-card {
   background: #ffffff;
   border: 1px solid #edf1f6;
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 12px 12px;
+  min-height: 146px;
 }
 
 .ave-swap-v2 .swap-lite-label-row {
@@ -8265,7 +8268,7 @@ button:disabled,
 
 .ave-swap-v2 .swap-token-main {
   color: #222a3a;
-  font-size: 38px;
+  font-size: 40px;
   line-height: 1.02;
 }
 
@@ -8279,29 +8282,29 @@ button:disabled,
 .ave-swap-v2 .swap-lite-input,
 .ave-swap-v2 .swap-lite-output {
   color: #b0b8c7;
-  font-size: 52px;
+  font-size: 50px;
   font-weight: 700;
 }
 
 .ave-swap-v2 .swap-lite-switch {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: #ffffff;
   border-color: #edf1f6;
   color: #6a7892;
-  margin-top: -5px;
-  margin-bottom: -5px;
+  margin-top: -7px;
+  margin-bottom: -7px;
 }
 
 .ave-swap-v2 .swap-receiver-row {
-  margin-top: 10px;
+  margin-top: 12px;
   border: 1px solid #edf1f6;
   border-radius: 10px;
-  height: 48px;
+  height: 46px;
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 42px;
+  grid-template-columns: 76px minmax(0, 1fr) 38px;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 10px;
   gap: 8px;
 }
 
@@ -8362,11 +8365,11 @@ button:disabled,
 
 .ave-swap-v2 .swap-one-click-btn {
   margin-top: 12px;
-  height: 50px;
+  height: 48px;
   border-radius: 8px;
   background: #e6e8eb;
   color: #97a0b0;
-  font-size: 33px;
+  font-size: 30px;
   font-weight: 700;
   box-shadow: none;
 }
@@ -8387,18 +8390,18 @@ button:disabled,
 }
 
 .ave-swap-v2 .swap-ave-meta {
-  margin-top: 12px;
+  margin-top: 10px;
   border-top: 1px solid #eef2f7;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .ave-swap-v2 .swap-ave-meta-row {
-  min-height: 28px;
+  min-height: 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #8f98aa;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .ave-swap-v2 .swap-ave-meta-row > span:last-child {
