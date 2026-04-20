@@ -2,7 +2,6 @@ import { useState } from 'react'
 
 export function PersonalCenterPage() {
   const [redGreenUp, setRedGreenUp] = useState(false)
-  const [fingerPay, setFingerPay] = useState(false)
 
   const renderArrow = () => <span className="ave-profile-arrow">›</span>
   const renderValue = (value: string) => <span className="ave-profile-value">{value}</span>
@@ -30,32 +29,12 @@ export function PersonalCenterPage() {
           </button>
         </div>
 
-        <div className="ave-profile-row">
-          <span className="ave-profile-label">指纹支付</span>
-          <button
-            type="button"
-            className={`ave-profile-toggle ${fingerPay ? 'active' : ''}`}
-            aria-pressed={fingerPay}
-            onClick={() => setFingerPay((v) => !v)}
-          >
-            <span />
-          </button>
-        </div>
-
         <button type="button" className="ave-profile-row">
           <span className="ave-profile-label">悬浮窗口</span>
           {renderArrow()}
         </button>
         <button type="button" className="ave-profile-row">
-          <span className="ave-profile-label">链节点管理</span>
-          {renderArrow()}
-        </button>
-        <button type="button" className="ave-profile-row">
           <span className="ave-profile-label">通知管理</span>
-          {renderArrow()}
-        </button>
-        <button type="button" className="ave-profile-row">
-          <span className="ave-profile-label">符文 & 铭文</span>
           {renderArrow()}
         </button>
         <button type="button" className="ave-profile-row">
@@ -71,10 +50,6 @@ export function PersonalCenterPage() {
             {renderValue('跟随系统')}
             {renderArrow()}
           </span>
-        </button>
-        <button type="button" className="ave-profile-row">
-          <span className="ave-profile-label">黑名单管理</span>
-          {renderArrow()}
         </button>
       </div>
 
