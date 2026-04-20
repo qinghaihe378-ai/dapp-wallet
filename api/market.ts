@@ -20,6 +20,7 @@ const SYSTEM_CONFIG_KEY = 'clawdex:systemConfig'
 const TOKEN_LIBRARY_KEY = 'clawdex:tokenLibrary'
 /** 手动热门未进榜单时，Dex 单价缓存（秒），多客户端共用，减轻 DexScreener 压力 */
 const MANUAL_SPOT_TTL_SEC = 20
+const REAL_ONCHAIN_ONLY = true
 
 function manualSpotRedisKey(ck: string) {
   return `clawdex:manualHotSpot:${ck}`
@@ -259,6 +260,21 @@ function sendMarketPayload(res: any, payload: MarketPayload) {
   res.status(200).json(payload)
 }
 
+function normalizeRealOnchainItems(items: MarketItem[]): MarketItem[] {
+  const byCk = new Map<string, MarketItem>()
+  for (const item of items) {
+    const ck = canonicalMergeKey(item.id, item.chain)
+    if (!ck) continue
+    if (!Number.isFinite(item.current_price) || item.current_price <= 0) continue
+    const prev = byCk.get(ck)
+    if (!prev || (item.market_cap ?? 0) > (prev.market_cap ?? 0)) {
+      const chain = ck.slice(0, ck.indexOf(':')) as ChainId
+      byCk.set(ck, { ...item, id: ck, chain })
+    }
+  }
+  return [...byCk.values()].sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0))
+}
+
 async function readCachedAll() {
   const keys = CHAINS.map((c) => keyFor(c))
   const cachedAll = await redis.mget(keys)
@@ -449,24 +465,21 @@ export default async function handler(req: any, res: any) {
         items: alphaItems,
       }
       await redis.set(ALPHA_CACHE_KEY, JSON.stringify(alphaPayload), 'EX', ttlSeconds)
-      const byChain = chain === 'all' ? alphaItems : alphaItems.filter((it) => it.chain === chain)
+      const normalized = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(alphaItems) : alphaItems
+      const byChain = chain === 'all' ? normalized : normalized.filter((it) => it.chain === chain)
       sendMarketPayload(res, { ...alphaPayload, chain, items: byChain } satisfies MarketPayload)
       return
     }
 
     if (!refresh) {
-      const manualItems = await getManualHotTokens()
       if (chain !== 'all') {
         const cached = await redis.get(keyFor(chain))
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
           const age = Date.now() - (payload.updatedAt || 0)
           if (age >= 0 && age < freshMs) {
-            const manualSlice = manualItems.filter((x) => x.chain === chain)
-            const cachedList = payload.items ?? []
-            let merged = mergeManualItems(cachedList, manualSlice)
-            merged = await enrichManualOnlyPrices(merged, manualSlice, cachedList)
-            sendMarketPayload(res, { ...payload, items: merged })
+            const realItems = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(payload.items ?? []) : (payload.items ?? [])
+            sendMarketPayload(res, { ...payload, items: realItems })
             return
           }
         }
@@ -474,9 +487,8 @@ export default async function handler(req: any, res: any) {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         const age = Date.now() - (updatedAt || 0)
         if (okCount === CHAINS.length && age >= 0 && age < freshMs) {
-          let merged = mergeManualItems(allItems, manualItems)
-          merged = await enrichManualOnlyPrices(merged, manualItems, allItems)
-          sendMarketPayload(res, { updatedAt, provider, chain: 'all', items: merged } satisfies MarketPayload)
+          const realItems = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(allItems) : allItems
+          sendMarketPayload(res, { updatedAt, provider, chain: 'all', items: realItems } satisfies MarketPayload)
           return
         }
       }
@@ -484,9 +496,17 @@ export default async function handler(req: any, res: any) {
 
     // 缓存缺失或强制刷新：优先拉链上 Dex 行情，按链缓存各 N 个
     try {
+      const effectiveToggles = REAL_ONCHAIN_ONLY
+        ? {
+            ...(sysCfg.market?.sourceToggles ?? {}),
+            coinGecko: false,
+            coinPaprika: false,
+            coinCap: false,
+          }
+        : sysCfg.market?.sourceToggles
       const { data, provider } = await fetchOnchainMarketsWithFallback(800, 1, {
         retries: Math.max(1, Number(sysCfg.market?.retries ?? 1)),
-        sourceToggles: sysCfg.market?.sourceToggles,
+        sourceToggles: effectiveToggles,
         birdeyeApiKey: String(sysCfg.apiKeys?.birdeyeApiKey ?? '').trim() || undefined,
       })
       const grouped = groupByChain(data)
@@ -494,36 +514,29 @@ export default async function handler(req: any, res: any) {
       const writes: Array<Promise<unknown>> = []
       const byChain = new Map<ChainId, MarketItem[]>()
       for (const c of CHAINS) {
-        const items = (grouped.get(c) ?? []).slice(0, 250)
+        const items = (REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(grouped.get(c) ?? []) : (grouped.get(c) ?? [])).slice(0, 250)
         byChain.set(c, items)
         const payload: MarketPayload = { updatedAt: now, provider, chain: c, items }
         writes.push(redis.set(keyFor(c), JSON.stringify(payload), 'EX', ttlSeconds))
       }
       await Promise.allSettled(writes)
 
-      const manualItems = await getManualHotTokens()
-
       if (chain === 'all') {
         const flat = CHAINS.flatMap((c) => byChain.get(c) ?? [])
-        let items = mergeManualItems(flat, manualItems)
-        items = await enrichManualOnlyPrices(items, manualItems, flat)
+        const items = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(flat) : flat
         sendMarketPayload(res, { updatedAt: now, provider, chain: 'all', items } satisfies MarketPayload)
         return
       }
 
-      const manualSlice = manualItems.filter((x) => x.chain === chain)
       const chainList = byChain.get(chain) ?? []
-      let chainItems = mergeManualItems(chainList, manualSlice)
-      chainItems = await enrichManualOnlyPrices(chainItems, manualSlice, chainList)
+      const chainItems = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(chainList) : chainList
       sendMarketPayload(res, { updatedAt: now, provider, chain, items: chainItems } satisfies MarketPayload)
     } catch (e) {
       // 第三方 API 失败：尽量返回 Redis 里的旧缓存，不让前端一直报“加载失败”
       if (chain === 'all') {
         const { okCount, provider, updatedAt, allItems } = await readCachedAll()
         if (okCount > 0) {
-          const manualItems = await getManualHotTokens()
-          let items = mergeManualItems(allItems, manualItems)
-          items = await enrichManualOnlyPrices(items, manualItems, allItems)
+          const items = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(allItems) : allItems
           sendMarketPayload(res, {
             updatedAt,
             provider: `${provider} (stale)`,
@@ -536,11 +549,8 @@ export default async function handler(req: any, res: any) {
         const cached = await redis.get(keyFor(chain))
         if (cached) {
           const payload = JSON.parse(cached) as MarketPayload
-          const manualItems = await getManualHotTokens()
-          const manualSlice = manualItems.filter((x) => x.chain === chain)
           const cachedList = payload.items ?? []
-          let merged = mergeManualItems(cachedList, manualSlice)
-          merged = await enrichManualOnlyPrices(merged, manualSlice, cachedList)
+          const merged = REAL_ONCHAIN_ONLY ? normalizeRealOnchainItems(cachedList) : cachedList
           sendMarketPayload(res, {
             ...payload,
             provider: `${payload.provider} (stale)`,
