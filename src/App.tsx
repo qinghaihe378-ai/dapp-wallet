@@ -103,6 +103,7 @@ function AppContent() {
   const isMarketDetail = /^\/market\/[^/]+$/.test(location.pathname)
   const isMarketList = location.pathname === '/market'
   const isSwapPage = location.pathname === '/swap'
+  const isProfilePage = location.pathname === '/profile'
   const routeToggles = systemConfig?.ui?.routeToggles
   const dynamicTabs = (systemConfig?.ui?.bottomTabs && Array.isArray(systemConfig.ui.bottomTabs) ? systemConfig.ui.bottomTabs : tabs)
     .filter((tab) => tab && tab.enabled !== false)
@@ -117,6 +118,7 @@ function AppContent() {
           (isBot ? ' app-main-bot' : '') +
           (isMarketList ? ' app-main-market' : '') +
           (isSwapPage ? ' app-main-swap' : '') +
+          (isProfilePage ? ' app-main-profile' : '') +
           (isLobsterEmbed ? ' app-main-longxia-embed' : '') +
           (isMarketDetail ? ' app-main-market-detail' : '')
         }

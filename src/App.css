@@ -32,6 +32,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* 个人中心：去掉左右内边距，列表行铺满全宽 */
+.ave-app .app-main.app-main-profile {
+  padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
+}
+
 /* 站内嵌入龙虾 iframe：减少内边距，让 iframe 尽量占满可视区 */
 .ave-app .app-main.app-main-longxia-embed {
   display: flex;
@@ -6177,7 +6182,8 @@ button:disabled,
 
 /* 个人中心：AVE 设置页样式 */
 .ave-profile-ave-shell {
-  margin: 0 -16px;
+  margin: 0;
+  width: 100%;
   min-height: calc(100svh - 56px - var(--bottom-nav-h) - var(--safe-bottom));
   padding: 0 0 calc(10px + var(--safe-bottom));
   background: linear-gradient(180deg, #111926, #101722);
