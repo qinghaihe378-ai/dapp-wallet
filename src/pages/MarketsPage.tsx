@@ -259,7 +259,6 @@ export function MarketsPage() {
                   <button type="button" className={sourceTab === 'new' ? 'active' : ''} onClick={() => setSourceTab('new')}>新开盘</button>
                   <button type="button" className={sourceTab === 'four' ? 'active' : ''} onClick={() => setSourceTab('four')}>Four.meme</button>
                   <button type="button" className={sourceTab === 'flap' ? 'active' : ''} onClick={() => setSourceTab('flap')}>Flap</button>
-                  <span className="market-source-split" />
                   <button type="button" className={rankTab === 'gain' ? 'active' : ''} onClick={() => setRankTab('gain')}>涨幅榜</button>
                   <button type="button" className={rankTab === 'included' ? 'active' : ''} onClick={() => setRankTab('included')}>收录榜</button>
                   <button type="button" className={rankTab === 'loss' ? 'active' : ''} onClick={() => setRankTab('loss')}>跌幅榜</button>

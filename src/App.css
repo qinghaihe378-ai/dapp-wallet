@@ -6192,8 +6192,8 @@ button:disabled,
 
 .ave-profile-group {
   background: #131c2a;
-  border-top: 1px solid rgba(85, 100, 126, 0.28);
-  border-bottom: 1px solid rgba(85, 100, 126, 0.28);
+  border-top: 1px solid rgba(85, 100, 126, 0.18);
+  border-bottom: 1px solid rgba(85, 100, 126, 0.18);
 }
 
 .ave-profile-group-secondary {
@@ -6210,7 +6210,7 @@ button:disabled,
   padding: 0 16px;
   box-sizing: border-box;
   border: 0;
-  border-bottom: 1px solid rgba(76, 90, 116, 0.24);
+  border-bottom: 1px solid rgba(76, 90, 116, 0.16);
   background: #131c2a;
   text-align: left;
 }
@@ -7939,14 +7939,6 @@ button:disabled,
 }
 
 .ave-markets-v2 .market-sort-row > button {
-  flex: 0 0 auto;
-}
-
-.market-source-split {
-  width: 1px;
-  height: 16px;
-  background: rgba(94, 114, 145, 0.55);
-  margin: 0 4px;
   flex: 0 0 auto;
 }
 
