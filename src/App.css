@@ -22,11 +22,11 @@
 /* 行情页：使用整屏深色背景，并把内容高度固定到可视区 */
 .ave-app .app-main.app-main-market {
   padding: 0 0 calc(var(--bottom-nav-h) + var(--safe-bottom));
-  background: #101722;
+  background: transparent;
 }
 
 :root[data-theme='light'] .ave-app .app-main.app-main-market {
-  background: #eef3fb;
+  background: transparent;
 }
 
 /* 交易页：首屏固定，不让整页再二次下拉 */
@@ -7962,6 +7962,21 @@ button:disabled,
   border: 1px solid rgba(41, 55, 77, 0.7);
   border-radius: 12px;
   box-shadow: none;
+}
+
+/* 行情/钱包页跟首页统一：使用首页背景框架色 */
+.ave-markets-v2,
+.ave-wallet-v2 {
+  background: transparent !important;
+}
+
+.ave-markets-v2 .market-panel,
+.ave-wallet-v2 .wallet-unified-card,
+.ave-wallet-v2 .wallet-hero-card,
+.ave-wallet-v2 .wallet-assets-section {
+  background: transparent !important;
+  border-color: rgba(31, 41, 55, 0.85) !important;
+  box-shadow: none !important;
 }
 
 .ave-markets-v2 .ave-markets-v2-list {
