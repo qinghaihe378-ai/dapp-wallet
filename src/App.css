@@ -2343,12 +2343,31 @@ button:disabled,
 }
 
 .ave-tab.active .ave-tab-icon {
-  background: rgba(75, 141, 255, 0.14);
+  background: linear-gradient(160deg, rgba(91, 140, 255, 0.24), rgba(35, 214, 196, 0.2));
   transform: translateY(-1px);
 }
 
 .ave-tab:not(.active) .ave-tab-icon {
   opacity: .92;
+}
+
+/* 底栏品牌双色：主色 + 辅色 */
+.ave-tab.active .ave-tab-icon svg path:nth-of-type(odd),
+.ave-tab.active .ave-tab-icon svg rect:nth-of-type(odd),
+.ave-tab.active .ave-tab-icon svg circle:nth-of-type(odd) {
+  stroke: #63a4ff;
+}
+
+.ave-tab.active .ave-tab-icon svg path:nth-of-type(even),
+.ave-tab.active .ave-tab-icon svg rect:nth-of-type(even),
+.ave-tab.active .ave-tab-icon svg circle:nth-of-type(even) {
+  stroke: #28d6c2;
+}
+
+.ave-tab.active .ave-tab-icon svg path:nth-of-type(1),
+.ave-tab.active .ave-tab-icon svg rect:nth-of-type(1),
+.ave-tab.active .ave-tab-icon svg circle:nth-of-type(1) {
+  fill: rgba(99, 164, 255, 0.14);
 }
 
 .ave-tab-icon-track .ave-tab-icon-core {
