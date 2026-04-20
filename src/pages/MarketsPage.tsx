@@ -402,7 +402,7 @@ export function MarketsPage() {
                           }}
                         />
                         <div>
-                          <div className="market-watch-name">{item.name?.trim() || item.symbol?.toUpperCase() || item.symbol}</div>
+                          <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
                           <div className="market-watch-sub">
                             <span>{item.symbol.toUpperCase()}/{String((item as any).quoteSymbol ?? 'USDC').toUpperCase()}</span>
                           </div>
