@@ -26,11 +26,7 @@ const HOME_FILTER_KEY_PREFIX = 'homeActiveFilter'
 const HOME_SECTION_KEY_PREFIX = 'homeActiveSection'
 const HOME_MAX_VISIBLE_TOKENS = 60
 const TOP_TICKER_REFRESH_MS = 8_000
-
-function hasTokenAvatar(image: string | undefined | null): boolean {
-  if (image == null || typeof image !== 'string') return false
-  return image.trim().length > 0
-}
+const HOME_NEW_TOKENS_REFRESH_MS = 30_000
 
 function tokenFallbackSvgDataUrl(symbol: string) {
   const text = (symbol || '?').trim().slice(0, 4).toUpperCase()
@@ -144,8 +140,8 @@ export function HomePage() {
         .sort((a, b) => (Number((b as any).launched_at ?? 0) - Number((a as any).launched_at ?? 0)))
         .slice(0, HOME_MAX_VISIBLE_TOKENS)
     }
-    // 热门：仅展示有头像（非空 image）的代币
-    return next.filter((item) => hasTokenAvatar(item.image)).slice(0, HOME_MAX_VISIBLE_TOKENS)
+    // 热门：写死支持头像兜底，不再过滤无头像代币
+    return next.slice(0, HOME_MAX_VISIBLE_TOKENS)
   }, [activeSection, baseFiltered, homeSearch])
 
   useEffect(() => {
@@ -211,7 +207,8 @@ export function HomePage() {
     }
 
     void load()
-    const t = setInterval(load, COLLECTION_INTERVAL_MS)
+    const intervalMs = activeSection === 'new' ? HOME_NEW_TOKENS_REFRESH_MS : COLLECTION_INTERVAL_MS
+    const t = setInterval(load, intervalMs)
     return () => clearInterval(t)
   }, [activeSection])
 

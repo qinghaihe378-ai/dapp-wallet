@@ -14,6 +14,38 @@ function formatCompact(value: number) {
 
 const MARKET_SORT_KEY_PREFIX = 'marketSort'
 
+function tokenFallbackSvgDataUrl(symbol: string) {
+  const text = (symbol || '?').trim().slice(0, 4).toUpperCase()
+  const safe = encodeURIComponent(text)
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>` +
+    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#1d4ed8'/><stop offset='100%' stop-color='#0f172a'/></linearGradient></defs>` +
+    `<rect width='80' height='80' rx='40' fill='url(#g)'/>` +
+    `<text x='40' y='46' text-anchor='middle' font-size='22' font-family='Inter,Arial,sans-serif' font-weight='700' fill='#e5e7eb'>${safe}</text>` +
+    `</svg>`
+  return `data:image/svg+xml;utf8,${svg}`
+}
+
+function tokenAddressFromId(id: string): string {
+  const i = id.indexOf(':')
+  const addr = i >= 0 ? id.slice(i + 1) : id
+  return /^0x[a-fA-F0-9]{40}$/.test(addr) ? addr : ''
+}
+
+function trustWalletLogoUrl(chain: string | undefined, id: string): string {
+  const addr = tokenAddressFromId(id)
+  if (!addr) return ''
+  const key = String(chain ?? '').toLowerCase()
+  const folder =
+    key === 'bsc' ? 'smartchain' :
+    key === 'eth' ? 'ethereum' :
+    key === 'polygon' ? 'polygon' :
+    key === 'base' ? 'base' :
+    ''
+  if (!folder) return ''
+  return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${folder}/assets/${addr}/logo.png`
+}
+
 export function MarketsPage() {
   const { network } = useWallet()
   const { config } = usePageConfig('market')
@@ -279,7 +311,28 @@ export function MarketsPage() {
                   const innerLink = (
                     <>
                       <div className="market-watch-main">
-                        <img src={item.image} alt="" className="market-watch-icon" />
+                        <img
+                          src={item.image?.trim() ? item.image : tokenFallbackSvgDataUrl(item.symbol)}
+                          alt=""
+                          className="market-watch-icon"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            const t = e.currentTarget
+                            const stage = Number(t.dataset.fallbackStage ?? '0')
+                            if (stage === 0) {
+                              const tw = trustWalletLogoUrl(item.chain, item.id)
+                              if (tw) {
+                                t.dataset.fallbackStage = '1'
+                                t.src = tw
+                                return
+                              }
+                            }
+                            if (stage <= 1) {
+                              t.dataset.fallbackStage = '2'
+                              t.src = tokenFallbackSvgDataUrl(item.symbol)
+                            }
+                          }}
+                        />
                         <div>
                           <div className="market-watch-name">{item.symbol?.toUpperCase() ?? item.symbol}</div>
                           <div className="market-watch-sub">
