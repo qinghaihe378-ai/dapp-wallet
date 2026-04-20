@@ -7983,14 +7983,15 @@ button:disabled,
 }
 
 .ave-market-search-btn {
-  width: 60px;
-  height: 60px;
-  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
   border: none;
   background: transparent;
-  color: #d6deea;
-  font-size: 32px;
-  line-height: 1;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
 }
 
@@ -8400,13 +8401,18 @@ button:disabled,
 }
 
 .ave-header-swap .ave-market-search-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: rgba(241, 246, 255, 0.92);
-  font-size: 18px;
+  color: inherit;
+}
+
+.ave-market-search-btn .ave-home-search-icon {
+  color: #9aa6b5;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .ave-swap-v2 {

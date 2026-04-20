@@ -266,7 +266,9 @@ export function AppHeader() {
           <Link to="/new-tokens" className="ave-header-tab">扫链</Link>
           <button type="button" className="ave-header-tab">合约</button>
           <div className="ave-market-search-btn-wrap">
-            <button type="button" className="ave-market-search-btn" aria-label="搜索">⌕</button>
+            <button type="button" className="ave-market-search-btn" aria-label="搜索">
+              <span className="ave-home-search-icon" aria-hidden="true">⌕</span>
+            </button>
           </div>
           {marketDropdown}
         </div>
@@ -290,7 +292,9 @@ export function AppHeader() {
         <div className="ave-header-tabbar ave-swap-top-tabs">
           <button type="button" className="ave-header-tab active">兑换</button>
           <div className="ave-market-search-btn-wrap">
-            <button type="button" className="ave-market-search-btn" aria-label="搜索">⌕</button>
+            <button type="button" className="ave-market-search-btn" aria-label="搜索">
+              <span className="ave-home-search-icon" aria-hidden="true">⌕</span>
+            </button>
           </div>
         </div>
       </header>
