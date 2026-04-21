@@ -912,7 +912,7 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
-                    {effectiveIsFourSource && subTab === 'pool' && (
+                    {(shouldTryFourSnapshot || effectiveIsFourSource) && subTab === 'pool' && (
                       <div className="ave-four-pool-summary">
                         <div>
                           <span>币种数量</span>
@@ -936,7 +936,11 @@ export function MarketDetailPage() {
                         </div>
                         <div>
                           <span>流动性总额</span>
-                          <strong>{derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '内盘同步中'}</strong>
+                          <strong>
+                            {derivedFourLiquidityUsd > 0
+                              ? formatCompact(derivedFourLiquidityUsd)
+                              : ((detailVM?.marketCap ?? 0) > 0 ? formatCompact(detailVM.marketCap ?? 0) : '内盘同步中')}
+                          </strong>
                         </div>
                       </div>
                     )}

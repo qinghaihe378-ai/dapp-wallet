@@ -345,32 +345,31 @@ export function MarketsPage() {
           volume_24h: number
           quoteSymbol: string
         }> = {}
-        for (let i = 0; i < targets.length; i += 6) {
-          const batch = targets.slice(i, i + 6)
-          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(batch.join(','))}`), { cache: 'no-store' })
+        for (let i = 0; i < targets.length; i += 1) {
+          const address = targets[i]
+          const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(address)}`), { cache: 'no-store' })
           if (!res.ok) continue
           const json = (await res.json()) as {
-            snapshots?: Record<string, {
+            snapshot?: {
               quoteSymbol?: string
               priceChange24h?: number | null
               marketCapUsd?: number | null
               virtualLiquidityUsd?: number | null
               volumeUsd?: number | null
               totalSupply?: number | null
-            } | null>
+            } | null
           }
           if (cancelled) return
-          for (const [address, snapshot] of Object.entries(json.snapshots ?? {})) {
-            if (!snapshot) continue
-            const totalSupply = Number(snapshot.totalSupply ?? 0)
-            const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
-            mergedPatch[address.toLowerCase()] = {
-              current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
-              price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
-              market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
-              volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
-              quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
-            }
+          const snapshot = json.snapshot
+          if (!snapshot) continue
+          const totalSupply = Number(snapshot.totalSupply ?? 0)
+          const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+          mergedPatch[address.toLowerCase()] = {
+            current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
+            price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
+            market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
+            volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+            quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
           }
         }
         if (!cancelled && Object.keys(mergedPatch).length > 0) {
