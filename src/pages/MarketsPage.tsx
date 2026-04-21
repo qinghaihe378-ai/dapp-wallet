@@ -72,6 +72,13 @@ export function MarketsPage() {
   const [newOpenSeedItems, setNewOpenSeedItems] = useState<MarketItem[]>([])
   const [fourSeedItems, setFourSeedItems] = useState<MarketItem[]>([])
   const [flapSeedItems, setFlapSeedItems] = useState<MarketItem[]>([])
+  const [fourPriceMap, setFourPriceMap] = useState<Record<string, {
+    current_price: number
+    price_change_percentage_24h: number | null
+    market_cap: number
+    volume_24h: number
+    quoteSymbol: string
+  }>>({})
 
   const normalizeNewTokenChain = (raw: string): ChainId | null => {
     const c = String(raw).toLowerCase()
@@ -122,6 +129,62 @@ export function MarketsPage() {
     const t = setInterval(() => void loadMarkets(true), COLLECTION_INTERVAL_MS)
     return () => clearInterval(t)
   }, [])
+
+  useEffect(() => {
+    const targets = fourSeedItems
+      .map((item) => tokenAddressFromId(item.id).toLowerCase())
+      .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
+      .slice(0, 12)
+
+    if (targets.length === 0) {
+      setFourPriceMap({})
+      return
+    }
+
+    let cancelled = false
+    const loadFourSnapshots = async () => {
+      try {
+        const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(targets.join(','))}`), { cache: 'no-store' })
+        if (!res.ok) return
+        const json = (await res.json()) as {
+          snapshots?: Record<string, {
+            quoteSymbol?: string
+            priceChange24h?: number | null
+            marketCapUsd?: number | null
+            virtualLiquidityUsd?: number | null
+            volumeUsd?: number | null
+            totalSupply?: number | null
+          } | null>
+        }
+        if (cancelled) return
+        const next: Record<string, {
+          current_price: number
+          price_change_percentage_24h: number | null
+          market_cap: number
+          volume_24h: number
+          quoteSymbol: string
+        }> = {}
+        for (const [address, snapshot] of Object.entries(json.snapshots ?? {})) {
+          if (!snapshot) continue
+          const totalSupply = Number(snapshot.totalSupply ?? 0)
+          const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+          next[address.toLowerCase()] = {
+            current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
+            price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
+            market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
+            volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+            quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+          }
+        }
+        setFourPriceMap(next)
+      } catch (e) {
+        console.error('加载 four 列表补值失败', e)
+      }
+    }
+
+    void loadFourSnapshots()
+    return () => { cancelled = true }
+  }, [fourSeedItems])
 
   useEffect(() => {
     let cancelled = false
@@ -225,7 +288,20 @@ export function MarketsPage() {
 
     if (!useAddressResults) {
       if (sourceTab === 'four' && fourSeedItems.length > 0) {
-        next = [...fourSeedItems]
+        next = fourSeedItems.map((item) => {
+          const addr = tokenAddressFromId(item.id).toLowerCase()
+          const extra = fourPriceMap[addr]
+          if (!extra) return item
+          const merged: MarketItem = {
+            ...item,
+            current_price: extra.current_price,
+            price_change_percentage_24h: extra.price_change_percentage_24h,
+            market_cap: extra.market_cap,
+            volume_24h: extra.volume_24h,
+          }
+          ;(merged as any).quoteSymbol = extra.quoteSymbol
+          return merged
+        })
         usingSourceSeedOnly = true
       } else if (sourceTab === 'new' && newOpenSeedItems.length > 0) {
         next = [...newOpenSeedItems]
@@ -302,6 +378,7 @@ export function MarketsPage() {
     newOpenSeedItems,
     fourSeedItems,
     flapSeedItems,
+    fourPriceMap,
   ])
 
   const sections = useMemo(() => {
