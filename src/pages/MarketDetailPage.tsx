@@ -251,6 +251,7 @@ export function MarketDetailPage() {
     if (dexItem.chain === 'polygon') return 'polygon_pos'
     return dexItem.chain
   }, [dexItem])
+  const isFourSource = routeSource.includes('four') || String(dexItem?.dexId ?? '').toLowerCase().includes('four')
 
   useEffect(() => {
     if (!coinId) return
@@ -298,7 +299,7 @@ export function MarketDetailPage() {
   }, [coinId, isDexFormat, isCoingeckoFormat])
 
   useEffect(() => {
-    if (!routeSource.includes('four') || !dexTokenAddress) {
+    if (!isFourSource || !dexTokenAddress) {
       setFourSnapshot(null)
       return
     }
@@ -315,7 +316,7 @@ export function MarketDetailPage() {
     }
     void load()
     return () => { cancelled = true }
-  }, [routeSource, dexTokenAddress])
+  }, [isFourSource, dexTokenAddress])
 
   useEffect(() => {
     if (!dexScreenerChainId || !dexTokenAddress) return
@@ -655,7 +656,7 @@ export function MarketDetailPage() {
   const displayDexId = displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw
   const displayPools = useMemo(() => {
     if (tokenPools.length > 0) return tokenPools
-    if (routeSource.includes('four') && detailVM) {
+    if (isFourSource && detailVM) {
       return [
         {
           pairAddress: dexPairAddress ?? dexTokenAddress ?? coinId,
@@ -667,19 +668,28 @@ export function MarketDetailPage() {
           feeLabel: '内盘',
           liquidityUsd: derivedFourLiquidityUsd,
           volume24h: Number(volume24hValue ?? 0) || 0,
-          topAmountText: remainingSupplyNum > 0 ? undefined : (totalSupplyNum > 0 ? formatTokenAmount(soldSupplyNum) : '数量待同步'),
-          bottomAmountText: (bondingQuoteAmountNum > 0 || targetQuoteAmountNum > 0) ? undefined : `${quoteSymbol} 同步中`,
-          liquidityText: derivedFourLiquidityUsd > 0 ? undefined : '内盘同步中',
+          topAmountText:
+            remainingSupplyNum > 0
+              ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
+              : (totalSupplyNum > 0 ? `${formatTokenAmount(soldSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}` : '数量待同步'),
+          bottomAmountText:
+            bondingQuoteAmountNum > 0
+              ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
+              : (targetQuoteAmountNum > 0 ? `${formatTokenAmount(targetQuoteAmountNum)} ${quoteSymbol}` : `${quoteSymbol} 同步中`),
+          liquidityText: derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '内盘同步中',
         },
       ]
     }
     return tokenPools
-  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
+  }, [tokenPools, isFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [displayPools],
   )
+  const totalPoolsLiquidityLabel = isFourSource && derivedFourLiquidityUsd > 0
+    ? formatCompact(derivedFourLiquidityUsd)
+    : formatCompact(totalPoolsLiquidity)
 
   useEffect(() => {
     setTokenLogoSrc(detailVM?.image ?? '')
@@ -899,7 +909,7 @@ export function MarketDetailPage() {
                   <>
                     <div className="ave-liquidity-title">
                       <span>总流动性</span>
-                      <strong>{formatCompact(totalPoolsLiquidity)}</strong>
+                      <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
                     {subTab === 'pool' ? (
                       <div className="trade-recent-list">

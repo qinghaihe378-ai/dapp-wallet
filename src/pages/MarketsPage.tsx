@@ -131,10 +131,11 @@ export function MarketsPage() {
   }, [])
 
   useEffect(() => {
+    if (sourceTab !== 'four') return
     const targets = fourSeedItems
       .map((item) => tokenAddressFromId(item.id).toLowerCase())
       .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
-      .slice(0, 12)
+      .slice(0, 18)
 
     if (targets.length === 0) {
       setFourPriceMap({})
@@ -144,19 +145,6 @@ export function MarketsPage() {
     let cancelled = false
     const loadFourSnapshots = async () => {
       try {
-        const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(targets.join(','))}`), { cache: 'no-store' })
-        if (!res.ok) return
-        const json = (await res.json()) as {
-          snapshots?: Record<string, {
-            quoteSymbol?: string
-            priceChange24h?: number | null
-            marketCapUsd?: number | null
-            virtualLiquidityUsd?: number | null
-            volumeUsd?: number | null
-            totalSupply?: number | null
-          } | null>
-        }
-        if (cancelled) return
         const next: Record<string, {
           current_price: number
           price_change_percentage_24h: number | null
@@ -164,19 +152,36 @@ export function MarketsPage() {
           volume_24h: number
           quoteSymbol: string
         }> = {}
-        for (const [address, snapshot] of Object.entries(json.snapshots ?? {})) {
-          if (!snapshot) continue
-          const totalSupply = Number(snapshot.totalSupply ?? 0)
-          const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
-          next[address.toLowerCase()] = {
-            current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
-            price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
-            market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
-            volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
-            quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+
+        for (let i = 0; i < targets.length; i += 4) {
+          const batch = targets.slice(i, i + 4)
+          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(batch.join(','))}`), { cache: 'no-store' })
+          if (!res.ok) continue
+          const json = (await res.json()) as {
+            snapshots?: Record<string, {
+              quoteSymbol?: string
+              priceChange24h?: number | null
+              marketCapUsd?: number | null
+              virtualLiquidityUsd?: number | null
+              volumeUsd?: number | null
+              totalSupply?: number | null
+            } | null>
+          }
+          if (cancelled) return
+          for (const [address, snapshot] of Object.entries(json.snapshots ?? {})) {
+            if (!snapshot) continue
+            const totalSupply = Number(snapshot.totalSupply ?? 0)
+            const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+            next[address.toLowerCase()] = {
+              current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
+              price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
+              market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
+              volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+              quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+            }
           }
         }
-        setFourPriceMap(next)
+        if (!cancelled) setFourPriceMap(next)
       } catch (e) {
         console.error('加载 four 列表补值失败', e)
       }
@@ -184,7 +189,7 @@ export function MarketsPage() {
 
     void loadFourSnapshots()
     return () => { cancelled = true }
-  }, [fourSeedItems])
+  }, [fourSeedItems, sourceTab])
 
   useEffect(() => {
     let cancelled = false
