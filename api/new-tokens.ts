@@ -1,7 +1,6 @@
 import { Redis } from 'ioredis'
 import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens.js'
 import { Contract, JsonRpcProvider } from 'ethers'
-import { fetchFourMemeTokenSnapshot } from './_fourMeme'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 const KEY = 'clawdex:new-tokens:latest'
@@ -105,7 +104,7 @@ async function fetchFourMemeOnchainNewTokens() {
     if (seen.has(t)) continue
     seen.add(t)
     uniqueInOrder.push(t)
-    if (uniqueInOrder.length >= 40) break
+    if (uniqueInOrder.length >= 24) break
   }
   const targetTokens = uniqueInOrder.reverse()
   if (targetTokens.length === 0) return []
@@ -136,22 +135,10 @@ async function fetchFourMemeOnchainNewTokens() {
     for (const [token, meta] of results) metas.set(token, meta)
   }
 
-  const snapshots = new Map<string, Awaited<ReturnType<typeof fetchFourMemeTokenSnapshot>>>()
-  for (let i = 0; i < targetTokens.length; i += 6) {
-    const batch = targetTokens.slice(i, i + 6)
-    const results = await Promise.all(batch.map(async (token) => [token, await fetchFourMemeTokenSnapshot(token)] as const))
-    for (const [token, snapshot] of results) snapshots.set(token, snapshot)
-  }
-
   for (const token of targetTokens) {
     const meta = metas.get(token)
-    const snapshot = snapshots.get(token)
-    const symbol = snapshot?.symbol || meta?.symbol || `${token.slice(2, 6).toUpperCase()}`
-    const name = snapshot?.name || meta?.name || symbol
-    const totalSupply = snapshot?.totalSupply ?? null
-    const priceUsd = snapshot?.marketCapUsd != null && totalSupply && totalSupply > 0
-      ? snapshot.marketCapUsd / totalSupply
-      : 0
+    const symbol = meta?.symbol || `${token.slice(2, 6).toUpperCase()}`
+    const name = meta?.name || symbol
 
     items.push({
       chainId: 'bsc',
@@ -162,13 +149,13 @@ async function fetchFourMemeOnchainNewTokens() {
       poolName: name,
       poolAddress: token,
       dexId: 'four.meme',
-      quoteSymbol: snapshot?.quoteSymbol || 'BNB',
-      priceUsd: String(priceUsd || 0),
-      fdvUsd: snapshot?.marketCapUsd != null ? String(snapshot.marketCapUsd) : null,
-      reserveUsd: String(snapshot?.virtualLiquidityUsd ?? 0),
-      volumeUsd: String(snapshot?.volumeUsd ?? 0),
+      quoteSymbol: 'BNB',
+      priceUsd: '0',
+      fdvUsd: null,
+      reserveUsd: '0',
+      volumeUsd: '0',
       poolCreatedAt: nowIso,
-      priceChange24h: snapshot?.priceChange24h == null ? null : String(snapshot.priceChange24h),
+      priceChange24h: null,
     })
   }
   return items
