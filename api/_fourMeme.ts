@@ -1,7 +1,44 @@
 import { Redis } from 'ioredis'
 
-const redis = new Redis(process.env.REDIS_URL as string)
 const FOUR_SNAPSHOT_KEY_PREFIX = 'clawdex:fourmeme:snapshot:'
+
+let redis: Redis | null = null
+
+function getRedis() {
+  if (redis) return redis
+  const url = String(process.env.REDIS_URL ?? '').trim()
+  if (!url) return null
+  const client = new Redis(url, {
+    lazyConnect: true,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: 1,
+  })
+  client.on('error', () => {})
+  redis = client
+  return redis
+}
+
+async function safeRedisGet(key: string) {
+  const client = getRedis()
+  if (!client) return null
+  try {
+    if (client.status === 'wait') await client.connect()
+    return await client.get(key)
+  } catch {
+    return null
+  }
+}
+
+async function safeRedisSet(key: string, value: string, ttlSeconds: number) {
+  const client = getRedis()
+  if (!client) return
+  try {
+    if (client.status === 'wait') await client.connect()
+    await client.set(key, value, 'EX', ttlSeconds)
+  } catch {
+    // ignore cache write failure
+  }
+}
 
 export interface FourMemeSnapshot {
   tokenAddress: string
@@ -120,7 +157,7 @@ function parseFourMarkdown(text: string, tokenAddress: string): FourMemeSnapshot
 export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<FourMemeSnapshot | null> {
   const token = tokenAddress.toLowerCase()
   const cacheKey = `${FOUR_SNAPSHOT_KEY_PREFIX}${token}`
-  const cached = await redis.get(cacheKey)
+  const cached = await safeRedisGet(cacheKey)
   if (cached) {
     try {
       return JSON.parse(cached) as FourMemeSnapshot
@@ -140,7 +177,7 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
     const text = await response.text()
     const parsed = parseFourMarkdown(text, token)
     if (!parsed) return null
-    await redis.set(cacheKey, JSON.stringify(parsed), 'EX', 300)
+    await safeRedisSet(cacheKey, JSON.stringify(parsed), 300)
     return parsed
   } catch {
     return null

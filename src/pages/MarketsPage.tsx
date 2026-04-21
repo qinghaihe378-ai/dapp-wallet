@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
-import { type ChainId, type MarketItem, COLLECTION_INTERVAL_MS, isContractAddress, searchByAddressOrQuery } from '../api/markets'
+import { type ChainId, type MarketItem, COLLECTION_INTERVAL_MS, fetchDexTokenById, isContractAddress, searchByAddressOrQuery } from '../api/markets'
 import { usePageConfig } from '../hooks/usePageConfig'
 import { apiUrl } from '../lib/apiBase'
 import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
@@ -355,29 +355,46 @@ export function MarketsPage() {
         }> = {}
         for (let i = 0; i < targets.length; i += 1) {
           const address = targets[i]
-          const res = await fetch(`/api/four-token?address=${encodeURIComponent(address)}`, { cache: 'no-store' })
-          if (!res.ok) continue
-          const json = (await res.json()) as {
-            snapshot?: {
-              quoteSymbol?: string
-              priceChange24h?: number | null
-              marketCapUsd?: number | null
-              virtualLiquidityUsd?: number | null
-              volumeUsd?: number | null
-              totalSupply?: number | null
-            } | null
+          try {
+            const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(address)}`), { cache: 'no-store' })
+            if (res.ok) {
+              const json = (await res.json()) as {
+                snapshot?: {
+                  quoteSymbol?: string
+                  priceChange24h?: number | null
+                  marketCapUsd?: number | null
+                  virtualLiquidityUsd?: number | null
+                  volumeUsd?: number | null
+                  totalSupply?: number | null
+                } | null
+              }
+              if (cancelled) return
+              const snapshot = json.snapshot
+              if (snapshot) {
+                const totalSupply = Number(snapshot.totalSupply ?? 0)
+                const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+                mergedPatch[address.toLowerCase()] = {
+                  current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
+                  price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
+                  market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
+                  volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+                  quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+                }
+                continue
+              }
+            }
+          } catch {
+            // fall through to DexScreener fallback
           }
-          if (cancelled) return
-          const snapshot = json.snapshot
-          if (!snapshot) continue
-          const totalSupply = Number(snapshot.totalSupply ?? 0)
-          const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+
+          const dexItem = await fetchDexTokenById(`bsc:${address}`)
+          if (!dexItem) continue
           mergedPatch[address.toLowerCase()] = {
-            current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
-            price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
-            market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
-            volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
-            quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+            current_price: Number(dexItem.current_price ?? 0) || 0,
+            price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? null : Number(dexItem.price_change_percentage_24h),
+            market_cap: Number(dexItem.market_cap ?? 0) || 0,
+            volume_24h: Number(dexItem.volume_24h ?? 0) || 0,
+            quoteSymbol: 'BNB',
           }
         }
         if (!cancelled && Object.keys(mergedPatch).length > 0) {
@@ -385,6 +402,14 @@ export function MarketsPage() {
         }
       } catch (e) {
         console.error('加载 four 列表补值失败', e)
+      } finally {
+        if (!cancelled) {
+          setFourLoadingMap((prev) => {
+            const next = { ...prev }
+            targets.forEach((addr) => { delete next[addr] })
+            return next
+          })
+        }
       }
     }
 

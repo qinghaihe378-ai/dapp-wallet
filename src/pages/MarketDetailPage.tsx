@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
 import { KLineChart, type KLinePeriod } from '../components/KLineChart'
 import { type MarketItem, fetchDexTokenById } from '../api/markets'
+import { apiUrl } from '../lib/apiBase'
 import { marketChainIdToWalletNetwork } from '../lib/marketChainMap'
 import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 import fourLogo from '../assets/four-logo.svg'
@@ -86,6 +87,7 @@ const platformToChain: Record<string, keyof typeof chainToHoneypotId> = {
 
 const DEX_ICON_MAP: Record<string, string> = {
   four: fourLogo,
+  fourmeme: fourLogo,
   'four.meme': fourLogo,
   pancakeswap: 'https://pancakeswap.finance/favicon.ico',
   uniswap: 'https://app.uniswap.org/favicon.ico',
@@ -251,7 +253,10 @@ export function MarketDetailPage() {
     if (dexItem.chain === 'polygon') return 'polygon_pos'
     return dexItem.chain
   }, [dexItem])
-  const isFourSource = routeSource.includes('four') || String(dexItem?.dexId ?? '').toLowerCase().includes('four')
+  const isFourSource =
+    routeSource.includes('four') ||
+    String(dexItem?.dexId ?? '').toLowerCase().includes('four') ||
+    String(pairDexId ?? '').toLowerCase().includes('four')
   const shouldTryFourSnapshot = !!dexTokenAddress && ((dexItem?.chain ?? '') === 'bsc' || isFourSource)
 
   useEffect(() => {
@@ -307,7 +312,7 @@ export function MarketDetailPage() {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch(`/api/four-token?address=${encodeURIComponent(dexTokenAddress)}`)
+        const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(dexTokenAddress)}`))
         if (!res.ok) return
         const json = await res.json() as { snapshot?: typeof fourSnapshot }
         if (!cancelled) setFourSnapshot(json.snapshot ?? null)
@@ -639,9 +644,13 @@ export function MarketDetailPage() {
           ? Number(detailVM?.price ?? 0) * totalSupplyNum
           : (volume24hValue > 0 ? volume24hValue : 0)
   const remainingSupplyNum = fourSnapshot?.remainingSupply ?? 0
-  const soldSupplyNum = totalSupplyNum > 0
-    ? Math.max(0, totalSupplyNum * 0.8 - Math.max(0, remainingSupplyNum))
-    : 0
+  const hasFourReserveData =
+    fourSnapshot != null &&
+    (
+      remainingSupplyNum > 0 ||
+      (fourSnapshot?.bondingQuoteAmount ?? 0) > 0 ||
+      (fourSnapshot?.targetQuoteAmount ?? 0) > 0
+    )
   const bondingQuoteAmountNum = fourSnapshot?.bondingQuoteAmount ?? 0
   const targetQuoteAmountNum = fourSnapshot?.targetQuoteAmount ?? 0
   const quoteSymbol = fourSnapshot?.quoteSymbol || 'BNB'
@@ -664,15 +673,15 @@ export function MarketDetailPage() {
           dexId: 'four.meme',
           topSymbol: detailVM.symbol?.toUpperCase() ?? 'TOKEN',
           bottomSymbol: quoteSymbol,
-          topAmount: remainingSupplyNum > 0 ? remainingSupplyNum : soldSupplyNum,
+          topAmount: remainingSupplyNum > 0 ? remainingSupplyNum : 0,
           bottomAmount: bondingQuoteAmountNum > 0 ? bondingQuoteAmountNum : targetQuoteAmountNum,
           feeLabel: '内盘',
           liquidityUsd: derivedFourLiquidityUsd,
           volume24h: Number(volume24hValue ?? 0) || 0,
           topAmountText:
-            remainingSupplyNum > 0
+            hasFourReserveData && remainingSupplyNum >= 0
               ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
-              : (totalSupplyNum > 0 ? `${formatTokenAmount(soldSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}` : '数量待同步'),
+              : '数量待同步',
           bottomAmountText:
             bondingQuoteAmountNum > 0
               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
@@ -682,7 +691,7 @@ export function MarketDetailPage() {
       ]
     }
     return tokenPools
-  }, [tokenPools, effectiveIsFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
+  }, [tokenPools, effectiveIsFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, derivedFourLiquidityUsd, remainingSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol, hasFourReserveData])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
@@ -917,11 +926,9 @@ export function MarketDetailPage() {
                         <div>
                           <span>币种数量</span>
                           <strong>
-                            {remainingSupplyNum > 0
+                            {hasFourReserveData
                               ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
-                              : (totalSupplyNum > 0
-                                  ? `${formatTokenAmount(soldSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
-                                  : '数量待同步')}
+                              : '数量待同步'}
                           </strong>
                         </div>
                         <div>

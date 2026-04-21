@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createChart, CandlestickSeries, LineSeries, CrosshairMode, type IChartApi, type ISeriesApi, type CandlestickData, type UTCTimestamp, type LineData } from 'lightweight-charts'
+import { apiUrl } from '../lib/apiBase'
 
 export type KLinePeriod = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w'
 
@@ -137,7 +138,7 @@ export function KLineChart({ syntheticData, period = '1h', geckoPool, dexScreene
           aggregate: String(aggregate),
           limit: String(limit),
         })
-        const r = await fetch(`/api/ohlcv?${qs.toString()}`)
+        const r = await fetch(apiUrl(`/api/ohlcv?${qs.toString()}`))
         if (!r.ok) return
         const json = (await r.json()) as {
           ok?: boolean
