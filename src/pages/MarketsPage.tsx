@@ -347,7 +347,7 @@ export function MarketsPage() {
         }> = {}
         for (let i = 0; i < targets.length; i += 1) {
           const address = targets[i]
-          const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(address)}`), { cache: 'no-store' })
+          const res = await fetch(`/api/four-token?address=${encodeURIComponent(address)}`, { cache: 'no-store' })
           if (!res.ok) continue
           const json = (await res.json()) as {
             snapshot?: {
