@@ -1,6 +1,13 @@
 import { Redis } from 'ioredis'
+import { JsonRpcProvider } from 'ethers'
 
 const FOUR_SNAPSHOT_KEY_PREFIX = 'clawdex:fourmeme:snapshot:'
+const FOUR_PROXY_CONTRACT = '0x5c952063c7fc8610ffdb798152d69f0b9550762b'
+const FOUR_TRADE_TOPICS = [
+  '0x0a5575b3648bae2210cee56bf33254cc1ddfbc7bf637c0af2ac18b14fb1bae19',
+  '0x7db52723a3b2cdd6164364b3b766e65e540d7be48ffa89582956d8eaebe62942',
+]
+const FOUR_RESERVED_SUPPLY = 200_000_000
 
 let redis: Redis | null = null
 
@@ -37,6 +44,81 @@ async function safeRedisSet(key: string, value: string, ttlSeconds: number) {
     await client.set(key, value, 'EX', ttlSeconds)
   } catch {
     // ignore cache write failure
+  }
+}
+
+let bscProvider: JsonRpcProvider | null = null
+
+function getBscRpcUrl() {
+  return (
+    process.env.BSC_RPC_URL ||
+    process.env.RPC_BSC_URL ||
+    process.env.BSC_RPC_HTTP ||
+    'https://bsc-rpc.publicnode.com'
+  )
+}
+
+function getBscProvider() {
+  if (bscProvider) return bscProvider
+  bscProvider = new JsonRpcProvider(getBscRpcUrl(), 56)
+  return bscProvider
+}
+
+function parseWordAmount(raw: string) {
+  if (!raw) return 0
+  const n = BigInt(`0x${raw}`)
+  return Number(n) / 1e18
+}
+
+async function fetchFourMemeOnchainState(tokenAddress: string) {
+  const provider = getBscProvider()
+  const tokenNeedle = tokenAddress.toLowerCase().replace(/^0x/, '')
+  const latest = await provider.getBlockNumber()
+
+  for (let start = latest - 50_000; start > Math.max(0, latest - 400_000); start -= 50_000) {
+    const logs = await provider.getLogs({
+      address: FOUR_PROXY_CONTRACT,
+      topics: [FOUR_TRADE_TOPICS],
+      fromBlock: Math.max(0, start),
+      toBlock: Math.min(latest, start + 49_999),
+    })
+
+    for (let i = logs.length - 1; i >= 0; i -= 1) {
+      const log = logs[i]
+      const haystack = `${log.data}${log.topics.join('')}`.toLowerCase()
+      if (!haystack.includes(tokenNeedle)) continue
+
+      const hex = log.data.replace(/^0x/, '')
+      if (hex.length < 64 * 8) continue
+      const words = Array.from({ length: 8 }, (_, index) => hex.slice(index * 64, (index + 1) * 64))
+      const remainingSupply = parseWordAmount(words[6])
+      const bondingQuoteAmount = parseWordAmount(words[7])
+      const priceQuote = parseWordAmount(words[2])
+      const progressPct = 100 - ((remainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
+
+      return {
+        remainingSupply,
+        bondingQuoteAmount,
+        priceQuote,
+        progressPct: Math.max(0, Math.min(100, progressPct)),
+        latestTradeBlock: log.blockNumber,
+        latestTradeTx: log.transactionHash,
+      }
+    }
+  }
+
+  return null
+}
+
+function mergeFourSnapshotWithOnchain(snapshot: FourMemeSnapshot, onchain: Awaited<ReturnType<typeof fetchFourMemeOnchainState>>): FourMemeSnapshot {
+  if (!onchain) return snapshot
+  return {
+    ...snapshot,
+    priceQuote: onchain.priceQuote > 0 ? onchain.priceQuote : snapshot.priceQuote,
+    priceQuoteText: onchain.priceQuote > 0 ? onchain.priceQuote.toString() : snapshot.priceQuoteText,
+    remainingSupply: onchain.remainingSupply > 0 ? onchain.remainingSupply : snapshot.remainingSupply,
+    bondingQuoteAmount: onchain.bondingQuoteAmount > 0 ? onchain.bondingQuoteAmount : snapshot.bondingQuoteAmount,
+    progressPct: onchain.progressPct,
   }
 }
 
@@ -160,7 +242,9 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
   const cached = await safeRedisGet(cacheKey)
   if (cached) {
     try {
-      return JSON.parse(cached) as FourMemeSnapshot
+      const parsed = JSON.parse(cached) as FourMemeSnapshot
+      const onchain = await fetchFourMemeOnchainState(token).catch(() => null)
+      return mergeFourSnapshotWithOnchain(parsed, onchain)
     } catch {
       // ignore invalid cache
     }
@@ -178,7 +262,8 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
     const parsed = parseFourMarkdown(text, token)
     if (!parsed) return null
     await safeRedisSet(cacheKey, JSON.stringify(parsed), 300)
-    return parsed
+    const onchain = await fetchFourMemeOnchainState(token).catch(() => null)
+    return mergeFourSnapshotWithOnchain(parsed, onchain)
   } catch {
     return null
   } finally {
