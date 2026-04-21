@@ -111,6 +111,58 @@ export function MarketsPage() {
     return [...byKey.values()]
   }
 
+  const loadFourSnapshotBatch = async (addresses: string[]) => {
+    const out: Record<string, {
+      current_price: number
+      price_change_percentage_24h: number | null
+      market_cap: number
+      volume_24h: number
+      quoteSymbol: string
+    }> = {}
+    const chunkSize = 12
+    for (let i = 0; i < addresses.length; i += chunkSize) {
+      const chunk = addresses.slice(i, i + chunkSize)
+      if (chunk.length === 0) continue
+      try {
+        const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(chunk.join(','))}`), { cache: 'no-store' })
+        if (!res.ok) continue
+        const json = (await res.json()) as {
+          snapshots?: Record<string, {
+            quoteSymbol?: string
+            priceChange24h?: number | null
+            marketCapUsd?: number | null
+            currentPriceUsd?: number | null
+            virtualLiquidityUsd?: number | null
+            volumeUsd?: number | null
+            totalSupply?: number | null
+          } | null>
+        }
+        for (const address of chunk) {
+          const snapshot = json.snapshots?.[address.toLowerCase()] ?? null
+          if (!snapshot) continue
+          const currentPriceUsd =
+            Number(snapshot.currentPriceUsd ?? 0) ||
+            (() => {
+              const totalSupply = Number(snapshot.totalSupply ?? 0)
+              const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
+              return marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
+            })()
+          if (currentPriceUsd <= 0) continue
+          out[address.toLowerCase()] = {
+            current_price: currentPriceUsd,
+            price_change_percentage_24h: snapshot.priceChange24h == null ? 0 : Number(snapshot.priceChange24h),
+            market_cap: Number(snapshot.virtualLiquidityUsd ?? snapshot.marketCapUsd ?? 0) || 0,
+            volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+            quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+          }
+        }
+      } catch {
+        // ignore batch failure and keep fallback path
+      }
+    }
+    return out
+  }
+
   const loadMarkets = async (silent = false) => {
     try {
       if (!silent) setLoading(true)
@@ -177,6 +229,34 @@ export function MarketsPage() {
           if (dex.includes('four')) fourSeeds.push(seed)
           if (dex.includes('flap')) flap.add(key)
           if (dex.includes('flap')) flapSeeds.push(seed)
+        }
+        const fourAddresses = fourSeeds
+          .map((item) => tokenAddressFromId(item.id).toLowerCase())
+          .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
+        const fourPatch = fourAddresses.length > 0 ? await loadFourSnapshotBatch(fourAddresses) : {}
+        if (Object.keys(fourPatch).length > 0) {
+          const mergeSeed = (item: MarketItem) => {
+            const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
+            if (!extra) return item
+            const merged: MarketItem = {
+              ...item,
+              current_price: extra.current_price,
+              price_change_percentage_24h: extra.price_change_percentage_24h,
+              market_cap: extra.market_cap,
+              volume_24h: extra.volume_24h,
+            }
+            ;(merged as any).quoteSymbol = extra.quoteSymbol
+            return merged
+          }
+          for (let i = 0; i < allSeeds.length; i += 1) {
+            allSeeds[i] = mergeSeed(allSeeds[i])
+          }
+          for (let i = 0; i < fourSeeds.length; i += 1) {
+            fourSeeds[i] = mergeSeed(fourSeeds[i])
+          }
+          if (!cancelled) {
+            setFourPriceMap((prev) => ({ ...prev, ...fourPatch }))
+          }
         }
         if (cancelled) return
         setNewOpenKeys(all)
