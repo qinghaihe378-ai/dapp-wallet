@@ -912,7 +912,7 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
-                    {!!fourSnapshot && subTab === 'pool' && (
+                    {effectiveIsFourSource && subTab === 'pool' && (
                       <div className="ave-four-pool-summary">
                         <div>
                           <span>币种数量</span>

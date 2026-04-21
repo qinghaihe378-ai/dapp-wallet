@@ -501,8 +501,12 @@ export function MarketsPage() {
                             : (redUpGreenDown ? 'up' : 'down')
                         }`}
                       >
-                        {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
-                        {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                        {item.price_change_percentage_24h != null ? (
+                          <>
+                            {(item.price_change_percentage_24h ?? 0) >= 0 ? '+' : ''}
+                            {(item.price_change_percentage_24h ?? 0).toFixed(2)}%
+                          </>
+                        ) : '—'}
                       </div>
                     </>
                   )
