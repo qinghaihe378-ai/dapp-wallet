@@ -77,25 +77,28 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
   const tokenNeedle = tokenAddress.toLowerCase().replace(/^0x/, '')
   const latest = await provider.getBlockNumber()
   let remainingSupply: number | null = null
+  let bondingQuoteAmount: number | null = null
+  let priceQuote: number | null = null
+  let targetQuoteAmount: number | null = null
+  let totalSupply: number | null = null
   let priceChange24h: number | null = null
 
   try {
-    const token = new Contract(
-      tokenAddress,
+    const four = new Contract(
+      FOUR_PROXY_CONTRACT,
       [
-        'function balanceOf(address) view returns (uint256)',
-        'function decimals() view returns (uint8)',
+        'function _tokenInfos(address) view returns (address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)',
       ],
       provider,
     )
-    const [rawBalance, decimals] = await Promise.all([
-      token.balanceOf(FOUR_PROXY_CONTRACT),
-      token.decimals(),
-    ])
-    const proxyTokenBalance = Number(rawBalance) / (10 ** Number(decimals))
-    remainingSupply = Math.max(0, proxyTokenBalance - FOUR_RESERVED_SUPPLY)
+    const tokenInfo = await four._tokenInfos(tokenAddress)
+    totalSupply = Number(tokenInfo[3]) / 1e18
+    remainingSupply = Number(tokenInfo[7]) / 1e18
+    bondingQuoteAmount = Number(tokenInfo[8]) / 1e18
+    priceQuote = Number(tokenInfo[9]) / 1e18
+    targetQuoteAmount = Number(tokenInfo[5]) / 1e18
   } catch {
-    // ignore token balance read failure and continue with event fallback
+    // ignore token info read failure and continue with fallback
   }
 
   try {
@@ -134,35 +137,42 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
       const haystack = `${log.data}${log.topics.join('')}`.toLowerCase()
       if (!haystack.includes(tokenNeedle)) continue
 
-      const hex = log.data.replace(/^0x/, '')
-      if (hex.length < 64 * 8) continue
-      const words = Array.from({ length: 8 }, (_, index) => hex.slice(index * 64, (index + 1) * 64))
-      const eventRemainingSupply = parseWordAmount(words[6])
-      const bondingQuoteAmount = parseWordAmount(words[7])
-      const priceQuote = parseWordAmount(words[2])
-      const mergedRemainingSupply = remainingSupply != null && remainingSupply >= 0 ? remainingSupply : eventRemainingSupply
-      const progressPct = 100 - ((mergedRemainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
-
+      const effectiveTotalSupply = totalSupply && totalSupply > 0 ? totalSupply : 1_000_000_000
+      const maxOffers = Math.max(0, effectiveTotalSupply - FOUR_RESERVED_SUPPLY)
+      const mergedRemainingSupply = remainingSupply != null && remainingSupply >= 0 ? remainingSupply : null
+      const progressPct =
+        mergedRemainingSupply != null
+          ? 100 - ((mergedRemainingSupply * 100) / maxOffers)
+          : null
       return {
         remainingSupply: mergedRemainingSupply,
         bondingQuoteAmount,
+        targetQuoteAmount,
+        totalSupply: effectiveTotalSupply,
         priceQuote,
         priceChange24h,
-        progressPct: Math.max(0, Math.min(100, progressPct)),
+        progressPct: progressPct == null ? null : Math.max(0, Math.min(100, progressPct)),
         latestTradeBlock: log.blockNumber,
         latestTradeTx: log.transactionHash,
       }
     }
   }
 
-  if (remainingSupply != null) {
-    const progressPct = 100 - ((remainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
+  if (remainingSupply != null || bondingQuoteAmount != null || priceQuote != null) {
+    const effectiveTotalSupply = totalSupply && totalSupply > 0 ? totalSupply : 1_000_000_000
+    const maxOffers = Math.max(0, effectiveTotalSupply - FOUR_RESERVED_SUPPLY)
+    const progressPct =
+      remainingSupply != null
+        ? 100 - ((remainingSupply * 100) / maxOffers)
+        : null
     return {
       remainingSupply,
-      bondingQuoteAmount: null,
-      priceQuote: null,
+      bondingQuoteAmount,
+      targetQuoteAmount,
+      totalSupply: effectiveTotalSupply,
+      priceQuote,
       priceChange24h,
-      progressPct: Math.max(0, Math.min(100, progressPct)),
+      progressPct: progressPct == null ? null : Math.max(0, Math.min(100, progressPct)),
       latestTradeBlock: null,
       latestTradeTx: null,
     }
@@ -237,9 +247,10 @@ function buildOnchainOnlySnapshot(
 ): FourMemeSnapshot | null {
   if (!onchain && !meta.totalSupply) return null
   const priceQuote = onchain?.priceQuote ?? null
+  const totalSupply = onchain?.totalSupply ?? (meta.totalSupply || 1_000_000_000)
   const marketCapUsd =
     priceQuote != null && bnbUsdPrice != null
-      ? priceQuote * (meta.totalSupply || 1_000_000_000) * bnbUsdPrice
+      ? priceQuote * totalSupply * bnbUsdPrice
       : null
   const virtualLiquidityUsd =
     priceQuote != null && bnbUsdPrice != null && onchain?.remainingSupply != null && onchain?.bondingQuoteAmount != null
@@ -257,10 +268,10 @@ function buildOnchainOnlySnapshot(
     marketCapUsd,
     virtualLiquidityUsd,
     volumeUsd: null,
-    totalSupply: meta.totalSupply || 1_000_000_000,
+    totalSupply,
     remainingSupply: onchain?.remainingSupply ?? null,
     bondingQuoteAmount: onchain?.bondingQuoteAmount ?? null,
-    targetQuoteAmount: FOUR_TARGET_QUOTE_AMOUNT,
+    targetQuoteAmount: onchain?.targetQuoteAmount ?? FOUR_TARGET_QUOTE_AMOUNT,
     progressPct: onchain?.progressPct ?? null,
     maxMarketCapUsd: null,
   }
@@ -273,8 +284,10 @@ function mergeFourSnapshotWithOnchain(snapshot: FourMemeSnapshot, onchain: Await
     priceQuote: (onchain.priceQuote ?? 0) > 0 ? onchain.priceQuote : snapshot.priceQuote,
     priceQuoteText: (onchain.priceQuote ?? 0) > 0 ? onchain.priceQuote!.toString() : snapshot.priceQuoteText,
     priceChange24h: onchain.priceChange24h ?? snapshot.priceChange24h,
+    totalSupply: onchain.totalSupply ?? snapshot.totalSupply,
     remainingSupply: onchain.remainingSupply != null ? onchain.remainingSupply : snapshot.remainingSupply,
     bondingQuoteAmount: (onchain.bondingQuoteAmount ?? 0) > 0 ? onchain.bondingQuoteAmount : snapshot.bondingQuoteAmount,
+    targetQuoteAmount: onchain.targetQuoteAmount ?? snapshot.targetQuoteAmount,
     progressPct: onchain.progressPct,
   }
 }
