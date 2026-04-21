@@ -2,6 +2,8 @@ import { fetchFourMemeTokenSnapshot } from './_fourMeme.js'
 
 export default async function handler(req: any, res: any) {
   try {
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
     const raw = String(req.query?.addresses ?? '')
     const addresses = raw
       .split(',')

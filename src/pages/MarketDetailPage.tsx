@@ -312,7 +312,7 @@ export function MarketDetailPage() {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(dexTokenAddress)}`))
+        const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(dexTokenAddress)}`), { cache: 'no-store' })
         if (!res.ok) return
         const json = await res.json() as { snapshot?: typeof fourSnapshot }
         if (!cancelled) setFourSnapshot(json.snapshot ?? null)
@@ -638,11 +638,7 @@ export function MarketDetailPage() {
   const derivedFourLiquidityUsd =
     (fourSnapshot?.virtualLiquidityUsd ?? 0) > 0
       ? Number(fourSnapshot?.virtualLiquidityUsd ?? 0)
-      : (detailVM?.marketCap ?? 0) > 0
-        ? Number(detailVM?.marketCap ?? 0)
-        : (detailVM?.price ?? 0) > 0 && totalSupplyNum > 0
-          ? Number(detailVM?.price ?? 0) * totalSupplyNum
-          : (volume24hValue > 0 ? volume24hValue : 0)
+      : 0
   const remainingSupplyNum = fourSnapshot?.remainingSupply ?? 0
   const hasFourReserveData =
     fourSnapshot != null &&
@@ -662,10 +658,15 @@ export function MarketDetailPage() {
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
   const effectiveIsFourSource = isFourSource
+  const showFourBondingPool =
+    effectiveIsFourSource &&
+    !!detailVM &&
+    hasFourReserveData &&
+    (remainingSupplyNum > 0 || bondingQuoteAmountNum > 0)
   const displayDexIdRaw = pairDexId ?? (routeSource || null)
-  const displayDexId = effectiveIsFourSource ? 'four.meme' : (displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw)
+  const displayDexId = showFourBondingPool ? 'four.meme' : (displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw)
   const displayPools = useMemo(() => {
-    if (effectiveIsFourSource && detailVM) {
+    if (showFourBondingPool && detailVM) {
       return [
         {
           pairAddress: dexPairAddress ?? dexTokenAddress ?? coinId,
@@ -680,23 +681,23 @@ export function MarketDetailPage() {
           topAmountText:
             hasFourReserveData && remainingSupplyNum >= 0
               ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
-              : '数量待同步',
+              : '--',
           bottomAmountText:
             fourSnapshot?.bondingQuoteAmount != null
               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
-              : `${quoteSymbol} 同步中`,
-          liquidityText: derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '内盘同步中',
+              : '--',
+          liquidityText: derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '--',
         },
       ]
     }
     return tokenPools
-  }, [tokenPools, effectiveIsFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, derivedFourLiquidityUsd, remainingSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol, hasFourReserveData])
+  }, [tokenPools, showFourBondingPool, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, derivedFourLiquidityUsd, remainingSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol, hasFourReserveData, fourSnapshot?.bondingQuoteAmount])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [displayPools],
   )
-  const totalPoolsLiquidityLabel = effectiveIsFourSource && derivedFourLiquidityUsd > 0
+  const totalPoolsLiquidityLabel = showFourBondingPool && derivedFourLiquidityUsd > 0
     ? formatCompact(derivedFourLiquidityUsd)
     : formatCompact(totalPoolsLiquidity)
 
@@ -920,14 +921,14 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
-                    {effectiveIsFourSource && subTab === 'pool' && (
+                    {showFourBondingPool && subTab === 'pool' && (
                       <div className="ave-four-pool-summary">
                         <div>
                           <span>币种数量</span>
                           <strong>
                             {hasFourReserveData
                               ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
-                              : '数量待同步'}
+                              : '--'}
                           </strong>
                         </div>
                         <div>
@@ -936,7 +937,7 @@ export function MarketDetailPage() {
                             {bondingQuoteAmountNum > 0
                               || fourSnapshot?.bondingQuoteAmount === 0
                               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
-                              : `${quoteSymbol} 同步中`}
+                              : '--'}
                           </strong>
                         </div>
                         <div>
@@ -944,7 +945,7 @@ export function MarketDetailPage() {
                           <strong>
                             {derivedFourLiquidityUsd > 0
                               ? formatCompact(derivedFourLiquidityUsd)
-                              : ((detailVM?.marketCap ?? 0) > 0 ? formatCompact(detailVM.marketCap ?? 0) : '内盘同步中')}
+                              : '--'}
                           </strong>
                         </div>
                       </div>
