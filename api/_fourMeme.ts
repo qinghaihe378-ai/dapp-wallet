@@ -288,10 +288,14 @@ function buildOnchainOnlySnapshot(
     priceQuote != null && bnbUsdPrice != null
       ? priceQuote * bnbUsdPrice
       : null
-  const virtualLiquidityUsd =
-    priceQuote != null && bnbUsdPrice != null && onchain?.remainingSupply != null && onchain?.bondingQuoteAmount != null
-      ? ((onchain.remainingSupply * priceQuote) + onchain.bondingQuoteAmount) * bnbUsdPrice
+  const bondingRaisedUsd =
+    bnbUsdPrice != null && onchain?.bondingQuoteAmount != null
+      ? onchain.bondingQuoteAmount * bnbUsdPrice
       : null
+  const isOuter =
+    onchain?.progressPct != null
+      ? onchain.progressPct >= 99.5
+      : ((onchain?.remainingSupply ?? 1) <= 0)
   return {
     tokenAddress: tokenAddress.toLowerCase(),
     name: meta.name || tokenAddress.slice(0, 6),
@@ -303,7 +307,8 @@ function buildOnchainOnlySnapshot(
     priceChange24h: onchain?.priceChange24h ?? null,
     marketCapUsd,
     currentPriceUsd,
-    virtualLiquidityUsd,
+    virtualLiquidityUsd: bondingRaisedUsd,
+    bondingRaisedUsd,
     volumeUsd: null,
     totalSupply,
     remainingSupply: onchain?.remainingSupply ?? null,
@@ -311,6 +316,7 @@ function buildOnchainOnlySnapshot(
     targetQuoteAmount: onchain?.targetQuoteAmount ?? FOUR_TARGET_QUOTE_AMOUNT,
     progressPct: onchain?.progressPct ?? null,
     maxMarketCapUsd: null,
+    isOuter,
   }
 }
 
@@ -325,6 +331,7 @@ export interface FourMemeSnapshot {
   priceChange24h: number | null
   marketCapUsd: number | null
   virtualLiquidityUsd: number | null
+  bondingRaisedUsd?: number | null
   volumeUsd: number | null
   totalSupply: number | null
   remainingSupply: number | null
@@ -333,6 +340,7 @@ export interface FourMemeSnapshot {
   progressPct: number | null
   maxMarketCapUsd: number | null
   currentPriceUsd?: number | null
+  isOuter?: boolean
   latestTradeBlock?: number | null
   latestTradeTx?: string | null
   updatedAt?: number

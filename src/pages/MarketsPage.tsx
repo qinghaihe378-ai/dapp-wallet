@@ -82,6 +82,9 @@ export function MarketsPage() {
     market_cap: number
     volume_24h: number
     quoteSymbol: string
+    bondingRaisedUsd: number
+    marketCapUsd: number
+    isOuter: boolean
   }>>({})
   const [fourLoadingMap, setFourLoadingMap] = useState<Record<string, boolean>>({})
 
@@ -114,6 +117,33 @@ export function MarketsPage() {
     return [...byKey.values()]
   }
 
+  const applyFourDisplayData = (
+    item: MarketItem,
+    extra: {
+      current_price: number
+      price_change_percentage_24h: number | null
+      market_cap: number
+      volume_24h: number
+      quoteSymbol: string
+      bondingRaisedUsd: number
+      marketCapUsd: number
+      isOuter: boolean
+    },
+  ) => {
+    const merged: MarketItem = {
+      ...item,
+      current_price: extra.current_price,
+      price_change_percentage_24h: extra.price_change_percentage_24h,
+      market_cap: extra.market_cap,
+      volume_24h: extra.volume_24h,
+    }
+    ;(merged as any).quoteSymbol = extra.quoteSymbol
+    ;(merged as any).fourBondingRaisedUsd = extra.bondingRaisedUsd
+    ;(merged as any).fourMarketCapUsd = extra.marketCapUsd
+    ;(merged as any).fourIsOuter = extra.isOuter
+    return merged
+  }
+
   const getFourRowMeta = (item: MarketItem) => {
     const progressPct = Number((item as any).fourProgressPct)
     const targetQuoteAmount = Number((item as any).fourTargetQuoteAmount)
@@ -128,10 +158,15 @@ export function MarketsPage() {
     const effectiveProgressPct = Number.isFinite(progressPct)
       ? progressPct
       : derivedProgressPct
+    const explicitOuter = (item as any).fourIsOuter
     const isOuter =
-      effectiveProgressPct != null
-        ? effectiveProgressPct >= 99.5
-        : (Number.isFinite(remainingSupply) ? remainingSupply <= 0 : false)
+      typeof explicitOuter === 'boolean'
+        ? explicitOuter
+        : (
+          effectiveProgressPct != null
+            ? effectiveProgressPct >= 99.5
+            : (Number.isFinite(remainingSupply) ? remainingSupply <= 0 : false)
+        )
     const hotScore =
       Math.max(Number(item.volume_24h ?? 0) || 0, 0) * 10 +
       Math.max(Number(item.market_cap ?? 0) || 0, 0) +
@@ -188,6 +223,9 @@ export function MarketsPage() {
       market_cap: number
       volume_24h: number
       quoteSymbol: string
+      bondingRaisedUsd: number
+      marketCapUsd: number
+      isOuter: boolean
     }> = {}
     const chunkSize = 12
     for (let i = 0; i < addresses.length; i += chunkSize) {
@@ -203,13 +241,16 @@ export function MarketsPage() {
             marketCapUsd?: number | null
             currentPriceUsd?: number | null
             virtualLiquidityUsd?: number | null
+            bondingRaisedUsd?: number | null
             volumeUsd?: number | null
             totalSupply?: number | null
+            isOuter?: boolean
           } | null>
         }
         for (const address of chunk) {
           const snapshot = json.snapshots?.[address.toLowerCase()] ?? null
           if (!snapshot) continue
+          const isOuter = Boolean(snapshot.isOuter)
           const currentPriceUsd =
             Number(snapshot.currentPriceUsd ?? 0) ||
             (() => {
@@ -217,13 +258,36 @@ export function MarketsPage() {
               const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
               return marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
             })()
+          const marketCapUsd = Number(snapshot.marketCapUsd ?? 0) || 0
+          const bondingRaisedUsd = Number(snapshot.bondingRaisedUsd ?? snapshot.virtualLiquidityUsd ?? 0) || 0
+
+          if (isOuter) {
+            const dexItem = await fetchDexTokenById(`bsc:${address}`)
+            if (dexItem && Number(dexItem.current_price ?? 0) > 0) {
+              out[address.toLowerCase()] = {
+                current_price: Number(dexItem.current_price ?? 0) || 0,
+                price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? 0 : Number(dexItem.price_change_percentage_24h),
+                market_cap: marketCapUsd > 0 ? marketCapUsd : (Number(dexItem.market_cap ?? 0) || 0),
+                volume_24h: Number(dexItem.volume_24h ?? 0) || 0,
+                quoteSymbol: 'USDT',
+                bondingRaisedUsd,
+                marketCapUsd,
+                isOuter: true,
+              }
+              continue
+            }
+          }
+
           if (currentPriceUsd <= 0) continue
           out[address.toLowerCase()] = {
             current_price: currentPriceUsd,
             price_change_percentage_24h: snapshot.priceChange24h == null ? 0 : Number(snapshot.priceChange24h),
-            market_cap: Number(snapshot.virtualLiquidityUsd ?? snapshot.marketCapUsd ?? 0) || 0,
+            market_cap: marketCapUsd,
             volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
             quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+            bondingRaisedUsd,
+            marketCapUsd,
+            isOuter,
           }
         }
       } catch {
@@ -262,7 +326,7 @@ export function MarketsPage() {
       try {
         const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
         if (!res.ok) return
-        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; volumeUsd?: string; priceUsd?: string; priceChange24h?: string; progressPct?: string | null; remainingSupply?: string | null; bondingQuoteAmount?: string | null; targetQuoteAmount?: string | null; latestTradeBlock?: number | null; fourCreatedOrder?: number }> }
+        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; volumeUsd?: string; priceUsd?: string; priceChange24h?: string; marketCapUsd?: string | null; bondingRaisedUsd?: string | null; isOuter?: boolean; progressPct?: string | null; remainingSupply?: string | null; bondingQuoteAmount?: string | null; targetQuoteAmount?: string | null; latestTradeBlock?: number | null; fourCreatedOrder?: number }> }
         const all = new Set<string>()
         const four = new Set<string>()
         const flap = new Set<string>()
@@ -287,13 +351,18 @@ export function MarketsPage() {
             current_price: Number((row as any).priceUsd ?? 0) || 0,
             price_change_percentage_24h:
               (row as any).priceChange24h == null ? null : (Number((row as any).priceChange24h) || 0),
-            market_cap: Number((row as any).reserveUsd ?? 0) || 0,
+            market_cap: Number((row as any).marketCapUsd ?? 0) || 0,
             volume_24h: Number((row as any).volumeUsd ?? (row as any).reserveUsd ?? 0) || 0,
             chain,
             dexId: String(row.dexId ?? ''),
             coingeckoId: undefined,
           }
           ;(seed as any).quoteSymbol = quoteSymbol
+          ;(seed as any).fourBondingRaisedUsd =
+            (row as any).bondingRaisedUsd == null ? 0 : (Number((row as any).bondingRaisedUsd) || 0)
+          ;(seed as any).fourMarketCapUsd =
+            (row as any).marketCapUsd == null ? 0 : (Number((row as any).marketCapUsd) || 0)
+          ;(seed as any).fourIsOuter = Boolean((row as any).isOuter)
           ;(seed as any).fourProgressPct =
             (row as any).progressPct == null ? null : (Number((row as any).progressPct) || 0)
           ;(seed as any).fourRemainingSupply =
@@ -330,28 +399,12 @@ export function MarketsPage() {
             setNewOpenSeedItems((prev) => prev.map((item) => {
               const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
               if (!extra) return item
-              const merged: MarketItem = {
-                ...item,
-                current_price: extra.current_price,
-                price_change_percentage_24h: extra.price_change_percentage_24h,
-                market_cap: extra.market_cap,
-                volume_24h: extra.volume_24h,
-              }
-              ;(merged as any).quoteSymbol = extra.quoteSymbol
-              return merged
+              return applyFourDisplayData(item, extra)
             }))
             setFourSeedItems((prev) => prev.map((item) => {
               const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
               if (!extra) return item
-              const merged: MarketItem = {
-                ...item,
-                current_price: extra.current_price,
-                price_change_percentage_24h: extra.price_change_percentage_24h,
-                market_cap: extra.market_cap,
-                volume_24h: extra.volume_24h,
-              }
-              ;(merged as any).quoteSymbol = extra.quoteSymbol
-              return merged
+              return applyFourDisplayData(item, extra)
             }))
           })()
         }
@@ -411,15 +464,7 @@ export function MarketsPage() {
           const addr = tokenAddressFromId(item.id).toLowerCase()
           const extra = fourPriceMap[addr]
           if (!extra) return item
-          const merged: MarketItem = {
-            ...item,
-            current_price: extra.current_price,
-            price_change_percentage_24h: extra.price_change_percentage_24h,
-            market_cap: extra.market_cap,
-            volume_24h: extra.volume_24h,
-          }
-          ;(merged as any).quoteSymbol = extra.quoteSymbol
-          return merged
+          return applyFourDisplayData(item, extra)
         })
         usingSourceSeedOnly = true
       } else if (sourceTab === 'new' && newOpenSeedItems.length > 0) {
@@ -429,6 +474,30 @@ export function MarketsPage() {
         next = [...flapSeedItems]
         usingSourceSeedOnly = true
       }
+    }
+
+    if (sourceTab === 'four') {
+      const liveByKey = new Map(
+        list
+          .filter((item) => !String(item.dexId ?? '').toLowerCase().includes('four'))
+          .map((item) => [marketItemKey(item), item] as const),
+      )
+      next = next.map((item) => {
+        const meta = getFourRowMeta(item)
+        if (!meta.isOuter) return item
+        const live = liveByKey.get(marketItemKey(item))
+        if (!live || Number(live.current_price ?? 0) <= 0) return item
+        const merged: MarketItem = {
+          ...item,
+          current_price: Number(live.current_price ?? 0) || item.current_price,
+          price_change_percentage_24h:
+            live.price_change_percentage_24h == null ? item.price_change_percentage_24h : live.price_change_percentage_24h,
+          market_cap: Number(live.market_cap ?? 0) || (item.market_cap ?? 0),
+          volume_24h: Number(live.volume_24h ?? 0) || (item.volume_24h ?? 0),
+        }
+        ;(merged as any).quoteSymbol = (live as any).quoteSymbol ?? (item as any).quoteSymbol ?? 'USDT'
+        return merged
+      })
     }
 
     // 行情页默认仅展示 ETH/BSC/Base 三条公链
@@ -534,6 +603,9 @@ export function MarketsPage() {
           market_cap: number
           volume_24h: number
           quoteSymbol: string
+          bondingRaisedUsd: number
+          marketCapUsd: number
+          isOuter: boolean
         }> = {}
         const snapshotMap: Record<string, {
           quoteSymbol?: string
@@ -541,8 +613,10 @@ export function MarketsPage() {
           marketCapUsd?: number | null
           currentPriceUsd?: number | null
           virtualLiquidityUsd?: number | null
+          bondingRaisedUsd?: number | null
           volumeUsd?: number | null
           totalSupply?: number | null
+          isOuter?: boolean
         } | null> = {}
         try {
           const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(targets.join(','))}`), { cache: 'no-store' })
@@ -554,8 +628,10 @@ export function MarketsPage() {
                 marketCapUsd?: number | null
                 currentPriceUsd?: number | null
                 virtualLiquidityUsd?: number | null
+                bondingRaisedUsd?: number | null
                 volumeUsd?: number | null
                 totalSupply?: number | null
+                isOuter?: boolean
               } | null>
             }
             Object.assign(snapshotMap, json.snapshots ?? {})
@@ -567,6 +643,7 @@ export function MarketsPage() {
         for (let i = 0; i < targets.length; i += 1) {
           const address = targets[i]
           const snapshot = snapshotMap[address.toLowerCase()] ?? null
+          const isOuter = Boolean(snapshot?.isOuter)
           const currentPriceUsd =
             Number(snapshot?.currentPriceUsd ?? 0) ||
             (() => {
@@ -574,14 +651,36 @@ export function MarketsPage() {
               const marketCapUsd = Number(snapshot?.marketCapUsd ?? 0)
               return marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
             })()
+          const marketCapUsd = Number(snapshot?.marketCapUsd ?? 0) || 0
+          const bondingRaisedUsd = Number(snapshot?.bondingRaisedUsd ?? snapshot?.virtualLiquidityUsd ?? 0) || 0
+
+          if (isOuter) {
+            const dexItem = await fetchDexTokenById(`bsc:${address}`)
+            if (dexItem && Number(dexItem.current_price ?? 0) > 0) {
+              mergedPatch[address.toLowerCase()] = {
+                current_price: Number(dexItem.current_price ?? 0) || 0,
+                price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? 0 : Number(dexItem.price_change_percentage_24h),
+                market_cap: marketCapUsd > 0 ? marketCapUsd : (Number(dexItem.market_cap ?? 0) || 0),
+                volume_24h: Number(dexItem.volume_24h ?? 0) || 0,
+                quoteSymbol: 'USDT',
+                bondingRaisedUsd,
+                marketCapUsd,
+                isOuter: true,
+              }
+              continue
+            }
+          }
 
           if (snapshot && currentPriceUsd > 0) {
             mergedPatch[address.toLowerCase()] = {
               current_price: currentPriceUsd,
               price_change_percentage_24h: snapshot.priceChange24h == null ? 0 : Number(snapshot.priceChange24h),
-              market_cap: Number(snapshot.virtualLiquidityUsd ?? snapshot.marketCapUsd ?? 0) || 0,
+              market_cap: marketCapUsd,
               volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
               quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+              bondingRaisedUsd,
+              marketCapUsd,
+              isOuter,
             }
             continue
           }
@@ -593,7 +692,10 @@ export function MarketsPage() {
             price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? 0 : Number(dexItem.price_change_percentage_24h),
             market_cap: Number(dexItem.market_cap ?? 0) || 0,
             volume_24h: Number(dexItem.volume_24h ?? 0) || 0,
-            quoteSymbol: 'BNB',
+            quoteSymbol: 'USDT',
+            bondingRaisedUsd: 0,
+            marketCapUsd: Number(dexItem.market_cap ?? 0) || 0,
+            isOuter: true,
           }
         }
         if (!cancelled && Object.keys(mergedPatch).length > 0) {
@@ -699,6 +801,14 @@ export function MarketsPage() {
               <div key="list" className="market-watch-list ave-markets-v2-list">
                 {rows.map((item) => {
                   const isDexToken = item.id.includes(':')
+                  const isFourToken = String((item as any).dexId ?? '').toLowerCase().includes('four')
+                  const isFourOuter = Boolean((item as any).fourIsOuter)
+                  const fourBondingRaisedUsd = Number((item as any).fourBondingRaisedUsd ?? 0) || 0
+                  const fourMarketCapUsd = Number((item as any).fourMarketCapUsd ?? item.market_cap ?? 0) || 0
+                  const metricLabel = isFourToken ? (isFourOuter ? '市值' : '内盘') : 'Liq'
+                  const metricValue = isFourToken
+                    ? (isFourOuter ? fourMarketCapUsd : fourBondingRaisedUsd)
+                    : ((item.market_cap ?? 0) > 0 ? (item.market_cap ?? 0) : (item.current_price * 125000))
                   const innerLink = (
                     <>
                       <div className="market-watch-main">
@@ -734,7 +844,7 @@ export function MarketsPage() {
                       <div className="market-watch-price">
                         {formatPriceByCurrency(item.current_price, currencyUnit)}
                         <div className="market-watch-price-sub">
-                          Liq {formatCurrencyCompact((item.market_cap ?? 0) > 0 ? (item.market_cap ?? 0) : (item.current_price * 125000), currencyUnit)}
+                          {metricLabel} {formatCurrencyCompact(metricValue, currencyUnit)}
                         </div>
                       </div>
                       <div

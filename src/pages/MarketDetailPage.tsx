@@ -140,6 +140,7 @@ export function MarketDetailPage() {
     priceChange24h: number | null
     marketCapUsd: number | null
     virtualLiquidityUsd: number | null
+    bondingRaisedUsd?: number | null
     volumeUsd: number | null
     totalSupply: number | null
     remainingSupply: number | null
@@ -147,6 +148,8 @@ export function MarketDetailPage() {
     targetQuoteAmount: number | null
     progressPct: number | null
     maxMarketCapUsd: number | null
+    currentPriceUsd?: number | null
+    isOuter?: boolean
   }>(null)
   const [tokenPools, setTokenPools] = useState<Array<{
     pairAddress: string
@@ -634,12 +637,12 @@ export function MarketDetailPage() {
 
   const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (fourSnapshot?.volumeUsd ?? pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
-  const totalSupplyNum = fourSnapshot?.totalSupply ?? (totalSupply ? (Number.parseFloat(totalSupply) || 0) : 0)
-  const derivedFourLiquidityUsd =
-    (fourSnapshot?.virtualLiquidityUsd ?? 0) > 0
-      ? Number(fourSnapshot?.virtualLiquidityUsd ?? 0)
+  const bondingRaisedUsd =
+    (fourSnapshot?.bondingRaisedUsd ?? fourSnapshot?.virtualLiquidityUsd ?? 0) > 0
+      ? Number(fourSnapshot?.bondingRaisedUsd ?? fourSnapshot?.virtualLiquidityUsd ?? 0)
       : 0
   const remainingSupplyNum = fourSnapshot?.remainingSupply ?? 0
+  const fourIsOuter = Boolean(fourSnapshot?.isOuter)
   const hasFourReserveData =
     fourSnapshot != null &&
     (
@@ -649,20 +652,21 @@ export function MarketDetailPage() {
   const bondingQuoteAmountNum = fourSnapshot?.bondingQuoteAmount ?? 0
   const targetQuoteAmountNum = fourSnapshot?.targetQuoteAmount ?? 0
   const quoteSymbol = fourSnapshot?.quoteSymbol || 'BNB'
-  const routeDisplayPrice = fourSnapshot?.marketCapUsd != null && totalSupplyNum > 0
-    ? fourSnapshot.marketCapUsd / totalSupplyNum
+  const effectiveIsFourSource = isFourSource
+  const showFourBondingPool =
+    effectiveIsFourSource &&
+    !fourIsOuter &&
+    !!detailVM &&
+    hasFourReserveData &&
+    (remainingSupplyNum > 0 || bondingQuoteAmountNum > 0)
+  const routeDisplayPrice = showFourBondingPool && (fourSnapshot?.currentPriceUsd ?? 0) > 0
+    ? Number(fourSnapshot?.currentPriceUsd ?? 0)
     : detailVM?.price ?? 0
-  const routeChange24h = fourSnapshot?.priceChange24h ?? detailVM?.change24h ?? 0
+  const routeChange24h = showFourBondingPool ? (fourSnapshot?.priceChange24h ?? detailVM?.change24h ?? 0) : (detailVM?.change24h ?? fourSnapshot?.priceChange24h ?? 0)
   const detailChangeTone = routeChange24h >= 0
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
-  const effectiveIsFourSource = isFourSource
-  const showFourBondingPool =
-    effectiveIsFourSource &&
-    !!detailVM &&
-    hasFourReserveData &&
-    (remainingSupplyNum > 0 || bondingQuoteAmountNum > 0)
   const displayDexIdRaw = pairDexId ?? (routeSource || null)
   const displayDexId = showFourBondingPool ? 'four.meme' : (displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw)
   const displayPools = useMemo(() => {
@@ -676,7 +680,7 @@ export function MarketDetailPage() {
           topAmount: remainingSupplyNum > 0 ? remainingSupplyNum : 0,
           bottomAmount: bondingQuoteAmountNum > 0 ? bondingQuoteAmountNum : targetQuoteAmountNum,
           feeLabel: '内盘',
-          liquidityUsd: derivedFourLiquidityUsd,
+          liquidityUsd: bondingRaisedUsd,
           volume24h: Number(volume24hValue ?? 0) || 0,
           topAmountText:
             hasFourReserveData && remainingSupplyNum >= 0
@@ -686,19 +690,19 @@ export function MarketDetailPage() {
             fourSnapshot?.bondingQuoteAmount != null
               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
               : '--',
-          liquidityText: derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '--',
+          liquidityText: bondingRaisedUsd > 0 ? formatCompact(bondingRaisedUsd) : '--',
         },
       ]
     }
     return tokenPools
-  }, [tokenPools, showFourBondingPool, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, derivedFourLiquidityUsd, remainingSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol, hasFourReserveData, fourSnapshot?.bondingQuoteAmount])
+  }, [tokenPools, showFourBondingPool, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, bondingRaisedUsd, remainingSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol, hasFourReserveData, fourSnapshot?.bondingQuoteAmount])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [displayPools],
   )
-  const totalPoolsLiquidityLabel = showFourBondingPool && derivedFourLiquidityUsd > 0
-    ? formatCompact(derivedFourLiquidityUsd)
+  const totalPoolsLiquidityLabel = showFourBondingPool && bondingRaisedUsd > 0
+    ? formatCompact(bondingRaisedUsd)
     : formatCompact(totalPoolsLiquidity)
 
   useEffect(() => {
@@ -820,7 +824,7 @@ export function MarketDetailPage() {
             </div>
           </div>
           <div className="ave-detail-price-right">
-            <div><span>流通市值</span><strong>{formatCurrencyCompact(fourSnapshot?.marketCapUsd ?? detailVM.marketCap, currencyUnit)}</strong></div>
+            <div><span>流通市值</span><strong>{formatCurrencyCompact(showFourBondingPool ? (fourSnapshot?.marketCapUsd ?? detailVM.marketCap) : detailVM.marketCap, currencyUnit)}</strong></div>
             <div><span>24h成交量</span><strong>{formatCurrencyCompact(volume24hValue, currencyUnit)}</strong></div>
             <div><span>24h持币数</span><strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong></div>
             <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
@@ -829,7 +833,7 @@ export function MarketDetailPage() {
         <div className="ave-detail-v2-data-cards">
           <div className="ave-detail-v2-data-card">
             <span>流通市值</span>
-            <strong>{formatCurrencyCompact(fourSnapshot?.marketCapUsd ?? detailVM.marketCap, currencyUnit)}</strong>
+            <strong>{formatCurrencyCompact(showFourBondingPool ? (fourSnapshot?.marketCapUsd ?? detailVM.marketCap) : detailVM.marketCap, currencyUnit)}</strong>
           </div>
           <div className="ave-detail-v2-data-card">
             <span>24h成交量</span>
@@ -918,7 +922,7 @@ export function MarketDetailPage() {
                 {subTab !== 'trade' && (
                   <>
                     <div className="ave-liquidity-title">
-                      <span>总流动性</span>
+                      <span>{showFourBondingPool ? '内盘资金' : '总流动性'}</span>
                       <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
                     {showFourBondingPool && subTab === 'pool' && (
@@ -941,10 +945,10 @@ export function MarketDetailPage() {
                           </strong>
                         </div>
                         <div>
-                          <span>流动性总额</span>
+                          <span>内盘资金</span>
                           <strong>
-                            {derivedFourLiquidityUsd > 0
-                              ? formatCompact(derivedFourLiquidityUsd)
+                            {bondingRaisedUsd > 0
+                              ? formatCompact(bondingRaisedUsd)
                               : '--'}
                           </strong>
                         </div>

@@ -127,6 +127,9 @@ async function fetchFourMemeOnchainNewTokens() {
     volumeUsd: string
     poolCreatedAt: string
     priceChange24h: string | null
+    marketCapUsd: string | null
+    bondingRaisedUsd: string | null
+    isOuter: boolean
     progressPct: string | null
     remainingSupply: string | null
     bondingQuoteAmount: string | null
@@ -175,13 +178,22 @@ async function fetchFourMemeOnchainNewTokens() {
         snapshot?.marketCapUsd != null && Number.isFinite(snapshot.marketCapUsd)
           ? String(snapshot.marketCapUsd)
           : null,
-      reserveUsd: String(Number(snapshot?.virtualLiquidityUsd ?? snapshot?.marketCapUsd ?? 0) || 0),
+      reserveUsd: String(Number(snapshot?.bondingRaisedUsd ?? 0) || 0),
       volumeUsd: String(Number(snapshot?.volumeUsd ?? 0) || 0),
       poolCreatedAt: nowIso,
       priceChange24h:
         snapshot?.priceChange24h != null && Number.isFinite(snapshot.priceChange24h)
           ? String(snapshot.priceChange24h)
           : null,
+      marketCapUsd:
+        snapshot?.marketCapUsd != null && Number.isFinite(snapshot.marketCapUsd)
+          ? String(snapshot.marketCapUsd)
+          : null,
+      bondingRaisedUsd:
+        snapshot?.bondingRaisedUsd != null && Number.isFinite(snapshot.bondingRaisedUsd)
+          ? String(snapshot.bondingRaisedUsd)
+          : null,
+      isOuter: Boolean(snapshot?.isOuter),
       progressPct:
         snapshot?.progressPct != null && Number.isFinite(snapshot.progressPct)
           ? String(snapshot.progressPct)
