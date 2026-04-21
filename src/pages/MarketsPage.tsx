@@ -338,6 +338,13 @@ export function MarketsPage() {
     let cancelled = false
     const loadFourSnapshots = async () => {
       try {
+        const mergedPatch: Record<string, {
+          current_price: number
+          price_change_percentage_24h: number | null
+          market_cap: number
+          volume_24h: number
+          quoteSymbol: string
+        }> = {}
         for (let i = 0; i < targets.length; i += 4) {
           const batch = targets.slice(i, i + 4)
           const results = await Promise.allSettled(
@@ -380,8 +387,11 @@ export function MarketsPage() {
             }
           }
           if (Object.keys(patch).length > 0) {
-            setFourPriceMap((prev) => ({ ...prev, ...patch }))
+            Object.assign(mergedPatch, patch)
           }
+        }
+        if (!cancelled && Object.keys(mergedPatch).length > 0) {
+          setFourPriceMap((prev) => ({ ...prev, ...mergedPatch }))
         }
       } catch (e) {
         console.error('加载 four 列表补值失败', e)
@@ -390,7 +400,7 @@ export function MarketsPage() {
 
     void loadFourSnapshots()
     return () => { cancelled = true }
-  }, [rows, sourceTab, fourPriceMap])
+  }, [rows, sourceTab])
 
   const sections = useMemo(() => {
     const defaults = [

@@ -7451,15 +7451,15 @@ button:disabled,
 .ave-pool-table-row {
   margin-top: 6px;
   display: grid !important;
-  grid-template-columns: 1.15fr 1.1fr .55fr .9fr !important;
+  grid-template-columns: 1.05fr 1.25fr .55fr 1fr !important;
   gap: 6px;
   align-items: center;
   min-width: 580px;
 }
 
 .ave-pool-table-row > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -7498,11 +7498,13 @@ button:disabled,
   gap: 2px;
   white-space: normal !important;
   line-height: 1.25;
+  overflow: visible !important;
 }
 
 .ave-pool-amount-cell > span {
   color: #d9e3f7;
   text-align: left;
+  white-space: nowrap;
 }
 
 .ave-pool-dex-cell {
