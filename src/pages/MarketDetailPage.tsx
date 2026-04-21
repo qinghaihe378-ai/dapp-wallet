@@ -131,6 +131,21 @@ export function MarketDetailPage() {
   const [communityLinks, setCommunityLinks] = useState<Array<{ label: string; url: string }>>([])
   const [pairDexId, setPairDexId] = useState<string | null>(null)
   const [tokenLogoSrc, setTokenLogoSrc] = useState<string>('')
+  const [fourSnapshot, setFourSnapshot] = useState<null | {
+    priceQuote: number | null
+    priceQuoteText: string | null
+    quoteSymbol: string
+    priceChange24h: number | null
+    marketCapUsd: number | null
+    virtualLiquidityUsd: number | null
+    volumeUsd: number | null
+    totalSupply: number | null
+    remainingSupply: number | null
+    bondingQuoteAmount: number | null
+    targetQuoteAmount: number | null
+    progressPct: number | null
+    maxMarketCapUsd: number | null
+  }>(null)
   const [tokenPools, setTokenPools] = useState<Array<{
     pairAddress: string
     dexId: string
@@ -281,6 +296,26 @@ export function MarketDetailPage() {
     }
     void load()
   }, [coinId, isDexFormat, isCoingeckoFormat])
+
+  useEffect(() => {
+    if (!routeSource.includes('four') || !dexTokenAddress) {
+      setFourSnapshot(null)
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/four-token?address=${encodeURIComponent(dexTokenAddress)}`)
+        if (!res.ok) return
+        const json = await res.json() as { snapshot?: typeof fourSnapshot }
+        if (!cancelled) setFourSnapshot(json.snapshot ?? null)
+      } catch (e) {
+        console.error('加载 four 快照失败', e)
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [routeSource, dexTokenAddress])
 
   useEffect(() => {
     if (!dexScreenerChainId || !dexTokenAddress) return
@@ -590,16 +625,29 @@ export function MarketDetailPage() {
     return `税${sellTax.toFixed(2).replace(/\.00$/, '')}%`
   }, [sellTax])
 
-  const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (pairVolume24h ?? 0)
+  const volume24hValue = (detailVM?.volume24h ?? 0) > 0 ? (detailVM?.volume24h ?? 0) : (fourSnapshot?.volumeUsd ?? pairVolume24h ?? 0)
   const txns24hValue = pairTxns24h ?? (volume24hValue > 0 ? Math.round(volume24hValue / 4200) : 0)
-  const totalSupplyNum = totalSupply ? (Number.parseFloat(totalSupply) || 0) : 0
+  const totalSupplyNum = fourSnapshot?.totalSupply ?? (totalSupply ? (Number.parseFloat(totalSupply) || 0) : 0)
   const derivedFourLiquidityUsd =
-    (detailVM?.marketCap ?? 0) > 0
-      ? Number(detailVM?.marketCap ?? 0)
-      : (detailVM?.price ?? 0) > 0 && totalSupplyNum > 0
-        ? Number(detailVM?.price ?? 0) * totalSupplyNum
-        : (volume24hValue > 0 ? volume24hValue : 0)
-  const detailChangeTone = detailVM?.change24h != null && detailVM.change24h >= 0
+    (fourSnapshot?.virtualLiquidityUsd ?? 0) > 0
+      ? Number(fourSnapshot?.virtualLiquidityUsd ?? 0)
+      : (detailVM?.marketCap ?? 0) > 0
+        ? Number(detailVM?.marketCap ?? 0)
+        : (detailVM?.price ?? 0) > 0 && totalSupplyNum > 0
+          ? Number(detailVM?.price ?? 0) * totalSupplyNum
+          : (volume24hValue > 0 ? volume24hValue : 0)
+  const remainingSupplyNum = fourSnapshot?.remainingSupply ?? 0
+  const soldSupplyNum = totalSupplyNum > 0
+    ? Math.max(0, totalSupplyNum * 0.8 - Math.max(0, remainingSupplyNum))
+    : 0
+  const bondingQuoteAmountNum = fourSnapshot?.bondingQuoteAmount ?? 0
+  const targetQuoteAmountNum = fourSnapshot?.targetQuoteAmount ?? 0
+  const quoteSymbol = fourSnapshot?.quoteSymbol || 'BNB'
+  const routeDisplayPrice = fourSnapshot?.marketCapUsd != null && totalSupplyNum > 0
+    ? fourSnapshot.marketCapUsd / totalSupplyNum
+    : detailVM?.price ?? 0
+  const routeChange24h = fourSnapshot?.priceChange24h ?? detailVM?.change24h ?? 0
+  const detailChangeTone = routeChange24h >= 0
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
@@ -613,20 +661,20 @@ export function MarketDetailPage() {
           pairAddress: dexPairAddress ?? dexTokenAddress ?? coinId,
           dexId: 'four.meme',
           topSymbol: detailVM.symbol?.toUpperCase() ?? 'TOKEN',
-          bottomSymbol: 'BNB',
-          topAmount: totalSupplyNum > 0 ? totalSupplyNum : 0,
-          bottomAmount: 0,
+          bottomSymbol: quoteSymbol,
+          topAmount: remainingSupplyNum > 0 ? remainingSupplyNum : soldSupplyNum,
+          bottomAmount: bondingQuoteAmountNum > 0 ? bondingQuoteAmountNum : targetQuoteAmountNum,
           feeLabel: '内盘',
           liquidityUsd: derivedFourLiquidityUsd,
           volume24h: Number(volume24hValue ?? 0) || 0,
-          topAmountText: totalSupplyNum > 0 ? undefined : '总量待同步',
-          bottomAmountText: 'BNB 同步中',
+          topAmountText: remainingSupplyNum > 0 ? undefined : (totalSupplyNum > 0 ? formatTokenAmount(soldSupplyNum) : '数量待同步'),
+          bottomAmountText: (bondingQuoteAmountNum > 0 || targetQuoteAmountNum > 0) ? undefined : `${quoteSymbol} 同步中`,
           liquidityText: derivedFourLiquidityUsd > 0 ? undefined : '内盘同步中',
         },
       ]
     }
     return tokenPools
-  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd])
+  }, [tokenPools, routeSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
@@ -707,7 +755,7 @@ export function MarketDetailPage() {
               onClick={async () => {
                 const sharePayload = {
                   title: `${detailVM.name} 行情`,
-                  text: `${detailVM.name} ${formatPriceByCurrency(detailVM.price, currencyUnit)}`,
+                  text: `${detailVM.name} ${formatPriceByCurrency(routeDisplayPrice, currencyUnit)}`,
                   url: window.location.href,
                 }
                 try {
@@ -746,13 +794,13 @@ export function MarketDetailPage() {
 
         <div className="ave-detail-price-panel">
           <div className="ave-detail-price-left">
-            <div className="ave-detail-big-price">{formatPriceByCurrency(detailVM.price, currencyUnit)}</div>
+            <div className="ave-detail-big-price">{formatPriceByCurrency(routeDisplayPrice, currencyUnit)}</div>
             <div className={`ave-detail-change ${detailChangeTone}`}>
-              {detailVM.change24h >= 0 ? '+' : ''}{detailVM.change24h.toFixed(2)}%
+              {routeChange24h >= 0 ? '+' : ''}{routeChange24h.toFixed(2)}%
             </div>
           </div>
           <div className="ave-detail-price-right">
-            <div><span>流通市值</span><strong>{formatCurrencyCompact(detailVM.marketCap, currencyUnit)}</strong></div>
+            <div><span>流通市值</span><strong>{formatCurrencyCompact(fourSnapshot?.marketCapUsd ?? detailVM.marketCap, currencyUnit)}</strong></div>
             <div><span>24h成交量</span><strong>{formatCurrencyCompact(volume24hValue, currencyUnit)}</strong></div>
             <div><span>24h持币数</span><strong>{holderCountValue ? formatInt(holderCountValue) : '—'}</strong></div>
             <div><span>24h交易数</span><strong>{formatInt(txns24hValue)}</strong></div>
@@ -761,7 +809,7 @@ export function MarketDetailPage() {
         <div className="ave-detail-v2-data-cards">
           <div className="ave-detail-v2-data-card">
             <span>流通市值</span>
-            <strong>{formatCurrencyCompact(detailVM.marketCap, currencyUnit)}</strong>
+            <strong>{formatCurrencyCompact(fourSnapshot?.marketCapUsd ?? detailVM.marketCap, currencyUnit)}</strong>
           </div>
           <div className="ave-detail-v2-data-card">
             <span>24h成交量</span>

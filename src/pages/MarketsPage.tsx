@@ -129,7 +129,7 @@ export function MarketsPage() {
       try {
         const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
         if (!res.ok) return
-        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; priceUsd?: string; priceChange24h?: string }> }
+        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; volumeUsd?: string; priceUsd?: string; priceChange24h?: string }> }
         const all = new Set<string>()
         const four = new Set<string>()
         const flap = new Set<string>()
@@ -155,7 +155,7 @@ export function MarketsPage() {
             price_change_percentage_24h:
               (row as any).priceChange24h == null ? null : (Number((row as any).priceChange24h) || 0),
             market_cap: Number((row as any).reserveUsd ?? 0) || 0,
-            volume_24h: Number((row as any).reserveUsd ?? 0) || 0,
+            volume_24h: Number((row as any).volumeUsd ?? (row as any).reserveUsd ?? 0) || 0,
             chain,
             dexId: String(row.dexId ?? ''),
             coingeckoId: undefined,
