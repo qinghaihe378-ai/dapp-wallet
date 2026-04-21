@@ -8,9 +8,9 @@ import { fetchEvmTokenByAddress } from '../lib/evm/balances'
 import { getSwapTokens, getTokenBySymbol, type EvmToken } from '../lib/evm/tokens'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
 import { executeQuotedSwap } from '../lib/evm/executeSwap'
+import { createRpcProvider } from '../lib/evm/fastRpcProvider'
 import { isEvmAddress } from '../api/jupiter'
 import { NETWORK_CONFIG } from '../lib/walletConfig'
-import { ethers } from 'ethers'
 import { usePageConfig } from '../hooks/usePageConfig'
 
 const SLIPPAGE_BPS = 200
@@ -246,12 +246,7 @@ export function BotPage() {
             info = await fetchEvmTokenByAddress(provider, buyTokenTrimmed)
           }
           if (!info) {
-            const rpcUrls = NETWORK_CONFIG[targetNet].rpcUrls
-            for (const rpc of rpcUrls) {
-              const prov = new ethers.JsonRpcProvider(rpc)
-              info = await fetchEvmTokenByAddress(prov, buyTokenTrimmed)
-              if (info) break
-            }
+            info = await fetchEvmTokenByAddress(createRpcProvider(targetNet), buyTokenTrimmed)
           }
           return info ? ({ symbol: info.symbol, name: info.symbol, address: addr, decimals: info.decimals, isNative: false, tone: 'slate' } as EvmToken) : null
         })()

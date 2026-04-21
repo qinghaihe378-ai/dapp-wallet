@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ethers } from 'ethers'
 import { readNativeBalance } from '../lib/evm/balances'
+import { createRpcProvider } from '../lib/evm/fastRpcProvider'
 import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 
 type Eip1193Provider = {
@@ -57,8 +58,7 @@ function resolveNetworkByChainId(chainId: number): Network | null {
 }
 
 function buildProvider(network: Network) {
-  const rpc = NETWORK_CONFIG[network].rpcUrls[0]
-  return new ethers.JsonRpcProvider(rpc)
+  return createRpcProvider(network)
 }
 
 async function buildWalletForMnemonic(mnemonic: string, network: Network) {

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ethers } from 'ethers'
 import { useSearchParams } from 'react-router-dom'
 import { useWallet } from '../components/WalletProvider'
 import { usePrices } from '../hooks/usePrices'
 import { NETWORK_CONFIG, type Network } from '../lib/walletConfig'
 import { fetchEvmTokenByAddress, readTokenBalance } from '../lib/evm/balances'
+import { createRpcProvider } from '../lib/evm/fastRpcProvider'
 import { executeQuotedSwap } from '../lib/evm/executeSwap'
 import { isSupportedSwapNetwork, type SupportedSwapNetwork } from '../lib/evm/config'
 import { getBestLiveQuote, type LiveQuote } from '../lib/evm/quote'
@@ -179,7 +179,7 @@ export function SwapPage() {
 
   const readOnlyProvider = useMemo(() => {
     if (!isSupportedSwapNetwork(network)) return null
-    return new ethers.JsonRpcProvider(NETWORK_CONFIG[network].rpcUrls[0])
+    return createRpcProvider(network)
   }, [network])
 
   /** 钱包未就绪时仍用公共 RPC 拉链上报价 */
@@ -284,7 +284,7 @@ export function SwapPage() {
       const addrNorm = parseEvmAddressInput(addrRaw)
       if (cancelled || !addrNorm || !isSupportedSwapNetwork(network)) return null
       const readProvider =
-        provider ?? new ethers.JsonRpcProvider(NETWORK_CONFIG[network as SupportedSwapNetwork].rpcUrls[0])
+        provider ?? createRpcProvider(network as SupportedSwapNetwork)
       const info = await fetchEvmTokenByAddress(readProvider, addrNorm)
       if (!info) return null
       const token: EvmToken = {

@@ -7,7 +7,11 @@ export const NETWORK_CONFIG: Record<
   mainnet: {
     chainId: 1,
     chainName: 'Ethereum Mainnet',
-    rpcUrls: ['https://ethereum-rpc.publicnode.com'],
+    rpcUrls: [
+      'https://ethereum.publicnode.com',
+      'https://eth.llamarpc.com',
+      'https://rpc.ankr.com/eth',
+    ],
     symbol: 'ETH',
     explorerTxBase: 'https://etherscan.io/tx/',
   },
@@ -15,10 +19,9 @@ export const NETWORK_CONFIG: Record<
     chainId: 8453,
     chainName: 'Base',
     rpcUrls: [
+      'https://base-rpc.publicnode.com',
       'https://mainnet.base.org',
       'https://base.llamarpc.com',
-      'https://rpc.ankr.com/base',
-      'https://base-mainnet.public.blastapi.io',
     ],
     symbol: 'ETH',
     explorerTxBase: 'https://basescan.org/tx/',
@@ -26,7 +29,12 @@ export const NETWORK_CONFIG: Record<
   bsc: {
     chainId: 56,
     chainName: 'BNB Smart Chain',
-    rpcUrls: ['https://bsc.publicnode.com', 'https://bsc-dataseed1.binance.org', 'https://rpc.ankr.com/bsc'],
+    rpcUrls: [
+      'https://bsc-dataseed1.binance.org',
+      'https://bsc-dataseed2.binance.org',
+      'https://bsc.publicnode.com',
+      'https://rpc.ankr.com/bsc',
+    ],
     symbol: 'BNB',
     explorerTxBase: 'https://bscscan.com/tx/',
   },
