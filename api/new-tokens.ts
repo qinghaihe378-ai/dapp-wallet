@@ -1,6 +1,7 @@
 import { Redis } from 'ioredis'
 import { fetchDexScreenerAllNewTokens } from '../src/api/dexscreenerNewTokens.js'
 import { Contract, JsonRpcProvider } from 'ethers'
+import { fetchFourMemeTokenSnapshot } from './_fourMeme.js'
 
 const redis = new Redis(process.env.REDIS_URL as string)
 const KEY = 'clawdex:new-tokens:latest'
@@ -135,8 +136,21 @@ async function fetchFourMemeOnchainNewTokens() {
     for (const [token, meta] of results) metas.set(token, meta)
   }
 
+  const snapshots = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchFourMemeTokenSnapshot>>
+  >()
+  for (let i = 0; i < targetTokens.length; i += 6) {
+    const batch = targetTokens.slice(i, i + 6)
+    const results = await Promise.all(
+      batch.map(async (token) => [token, await fetchFourMemeTokenSnapshot(token).catch(() => null)] as const),
+    )
+    for (const [token, snapshot] of results) snapshots.set(token, snapshot)
+  }
+
   for (const token of targetTokens) {
     const meta = metas.get(token)
+    const snapshot = snapshots.get(token)
     const symbol = meta?.symbol || `${token.slice(2, 6).toUpperCase()}`
     const name = meta?.name || symbol
 
@@ -149,13 +163,19 @@ async function fetchFourMemeOnchainNewTokens() {
       poolName: name,
       poolAddress: token,
       dexId: 'four.meme',
-      quoteSymbol: 'BNB',
-      priceUsd: '0',
-      fdvUsd: null,
-      reserveUsd: '0',
-      volumeUsd: '0',
+      quoteSymbol: String(snapshot?.quoteSymbol ?? 'BNB'),
+      priceUsd: String(Number(snapshot?.currentPriceUsd ?? 0) || 0),
+      fdvUsd:
+        snapshot?.marketCapUsd != null && Number.isFinite(snapshot.marketCapUsd)
+          ? String(snapshot.marketCapUsd)
+          : null,
+      reserveUsd: String(Number(snapshot?.virtualLiquidityUsd ?? snapshot?.marketCapUsd ?? 0) || 0),
+      volumeUsd: String(Number(snapshot?.volumeUsd ?? 0) || 0),
       poolCreatedAt: nowIso,
-      priceChange24h: null,
+      priceChange24h:
+        snapshot?.priceChange24h != null && Number.isFinite(snapshot.priceChange24h)
+          ? String(snapshot.priceChange24h)
+          : null,
     })
   }
   return items
