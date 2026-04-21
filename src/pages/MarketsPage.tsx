@@ -67,6 +67,7 @@ export function MarketsPage() {
   const [addressSearchLoading, setAddressSearchLoading] = useState(false)
   const SUPPORTED_MARKET_CHAINS: ChainId[] = ['eth', 'bsc', 'base']
   const [sourceTab, setSourceTab] = useState<'gold' | 'new' | 'four' | 'flap'>('gold')
+  const [fourTab, setFourTab] = useState<'hotInner' | 'newInner' | 'nearFull' | 'newOuter' | 'hotOuter'>('hotInner')
   const [rankTab, setRankTab] = useState<'gain' | 'included' | 'loss'>('included')
   const [period, setPeriod] = useState<'5m' | '1h' | '4h' | '24h'>('24h')
   const [newOpenKeys, setNewOpenKeys] = useState<Set<string>>(new Set())
@@ -83,6 +84,8 @@ export function MarketsPage() {
     quoteSymbol: string
   }>>({})
   const [fourLoadingMap, setFourLoadingMap] = useState<Record<string, boolean>>({})
+
+  const showPeriodTabs = sourceTab === 'gold' || sourceTab === 'new'
 
   const normalizeNewTokenChain = (raw: string): ChainId | null => {
     const c = String(raw).toLowerCase()
@@ -109,6 +112,73 @@ export function MarketsPage() {
       if (!byKey.has(k)) byKey.set(k, it)
     }
     return [...byKey.values()]
+  }
+
+  const getFourRowMeta = (item: MarketItem) => {
+    const progressPct = Number((item as any).fourProgressPct)
+    const targetQuoteAmount = Number((item as any).fourTargetQuoteAmount)
+    const bondingQuoteAmount = Number((item as any).fourBondingQuoteAmount)
+    const remainingSupply = Number((item as any).fourRemainingSupply)
+    const latestTradeBlock = Number((item as any).fourLatestTradeBlock)
+    const fourCreatedOrder = Number((item as any).fourCreatedOrder)
+    const derivedProgressPct =
+      targetQuoteAmount > 0 && bondingQuoteAmount >= 0
+        ? Math.max(0, Math.min(100, (bondingQuoteAmount / targetQuoteAmount) * 100))
+        : null
+    const effectiveProgressPct = Number.isFinite(progressPct)
+      ? progressPct
+      : derivedProgressPct
+    const isOuter =
+      effectiveProgressPct != null
+        ? effectiveProgressPct >= 99.5
+        : (Number.isFinite(remainingSupply) ? remainingSupply <= 0 : false)
+    const hotScore =
+      Math.max(Number(item.volume_24h ?? 0) || 0, 0) * 10 +
+      Math.max(Number(item.market_cap ?? 0) || 0, 0) +
+      Math.max(Number(item.price_change_percentage_24h ?? 0) || 0, 0) * 1_000 +
+      Math.max(Number(item.current_price ?? 0) || 0, 0) * 1_000_000
+
+    return {
+      effectiveProgressPct,
+      isOuter,
+      latestTradeBlock: Number.isFinite(latestTradeBlock) ? latestTradeBlock : 0,
+      fourCreatedOrder: Number.isFinite(fourCreatedOrder) ? fourCreatedOrder : 0,
+      hotScore,
+    }
+  }
+
+  const sortFourRows = (items: MarketItem[], tab: 'hotInner' | 'newInner' | 'nearFull' | 'newOuter' | 'hotOuter') => {
+    const filtered = items.filter((item) => {
+      const meta = getFourRowMeta(item)
+      if (tab === 'hotInner' || tab === 'newInner') return !meta.isOuter
+      if (tab === 'nearFull') return !meta.isOuter && (meta.effectiveProgressPct ?? 0) >= 80
+      if (tab === 'newOuter' || tab === 'hotOuter') return meta.isOuter
+      return true
+    })
+
+    return [...filtered].sort((a, b) => {
+      const am = getFourRowMeta(a)
+      const bm = getFourRowMeta(b)
+      if (tab === 'newInner' || tab === 'newOuter') {
+        return (
+          bm.fourCreatedOrder - am.fourCreatedOrder ||
+          bm.latestTradeBlock - am.latestTradeBlock ||
+          bm.hotScore - am.hotScore
+        )
+      }
+      if (tab === 'nearFull') {
+        return (
+          (bm.effectiveProgressPct ?? 0) - (am.effectiveProgressPct ?? 0) ||
+          bm.hotScore - am.hotScore ||
+          bm.latestTradeBlock - am.latestTradeBlock
+        )
+      }
+      return (
+        bm.hotScore - am.hotScore ||
+        bm.latestTradeBlock - am.latestTradeBlock ||
+        (bm.effectiveProgressPct ?? 0) - (am.effectiveProgressPct ?? 0)
+      )
+    })
   }
 
   const loadFourSnapshotBatch = async (addresses: string[]) => {
@@ -192,7 +262,7 @@ export function MarketsPage() {
       try {
         const res = await fetch(apiUrl('/api/new-tokens'), { cache: 'no-store' })
         if (!res.ok) return
-        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; volumeUsd?: string; priceUsd?: string; priceChange24h?: string }> }
+        const json = (await res.json()) as { items?: Array<{ chainId?: string; tokenAddress?: string; dexId?: string; symbol?: string; name?: string; poolName?: string; quoteSymbol?: string; reserveUsd?: string; volumeUsd?: string; priceUsd?: string; priceChange24h?: string; progressPct?: string | null; remainingSupply?: string | null; bondingQuoteAmount?: string | null; targetQuoteAmount?: string | null; latestTradeBlock?: number | null; fourCreatedOrder?: number }> }
         const all = new Set<string>()
         const four = new Set<string>()
         const flap = new Set<string>()
@@ -224,6 +294,17 @@ export function MarketsPage() {
             coingeckoId: undefined,
           }
           ;(seed as any).quoteSymbol = quoteSymbol
+          ;(seed as any).fourProgressPct =
+            (row as any).progressPct == null ? null : (Number((row as any).progressPct) || 0)
+          ;(seed as any).fourRemainingSupply =
+            (row as any).remainingSupply == null ? null : (Number((row as any).remainingSupply) || 0)
+          ;(seed as any).fourBondingQuoteAmount =
+            (row as any).bondingQuoteAmount == null ? null : (Number((row as any).bondingQuoteAmount) || 0)
+          ;(seed as any).fourTargetQuoteAmount =
+            (row as any).targetQuoteAmount == null ? null : (Number((row as any).targetQuoteAmount) || 0)
+          ;(seed as any).fourLatestTradeBlock =
+            (row as any).latestTradeBlock == null ? null : (Number((row as any).latestTradeBlock) || 0)
+          ;(seed as any).fourCreatedOrder = Number((row as any).fourCreatedOrder ?? 0)
           allSeeds.push(seed)
           if (dex.includes('four')) four.add(key)
           if (dex.includes('four')) fourSeeds.push(seed)
@@ -322,6 +403,7 @@ export function MarketsPage() {
     const useAddressResults = searchQuery && isContractAddress(searchQuery) && addressSearchResults !== null
     let next: MarketItem[] = useAddressResults ? [...addressSearchResults] : [...list]
     let usingSourceSeedOnly = false
+    let usingFourCategorySort = false
 
     if (!useAddressResults) {
       if (sourceTab === 'four' && fourSeedItems.length > 0) {
@@ -386,8 +468,15 @@ export function MarketsPage() {
       )
     }
 
+    if (sourceTab === 'four') {
+      next = sortFourRows(next, fourTab)
+      usingFourCategorySort = true
+    }
+
     // 榜单排序：涨幅榜 / 收录榜 / 跌幅榜
-    if (rankTab === 'gain') {
+    if (usingFourCategorySort) {
+      // four.meme 子标签使用自己的排序逻辑
+    } else if (rankTab === 'gain') {
       next = [...next].sort((a, b) => (b.price_change_percentage_24h ?? -Infinity) - (a.price_change_percentage_24h ?? -Infinity))
     } else if (rankTab === 'loss') {
       next = [...next].sort((a, b) => (a.price_change_percentage_24h ?? Infinity) - (b.price_change_percentage_24h ?? Infinity))
@@ -408,6 +497,7 @@ export function MarketsPage() {
     searchQuery,
     sortBy,
     sourceTab,
+    fourTab,
     rankTab,
     newOpenKeys,
     fourKeys,
@@ -557,16 +647,27 @@ export function MarketsPage() {
                   <button type="button" className={rankTab === 'included' ? 'active' : ''} onClick={() => setRankTab('included')}>收录榜</button>
                   <button type="button" className={rankTab === 'loss' ? 'active' : ''} onClick={() => setRankTab('loss')}>跌幅榜</button>
                 </div>
-                <div className="market-period-row">
-                  <button type="button" className={period === '5m' ? 'active' : ''} onClick={() => { setPeriod('5m'); setSortBy('default') }}>5m</button>
-                  <button type="button" className={period === '1h' ? 'active' : ''} onClick={() => { setPeriod('1h'); setSortBy('price') }}>1h</button>
-                  <button type="button" className={period === '4h' ? 'active' : ''} onClick={() => { setPeriod('4h'); setSortBy('change') }}>4h</button>
-                  <button type="button" className={period === '24h' ? 'active' : ''} onClick={() => { setPeriod('24h'); setSortBy('change') }}>24h</button>
-                  <span className="market-period-tools">
-                    <button type="button" aria-label="排序">☰</button>
-                    <button type="button" aria-label="筛选">⌯</button>
-                  </span>
-                </div>
+                {sourceTab === 'four' && (
+                  <div className="market-period-row">
+                    <button type="button" className={fourTab === 'hotInner' ? 'active' : ''} onClick={() => setFourTab('hotInner')}>热内盘</button>
+                    <button type="button" className={fourTab === 'newInner' ? 'active' : ''} onClick={() => setFourTab('newInner')}>新内盘</button>
+                    <button type="button" className={fourTab === 'nearFull' ? 'active' : ''} onClick={() => setFourTab('nearFull')}>即将打满</button>
+                    <button type="button" className={fourTab === 'newOuter' ? 'active' : ''} onClick={() => setFourTab('newOuter')}>新外盘</button>
+                    <button type="button" className={fourTab === 'hotOuter' ? 'active' : ''} onClick={() => setFourTab('hotOuter')}>热外盘</button>
+                  </div>
+                )}
+                {showPeriodTabs && (
+                  <div className="market-period-row">
+                    <button type="button" className={period === '5m' ? 'active' : ''} onClick={() => { setPeriod('5m'); setSortBy('default') }}>5m</button>
+                    <button type="button" className={period === '1h' ? 'active' : ''} onClick={() => { setPeriod('1h'); setSortBy('price') }}>1h</button>
+                    <button type="button" className={period === '4h' ? 'active' : ''} onClick={() => { setPeriod('4h'); setSortBy('change') }}>4h</button>
+                    <button type="button" className={period === '24h' ? 'active' : ''} onClick={() => { setPeriod('24h'); setSortBy('change') }}>24h</button>
+                    <span className="market-period-tools">
+                      <button type="button" aria-label="排序">☰</button>
+                      <button type="button" aria-label="筛选">⌯</button>
+                    </span>
+                  </div>
+                )}
               </div>
             )
           }

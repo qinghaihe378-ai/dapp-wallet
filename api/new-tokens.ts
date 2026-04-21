@@ -127,6 +127,12 @@ async function fetchFourMemeOnchainNewTokens() {
     volumeUsd: string
     poolCreatedAt: string
     priceChange24h: string | null
+    progressPct: string | null
+    remainingSupply: string | null
+    bondingQuoteAmount: string | null
+    targetQuoteAmount: string | null
+    latestTradeBlock: number | null
+    fourCreatedOrder: number
   }> = []
 
   const metas = new Map<string, { symbol: string; name: string }>()
@@ -148,7 +154,7 @@ async function fetchFourMemeOnchainNewTokens() {
     for (const [token, snapshot] of results) snapshots.set(token, snapshot)
   }
 
-  for (const token of targetTokens) {
+  for (const [index, token] of targetTokens.entries()) {
     const meta = metas.get(token)
     const snapshot = snapshots.get(token)
     const symbol = meta?.symbol || `${token.slice(2, 6).toUpperCase()}`
@@ -176,6 +182,27 @@ async function fetchFourMemeOnchainNewTokens() {
         snapshot?.priceChange24h != null && Number.isFinite(snapshot.priceChange24h)
           ? String(snapshot.priceChange24h)
           : null,
+      progressPct:
+        snapshot?.progressPct != null && Number.isFinite(snapshot.progressPct)
+          ? String(snapshot.progressPct)
+          : null,
+      remainingSupply:
+        snapshot?.remainingSupply != null && Number.isFinite(snapshot.remainingSupply)
+          ? String(snapshot.remainingSupply)
+          : null,
+      bondingQuoteAmount:
+        snapshot?.bondingQuoteAmount != null && Number.isFinite(snapshot.bondingQuoteAmount)
+          ? String(snapshot.bondingQuoteAmount)
+          : null,
+      targetQuoteAmount:
+        snapshot?.targetQuoteAmount != null && Number.isFinite(snapshot.targetQuoteAmount)
+          ? String(snapshot.targetQuoteAmount)
+          : null,
+      latestTradeBlock:
+        snapshot?.latestTradeBlock != null && Number.isFinite(snapshot.latestTradeBlock)
+          ? snapshot.latestTradeBlock
+          : null,
+      fourCreatedOrder: index,
     })
   }
   return items
