@@ -409,20 +409,28 @@ function parseFourMarkdown(text: string, tokenAddress: string): FourMemeSnapshot
 export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<FourMemeSnapshot | null> {
   const token = tokenAddress.toLowerCase()
   const cacheKey = `${FOUR_SNAPSHOT_KEY_PREFIX}${token}`
-  const onchainPromise = fetchFourMemeOnchainState(token).catch(() => null)
-  const bnbUsdPromise = fetchBnbUsdPrice().catch(() => null)
-  const metaPromise = fetchFourMemeTokenMeta(token).catch(() => ({
-    name: '',
-    symbol: '',
-    totalSupply: 1_000_000_000,
-    decimals: 18,
-  }))
+  const [onchain, meta, bnbUsdPrice] = await Promise.all([
+    fetchFourMemeOnchainState(token).catch(() => null),
+    fetchFourMemeTokenMeta(token).catch(() => ({
+      name: '',
+      symbol: '',
+      totalSupply: 1_000_000_000,
+      decimals: 18,
+    })),
+    fetchBnbUsdPrice().catch(() => null),
+  ])
+  const onchainSnapshot = buildOnchainOnlySnapshot(token, meta, onchain, bnbUsdPrice)
+
+  // Four.meme 详情关键字段优先返回链上快照，避免页面抓取失败时直接变成 null。
+  if (onchainSnapshot) {
+    await safeRedisSet(cacheKey, JSON.stringify(onchainSnapshot), 300)
+    return onchainSnapshot
+  }
+
   const cached = await safeRedisGet(cacheKey)
   if (cached) {
     try {
-      const parsed = JSON.parse(cached) as FourMemeSnapshot
-      const onchain = await onchainPromise
-      return mergeFourSnapshotWithOnchain(parsed, onchain)
+      return JSON.parse(cached) as FourMemeSnapshot
     } catch {
       // ignore invalid cache
     }
@@ -438,9 +446,6 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
     if (!response.ok) return null
     const text = await response.text()
     const parsed = parseFourMarkdown(text, token)
-    const onchain = await onchainPromise
-    const meta = await metaPromise
-    const bnbUsdPrice = await bnbUsdPromise
     if (!parsed) {
       return buildOnchainOnlySnapshot(token, meta, onchain, bnbUsdPrice)
     }
@@ -454,7 +459,6 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
     }
     return merged
   } catch {
-    const [onchain, meta, bnbUsdPrice] = await Promise.all([onchainPromise, metaPromise, bnbUsdPromise])
     return buildOnchainOnlySnapshot(token, meta, onchain, bnbUsdPrice)
   } finally {
     clearTimeout(timeout)

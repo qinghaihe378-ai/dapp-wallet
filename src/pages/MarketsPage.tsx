@@ -376,14 +376,17 @@ export function MarketsPage() {
               if (snapshot) {
                 const totalSupply = Number(snapshot.totalSupply ?? 0)
                 const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
-                mergedPatch[address.toLowerCase()] = {
-                  current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
-                  price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
-                  market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
-                  volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
-                  quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+                const derivedUsdPrice = marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
+                if (derivedUsdPrice > 0) {
+                  mergedPatch[address.toLowerCase()] = {
+                    current_price: derivedUsdPrice,
+                    price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
+                    market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
+                    volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+                    quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
+                  }
+                  continue
                 }
-                continue
               }
             }
           } catch {
