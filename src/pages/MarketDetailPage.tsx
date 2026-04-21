@@ -655,7 +655,6 @@ export function MarketDetailPage() {
   const displayDexIdRaw = pairDexId ?? (routeSource || null)
   const displayDexId = displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw
   const displayPools = useMemo(() => {
-    if (tokenPools.length > 0) return tokenPools
     if (isFourSource && detailVM) {
       return [
         {
