@@ -79,6 +79,7 @@ export function MarketsPage() {
     volume_24h: number
     quoteSymbol: string
   }>>({})
+  const [fourLoadingMap, setFourLoadingMap] = useState<Record<string, boolean>>({})
 
   const normalizeNewTokenChain = (raw: string): ChainId | null => {
     const c = String(raw).toLowerCase()
@@ -330,10 +331,17 @@ export function MarketsPage() {
     const targets = rows
       .map((item) => tokenAddressFromId(item.id).toLowerCase())
       .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
-      .filter((addr) => !fourPriceMap[addr])
+      .filter((addr) => !fourPriceMap[addr] && !fourLoadingMap[addr])
       .slice(0, 18)
 
     if (targets.length === 0) return
+    
+    // 标记这些地址为正在加载
+    setFourLoadingMap(prev => {
+      const next = { ...prev }
+      targets.forEach(addr => { next[addr] = true })
+      return next
+    })
 
     let cancelled = false
     const loadFourSnapshots = async () => {
@@ -382,7 +390,7 @@ export function MarketsPage() {
 
     void loadFourSnapshots()
     return () => { cancelled = true }
-  }, [rows, sourceTab])
+  }, [rows, sourceTab, fourPriceMap, fourLoadingMap])
 
   const sections = useMemo(() => {
     const defaults = [

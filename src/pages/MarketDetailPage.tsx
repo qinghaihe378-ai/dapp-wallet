@@ -653,7 +653,7 @@ export function MarketDetailPage() {
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
-  const effectiveIsFourSource = isFourSource || !!fourSnapshot
+  const effectiveIsFourSource = isFourSource
   const displayDexIdRaw = pairDexId ?? (routeSource || null)
   const displayDexId = effectiveIsFourSource ? 'four.meme' : (displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw)
   const displayPools = useMemo(() => {
