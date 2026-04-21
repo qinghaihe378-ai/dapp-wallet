@@ -230,34 +230,6 @@ export function MarketsPage() {
           if (dex.includes('flap')) flap.add(key)
           if (dex.includes('flap')) flapSeeds.push(seed)
         }
-        const fourAddresses = fourSeeds
-          .map((item) => tokenAddressFromId(item.id).toLowerCase())
-          .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
-        const fourPatch = fourAddresses.length > 0 ? await loadFourSnapshotBatch(fourAddresses) : {}
-        if (Object.keys(fourPatch).length > 0) {
-          const mergeSeed = (item: MarketItem) => {
-            const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
-            if (!extra) return item
-            const merged: MarketItem = {
-              ...item,
-              current_price: extra.current_price,
-              price_change_percentage_24h: extra.price_change_percentage_24h,
-              market_cap: extra.market_cap,
-              volume_24h: extra.volume_24h,
-            }
-            ;(merged as any).quoteSymbol = extra.quoteSymbol
-            return merged
-          }
-          for (let i = 0; i < allSeeds.length; i += 1) {
-            allSeeds[i] = mergeSeed(allSeeds[i])
-          }
-          for (let i = 0; i < fourSeeds.length; i += 1) {
-            fourSeeds[i] = mergeSeed(fourSeeds[i])
-          }
-          if (!cancelled) {
-            setFourPriceMap((prev) => ({ ...prev, ...fourPatch }))
-          }
-        }
         if (cancelled) return
         setNewOpenKeys(all)
         setFourKeys(four)
@@ -265,6 +237,43 @@ export function MarketsPage() {
         setNewOpenSeedItems(allSeeds)
         setFourSeedItems(fourSeeds)
         setFlapSeedItems(flapSeeds)
+
+        const fourAddresses = fourSeeds
+          .map((item) => tokenAddressFromId(item.id).toLowerCase())
+          .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
+        if (fourAddresses.length > 0) {
+          void (async () => {
+            const fourPatch = await loadFourSnapshotBatch(fourAddresses)
+            if (cancelled || Object.keys(fourPatch).length === 0) return
+            setFourPriceMap((prev) => ({ ...prev, ...fourPatch }))
+            setNewOpenSeedItems((prev) => prev.map((item) => {
+              const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
+              if (!extra) return item
+              const merged: MarketItem = {
+                ...item,
+                current_price: extra.current_price,
+                price_change_percentage_24h: extra.price_change_percentage_24h,
+                market_cap: extra.market_cap,
+                volume_24h: extra.volume_24h,
+              }
+              ;(merged as any).quoteSymbol = extra.quoteSymbol
+              return merged
+            }))
+            setFourSeedItems((prev) => prev.map((item) => {
+              const extra = fourPatch[tokenAddressFromId(item.id).toLowerCase()]
+              if (!extra) return item
+              const merged: MarketItem = {
+                ...item,
+                current_price: extra.current_price,
+                price_change_percentage_24h: extra.price_change_percentage_24h,
+                market_cap: extra.market_cap,
+                volume_24h: extra.volume_24h,
+              }
+              ;(merged as any).quoteSymbol = extra.quoteSymbol
+              return merged
+            }))
+          })()
+        }
       } catch (e) {
         console.error('加载新开盘来源失败', e)
       }
