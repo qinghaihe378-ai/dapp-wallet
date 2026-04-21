@@ -331,7 +331,7 @@ export function MarketsPage() {
       .map((item) => tokenAddressFromId(item.id).toLowerCase())
       .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
       .filter((addr) => !fourPriceMap[addr])
-      .slice(0, 40)
+      .slice(0, 18)
 
     if (targets.length === 0) return
 
@@ -345,49 +345,32 @@ export function MarketsPage() {
           volume_24h: number
           quoteSymbol: string
         }> = {}
-        for (let i = 0; i < targets.length; i += 4) {
-          const batch = targets.slice(i, i + 4)
-          const results = await Promise.allSettled(
-            batch.map(async (address) => {
-              const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(address)}`), { cache: 'no-store' })
-              if (!res.ok) return [address, null] as const
-              const json = (await res.json()) as {
-                snapshot?: {
-                  quoteSymbol?: string
-                  priceChange24h?: number | null
-                  marketCapUsd?: number | null
-                  virtualLiquidityUsd?: number | null
-                  volumeUsd?: number | null
-                  totalSupply?: number | null
-                } | null
-              }
-              return [address, json.snapshot ?? null] as const
-            }),
-          )
+        for (let i = 0; i < targets.length; i += 6) {
+          const batch = targets.slice(i, i + 6)
+          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(batch.join(','))}`), { cache: 'no-store' })
+          if (!res.ok) continue
+          const json = (await res.json()) as {
+            snapshots?: Record<string, {
+              quoteSymbol?: string
+              priceChange24h?: number | null
+              marketCapUsd?: number | null
+              virtualLiquidityUsd?: number | null
+              volumeUsd?: number | null
+              totalSupply?: number | null
+            } | null>
+          }
           if (cancelled) return
-          const patch: Record<string, {
-            current_price: number
-            price_change_percentage_24h: number | null
-            market_cap: number
-            volume_24h: number
-            quoteSymbol: string
-          }> = {}
-          for (const result of results) {
-            if (result.status !== 'fulfilled') continue
-            const [address, snapshot] = result.value
+          for (const [address, snapshot] of Object.entries(json.snapshots ?? {})) {
             if (!snapshot) continue
             const totalSupply = Number(snapshot.totalSupply ?? 0)
             const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
-            patch[address.toLowerCase()] = {
+            mergedPatch[address.toLowerCase()] = {
               current_price: marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0,
               price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
               market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
               volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
               quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
             }
-          }
-          if (Object.keys(patch).length > 0) {
-            Object.assign(mergedPatch, patch)
           }
         }
         if (!cancelled && Object.keys(mergedPatch).length > 0) {

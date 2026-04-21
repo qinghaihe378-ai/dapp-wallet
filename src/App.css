@@ -7507,6 +7507,35 @@ button:disabled,
   white-space: nowrap;
 }
 
+.ave-four-pool-summary {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ave-four-pool-summary > div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.ave-four-pool-summary span {
+  display: block;
+  color: #8f99ac;
+  font-size: 11px;
+}
+
+.ave-four-pool-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: #f2f6ff;
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
 .ave-pool-dex-cell {
   display: inline-flex;
   align-items: center;

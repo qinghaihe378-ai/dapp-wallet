@@ -912,6 +912,34 @@ export function MarketDetailPage() {
                       <span>总流动性</span>
                       <strong>{totalPoolsLiquidityLabel}</strong>
                     </div>
+                    {effectiveIsFourSource && subTab === 'pool' && (
+                      <div className="ave-four-pool-summary">
+                        <div>
+                          <span>币种数量</span>
+                          <strong>
+                            {remainingSupplyNum > 0
+                              ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
+                              : (totalSupplyNum > 0
+                                  ? `${formatTokenAmount(soldSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
+                                  : '数量待同步')}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>{quoteSymbol} 数量</span>
+                          <strong>
+                            {bondingQuoteAmountNum > 0
+                              ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
+                              : (targetQuoteAmountNum > 0
+                                  ? `${formatTokenAmount(targetQuoteAmountNum)} ${quoteSymbol}`
+                                  : `${quoteSymbol} 同步中`)}
+                          </strong>
+                        </div>
+                        <div>
+                          <span>流动性总额</span>
+                          <strong>{derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '内盘同步中'}</strong>
+                        </div>
+                      </div>
+                    )}
                     {subTab === 'pool' ? (
                       <div className="trade-recent-list">
                         <div className="ave-pool-table-head">
