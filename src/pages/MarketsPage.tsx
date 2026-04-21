@@ -356,48 +356,62 @@ export function MarketsPage() {
           volume_24h: number
           quoteSymbol: string
         }> = {}
+        const snapshotMap: Record<string, {
+          quoteSymbol?: string
+          priceChange24h?: number | null
+          marketCapUsd?: number | null
+          currentPriceUsd?: number | null
+          virtualLiquidityUsd?: number | null
+          volumeUsd?: number | null
+          totalSupply?: number | null
+        } | null> = {}
+        try {
+          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(targets.join(','))}`), { cache: 'no-store' })
+          if (res.ok) {
+            const json = (await res.json()) as {
+              snapshots?: Record<string, {
+                quoteSymbol?: string
+                priceChange24h?: number | null
+                marketCapUsd?: number | null
+                currentPriceUsd?: number | null
+                virtualLiquidityUsd?: number | null
+                volumeUsd?: number | null
+                totalSupply?: number | null
+              } | null>
+            }
+            Object.assign(snapshotMap, json.snapshots ?? {})
+          }
+        } catch {
+          // fall through to per-token fallback below
+        }
+
         for (let i = 0; i < targets.length; i += 1) {
           const address = targets[i]
-          try {
-            const res = await fetch(apiUrl(`/api/four-token?address=${encodeURIComponent(address)}`), { cache: 'no-store' })
-            if (res.ok) {
-              const json = (await res.json()) as {
-                snapshot?: {
-                  quoteSymbol?: string
-                  priceChange24h?: number | null
-                  marketCapUsd?: number | null
-                  virtualLiquidityUsd?: number | null
-                  volumeUsd?: number | null
-                  totalSupply?: number | null
-                } | null
-              }
-              if (cancelled) return
-              const snapshot = json.snapshot
-              if (snapshot) {
-                const totalSupply = Number(snapshot.totalSupply ?? 0)
-                const marketCapUsd = Number(snapshot.marketCapUsd ?? 0)
-                const derivedUsdPrice = marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
-                if (derivedUsdPrice > 0) {
-                  mergedPatch[address.toLowerCase()] = {
-                    current_price: derivedUsdPrice,
-                    price_change_percentage_24h: snapshot.priceChange24h == null ? null : Number(snapshot.priceChange24h),
-                    market_cap: Number(snapshot.virtualLiquidityUsd ?? 0) || 0,
-                    volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
-                    quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
-                  }
-                  continue
-                }
-              }
+          const snapshot = snapshotMap[address.toLowerCase()] ?? null
+          const currentPriceUsd =
+            Number(snapshot?.currentPriceUsd ?? 0) ||
+            (() => {
+              const totalSupply = Number(snapshot?.totalSupply ?? 0)
+              const marketCapUsd = Number(snapshot?.marketCapUsd ?? 0)
+              return marketCapUsd > 0 && totalSupply > 0 ? marketCapUsd / totalSupply : 0
+            })()
+
+          if (snapshot && currentPriceUsd > 0) {
+            mergedPatch[address.toLowerCase()] = {
+              current_price: currentPriceUsd,
+              price_change_percentage_24h: snapshot.priceChange24h == null ? 0 : Number(snapshot.priceChange24h),
+              market_cap: Number(snapshot.virtualLiquidityUsd ?? snapshot.marketCapUsd ?? 0) || 0,
+              volume_24h: Number(snapshot.volumeUsd ?? 0) || 0,
+              quoteSymbol: String(snapshot.quoteSymbol ?? 'BNB'),
             }
-          } catch {
-            // fall through to DexScreener fallback
+            continue
           }
 
           const dexItem = await fetchDexTokenById(`bsc:${address}`)
           if (!dexItem) continue
           mergedPatch[address.toLowerCase()] = {
             current_price: Number(dexItem.current_price ?? 0) || 0,
-            price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? null : Number(dexItem.price_change_percentage_24h),
+            price_change_percentage_24h: dexItem.price_change_percentage_24h == null ? 0 : Number(dexItem.price_change_percentage_24h),
             market_cap: Number(dexItem.market_cap ?? 0) || 0,
             volume_24h: Number(dexItem.volume_24h ?? 0) || 0,
             quoteSymbol: 'BNB',

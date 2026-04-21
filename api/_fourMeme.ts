@@ -163,6 +163,9 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
             priceChange24h = ((lastPrice - firstPrice) / firstPrice) * 100
           }
         }
+        if (priceChange24h == null) {
+          priceChange24h = 0
+        }
       }
     } catch {
       // ignore recent trade scan failure
@@ -281,6 +284,10 @@ function buildOnchainOnlySnapshot(
     priceQuote != null && bnbUsdPrice != null
       ? priceQuote * totalSupply * bnbUsdPrice
       : null
+  const currentPriceUsd =
+    priceQuote != null && bnbUsdPrice != null
+      ? priceQuote * bnbUsdPrice
+      : null
   const virtualLiquidityUsd =
     priceQuote != null && bnbUsdPrice != null && onchain?.remainingSupply != null && onchain?.bondingQuoteAmount != null
       ? ((onchain.remainingSupply * priceQuote) + onchain.bondingQuoteAmount) * bnbUsdPrice
@@ -295,6 +302,7 @@ function buildOnchainOnlySnapshot(
     quoteSymbol: 'BNB',
     priceChange24h: onchain?.priceChange24h ?? null,
     marketCapUsd,
+    currentPriceUsd,
     virtualLiquidityUsd,
     volumeUsd: null,
     totalSupply,
@@ -324,6 +332,7 @@ export interface FourMemeSnapshot {
   targetQuoteAmount: number | null
   progressPct: number | null
   maxMarketCapUsd: number | null
+  currentPriceUsd?: number | null
   latestTradeBlock?: number | null
   latestTradeTx?: string | null
   updatedAt?: number
