@@ -252,6 +252,7 @@ export function MarketDetailPage() {
     return dexItem.chain
   }, [dexItem])
   const isFourSource = routeSource.includes('four') || String(dexItem?.dexId ?? '').toLowerCase().includes('four')
+  const shouldTryFourSnapshot = !!dexTokenAddress && ((dexItem?.chain ?? '') === 'bsc' || isFourSource)
 
   useEffect(() => {
     if (!coinId) return
@@ -299,7 +300,7 @@ export function MarketDetailPage() {
   }, [coinId, isDexFormat, isCoingeckoFormat])
 
   useEffect(() => {
-    if (!isFourSource || !dexTokenAddress) {
+    if (!shouldTryFourSnapshot || !dexTokenAddress) {
       setFourSnapshot(null)
       return
     }
@@ -316,7 +317,7 @@ export function MarketDetailPage() {
     }
     void load()
     return () => { cancelled = true }
-  }, [isFourSource, dexTokenAddress])
+  }, [shouldTryFourSnapshot, dexTokenAddress])
 
   useEffect(() => {
     if (!dexScreenerChainId || !dexTokenAddress) return
@@ -652,10 +653,11 @@ export function MarketDetailPage() {
     ? (redUpGreenDown ? 'down' : 'up')
     : (redUpGreenDown ? 'up' : 'down')
   const holderCountValue = apiTotalHolders && apiTotalHolders > 0 ? apiTotalHolders : null
+  const effectiveIsFourSource = isFourSource || !!fourSnapshot
   const displayDexIdRaw = pairDexId ?? (routeSource || null)
-  const displayDexId = displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw
+  const displayDexId = effectiveIsFourSource ? 'four.meme' : (displayDexIdRaw === 'four' ? 'four.meme' : displayDexIdRaw)
   const displayPools = useMemo(() => {
-    if (isFourSource && detailVM) {
+    if (effectiveIsFourSource && detailVM) {
       return [
         {
           pairAddress: dexPairAddress ?? dexTokenAddress ?? coinId,
@@ -680,13 +682,13 @@ export function MarketDetailPage() {
       ]
     }
     return tokenPools
-  }, [tokenPools, isFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
+  }, [tokenPools, effectiveIsFourSource, detailVM, dexPairAddress, dexTokenAddress, coinId, volume24hValue, totalSupplyNum, derivedFourLiquidityUsd, remainingSupplyNum, soldSupplyNum, bondingQuoteAmountNum, targetQuoteAmountNum, quoteSymbol])
   const pairDexIcon = displayDexId ? DEX_ICON_MAP[displayDexId.toLowerCase()] : null
   const totalPoolsLiquidity = useMemo(
     () => displayPools.reduce((sum, p) => sum + (Number.isFinite(p.liquidityUsd) ? p.liquidityUsd : 0), 0),
     [displayPools],
   )
-  const totalPoolsLiquidityLabel = isFourSource && derivedFourLiquidityUsd > 0
+  const totalPoolsLiquidityLabel = effectiveIsFourSource && derivedFourLiquidityUsd > 0
     ? formatCompact(derivedFourLiquidityUsd)
     : formatCompact(totalPoolsLiquidity)
 
