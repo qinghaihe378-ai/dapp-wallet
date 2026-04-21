@@ -1,4 +1,4 @@
-import { fetchFourMemeTokenSnapshot } from './_fourMeme'
+import { fetchFourMemeTokenSnapshot } from './_fourMeme.js'
 
 export default async function handler(req: any, res: any) {
   try {
