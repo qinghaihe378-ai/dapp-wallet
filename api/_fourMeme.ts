@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis'
-import { JsonRpcProvider } from 'ethers'
+import { Contract, JsonRpcProvider } from 'ethers'
 
 const FOUR_SNAPSHOT_KEY_PREFIX = 'clawdex:fourmeme:snapshot:'
 const FOUR_PROXY_CONTRACT = '0x5c952063c7fc8610ffdb798152d69f0b9550762b'
@@ -8,6 +8,8 @@ const FOUR_TRADE_TOPICS = [
   '0x7db52723a3b2cdd6164364b3b766e65e540d7be48ffa89582956d8eaebe62942',
 ]
 const FOUR_RESERVED_SUPPLY = 200_000_000
+const FOUR_TARGET_QUOTE_AMOUNT = 18
+const BNB_USD_FEED = '0x0567F2323251f0Aab15c8DfB1967E4e8A7D42aeE'
 
 let redis: Redis | null = null
 
@@ -74,8 +76,52 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
   const provider = getBscProvider()
   const tokenNeedle = tokenAddress.toLowerCase().replace(/^0x/, '')
   const latest = await provider.getBlockNumber()
+  let remainingSupply: number | null = null
+  let priceChange24h: number | null = null
 
-  for (let start = latest - 50_000; start > Math.max(0, latest - 400_000); start -= 50_000) {
+  try {
+    const token = new Contract(
+      tokenAddress,
+      [
+        'function balanceOf(address) view returns (uint256)',
+        'function decimals() view returns (uint8)',
+      ],
+      provider,
+    )
+    const [rawBalance, decimals] = await Promise.all([
+      token.balanceOf(FOUR_PROXY_CONTRACT),
+      token.decimals(),
+    ])
+    const proxyTokenBalance = Number(rawBalance) / (10 ** Number(decimals))
+    remainingSupply = Math.max(0, proxyTokenBalance - FOUR_RESERVED_SUPPLY)
+  } catch {
+    // ignore token balance read failure and continue with event fallback
+  }
+
+  try {
+    const recentLogs = await provider.getLogs({
+      address: FOUR_PROXY_CONTRACT,
+      topics: [FOUR_TRADE_TOPICS],
+      fromBlock: Math.max(0, latest - 30_000),
+      toBlock: latest,
+    })
+    const matched = recentLogs.filter((log) => `${log.data}${log.topics.join('')}`.toLowerCase().includes(tokenNeedle))
+    if (matched.length >= 2) {
+      const firstHex = matched[0].data.replace(/^0x/, '')
+      const lastHex = matched[matched.length - 1].data.replace(/^0x/, '')
+      if (firstHex.length >= 64 * 3 && lastHex.length >= 64 * 3) {
+        const firstPrice = parseWordAmount(firstHex.slice(64 * 2, 64 * 3))
+        const lastPrice = parseWordAmount(lastHex.slice(64 * 2, 64 * 3))
+        if (firstPrice > 0) {
+          priceChange24h = ((lastPrice - firstPrice) / firstPrice) * 100
+        }
+      }
+    }
+  } catch {
+    // ignore recent trade scan failure
+  }
+
+  for (let start = latest - 50_000; start > Math.max(0, latest - 5_000_000); start -= 50_000) {
     const logs = await provider.getLogs({
       address: FOUR_PROXY_CONTRACT,
       topics: [FOUR_TRADE_TOPICS],
@@ -91,15 +137,17 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
       const hex = log.data.replace(/^0x/, '')
       if (hex.length < 64 * 8) continue
       const words = Array.from({ length: 8 }, (_, index) => hex.slice(index * 64, (index + 1) * 64))
-      const remainingSupply = parseWordAmount(words[6])
+      const eventRemainingSupply = parseWordAmount(words[6])
       const bondingQuoteAmount = parseWordAmount(words[7])
       const priceQuote = parseWordAmount(words[2])
-      const progressPct = 100 - ((remainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
+      const mergedRemainingSupply = remainingSupply != null && remainingSupply >= 0 ? remainingSupply : eventRemainingSupply
+      const progressPct = 100 - ((mergedRemainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
 
       return {
-        remainingSupply,
+        remainingSupply: mergedRemainingSupply,
         bondingQuoteAmount,
         priceQuote,
+        priceChange24h,
         progressPct: Math.max(0, Math.min(100, progressPct)),
         latestTradeBlock: log.blockNumber,
         latestTradeTx: log.transactionHash,
@@ -107,17 +155,126 @@ async function fetchFourMemeOnchainState(tokenAddress: string) {
     }
   }
 
+  if (remainingSupply != null) {
+    const progressPct = 100 - ((remainingSupply * 100) / (1_000_000_000 - FOUR_RESERVED_SUPPLY))
+    return {
+      remainingSupply,
+      bondingQuoteAmount: null,
+      priceQuote: null,
+      priceChange24h,
+      progressPct: Math.max(0, Math.min(100, progressPct)),
+      latestTradeBlock: null,
+      latestTradeTx: null,
+    }
+  }
+
   return null
+}
+
+async function fetchBnbUsdPrice() {
+  const provider = getBscProvider()
+  try {
+    const feed = new Contract(
+      BNB_USD_FEED,
+      [
+        'function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)',
+        'function decimals() view returns (uint8)',
+      ],
+      provider,
+    )
+    const [roundData, decimals] = await Promise.all([
+      feed.latestRoundData(),
+      feed.decimals(),
+    ])
+    const answer = Number(roundData[1])
+    return answer > 0 ? answer / (10 ** Number(decimals)) : null
+  } catch {
+    return null
+  }
+}
+
+async function fetchFourMemeTokenMeta(tokenAddress: string) {
+  const provider = getBscProvider()
+  try {
+    const token = new Contract(
+      tokenAddress,
+      [
+        'function name() view returns (string)',
+        'function symbol() view returns (string)',
+        'function totalSupply() view returns (uint256)',
+        'function decimals() view returns (uint8)',
+      ],
+      provider,
+    )
+    const [name, symbol, totalSupplyRaw, decimals] = await Promise.all([
+      token.name().catch(() => ''),
+      token.symbol().catch(() => ''),
+      token.totalSupply().catch(() => 0n),
+      token.decimals().catch(() => 18),
+    ])
+    const divisor = 10 ** Number(decimals)
+    return {
+      name: String(name || '').trim(),
+      symbol: String(symbol || '').trim(),
+      totalSupply: Number(totalSupplyRaw) / divisor,
+      decimals: Number(decimals),
+    }
+  } catch {
+    return {
+      name: '',
+      symbol: '',
+      totalSupply: 1_000_000_000,
+      decimals: 18,
+    }
+  }
+}
+
+function buildOnchainOnlySnapshot(
+  tokenAddress: string,
+  meta: Awaited<ReturnType<typeof fetchFourMemeTokenMeta>>,
+  onchain: Awaited<ReturnType<typeof fetchFourMemeOnchainState>>,
+  bnbUsdPrice: number | null,
+): FourMemeSnapshot | null {
+  if (!onchain && !meta.totalSupply) return null
+  const priceQuote = onchain?.priceQuote ?? null
+  const marketCapUsd =
+    priceQuote != null && bnbUsdPrice != null
+      ? priceQuote * (meta.totalSupply || 1_000_000_000) * bnbUsdPrice
+      : null
+  const virtualLiquidityUsd =
+    priceQuote != null && bnbUsdPrice != null && onchain?.remainingSupply != null && onchain?.bondingQuoteAmount != null
+      ? ((onchain.remainingSupply * priceQuote) + onchain.bondingQuoteAmount) * bnbUsdPrice
+      : null
+  return {
+    tokenAddress: tokenAddress.toLowerCase(),
+    name: meta.name || tokenAddress.slice(0, 6),
+    symbol: meta.symbol || tokenAddress.slice(0, 6),
+    imageUrl: null,
+    priceQuote,
+    priceQuoteText: priceQuote != null ? String(priceQuote) : null,
+    quoteSymbol: 'BNB',
+    priceChange24h: onchain?.priceChange24h ?? null,
+    marketCapUsd,
+    virtualLiquidityUsd,
+    volumeUsd: null,
+    totalSupply: meta.totalSupply || 1_000_000_000,
+    remainingSupply: onchain?.remainingSupply ?? null,
+    bondingQuoteAmount: onchain?.bondingQuoteAmount ?? null,
+    targetQuoteAmount: FOUR_TARGET_QUOTE_AMOUNT,
+    progressPct: onchain?.progressPct ?? null,
+    maxMarketCapUsd: null,
+  }
 }
 
 function mergeFourSnapshotWithOnchain(snapshot: FourMemeSnapshot, onchain: Awaited<ReturnType<typeof fetchFourMemeOnchainState>>): FourMemeSnapshot {
   if (!onchain) return snapshot
   return {
     ...snapshot,
-    priceQuote: onchain.priceQuote > 0 ? onchain.priceQuote : snapshot.priceQuote,
-    priceQuoteText: onchain.priceQuote > 0 ? onchain.priceQuote.toString() : snapshot.priceQuoteText,
-    remainingSupply: onchain.remainingSupply > 0 ? onchain.remainingSupply : snapshot.remainingSupply,
-    bondingQuoteAmount: onchain.bondingQuoteAmount > 0 ? onchain.bondingQuoteAmount : snapshot.bondingQuoteAmount,
+    priceQuote: (onchain.priceQuote ?? 0) > 0 ? onchain.priceQuote : snapshot.priceQuote,
+    priceQuoteText: (onchain.priceQuote ?? 0) > 0 ? onchain.priceQuote!.toString() : snapshot.priceQuoteText,
+    priceChange24h: onchain.priceChange24h ?? snapshot.priceChange24h,
+    remainingSupply: onchain.remainingSupply != null ? onchain.remainingSupply : snapshot.remainingSupply,
+    bondingQuoteAmount: (onchain.bondingQuoteAmount ?? 0) > 0 ? onchain.bondingQuoteAmount : snapshot.bondingQuoteAmount,
     progressPct: onchain.progressPct,
   }
 }
@@ -239,11 +396,19 @@ function parseFourMarkdown(text: string, tokenAddress: string): FourMemeSnapshot
 export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<FourMemeSnapshot | null> {
   const token = tokenAddress.toLowerCase()
   const cacheKey = `${FOUR_SNAPSHOT_KEY_PREFIX}${token}`
+  const onchainPromise = fetchFourMemeOnchainState(token).catch(() => null)
+  const bnbUsdPromise = fetchBnbUsdPrice().catch(() => null)
+  const metaPromise = fetchFourMemeTokenMeta(token).catch(() => ({
+    name: '',
+    symbol: '',
+    totalSupply: 1_000_000_000,
+    decimals: 18,
+  }))
   const cached = await safeRedisGet(cacheKey)
   if (cached) {
     try {
       const parsed = JSON.parse(cached) as FourMemeSnapshot
-      const onchain = await fetchFourMemeOnchainState(token).catch(() => null)
+      const onchain = await onchainPromise
       return mergeFourSnapshotWithOnchain(parsed, onchain)
     } catch {
       // ignore invalid cache
@@ -260,12 +425,24 @@ export async function fetchFourMemeTokenSnapshot(tokenAddress: string): Promise<
     if (!response.ok) return null
     const text = await response.text()
     const parsed = parseFourMarkdown(text, token)
-    if (!parsed) return null
+    const onchain = await onchainPromise
+    const meta = await metaPromise
+    const bnbUsdPrice = await bnbUsdPromise
+    if (!parsed) {
+      return buildOnchainOnlySnapshot(token, meta, onchain, bnbUsdPrice)
+    }
     await safeRedisSet(cacheKey, JSON.stringify(parsed), 300)
-    const onchain = await fetchFourMemeOnchainState(token).catch(() => null)
-    return mergeFourSnapshotWithOnchain(parsed, onchain)
+    const merged = mergeFourSnapshotWithOnchain(parsed, onchain)
+    if ((merged.priceQuote ?? 0) > 0 && bnbUsdPrice != null && (merged.totalSupply ?? 0) > 0) {
+      merged.marketCapUsd = merged.priceQuote! * merged.totalSupply! * bnbUsdPrice
+    }
+    if ((merged.priceQuote ?? 0) > 0 && bnbUsdPrice != null && merged.remainingSupply != null && merged.bondingQuoteAmount != null) {
+      merged.virtualLiquidityUsd = ((merged.remainingSupply * merged.priceQuote!) + merged.bondingQuoteAmount) * bnbUsdPrice
+    }
+    return merged
   } catch {
-    return null
+    const [onchain, meta, bnbUsdPrice] = await Promise.all([onchainPromise, metaPromise, bnbUsdPromise])
+    return buildOnchainOnlySnapshot(token, meta, onchain, bnbUsdPrice)
   } finally {
     clearTimeout(timeout)
   }

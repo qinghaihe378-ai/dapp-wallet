@@ -9,7 +9,10 @@ import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '..
 const MARKET_SORT_KEY_PREFIX = 'marketSort'
 
 function tokenFallbackSvgDataUrl(symbol: string) {
-  const text = (symbol || '?').trim().slice(0, 4).toUpperCase()
+  const text = Array.from(String(symbol || '?').trim().replace(/[\uD800-\uDFFF]/g, '') || '?')
+    .slice(0, 4)
+    .join('')
+    .toUpperCase()
   const safe = encodeURIComponent(text)
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'>` +

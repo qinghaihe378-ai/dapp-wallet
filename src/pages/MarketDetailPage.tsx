@@ -648,8 +648,7 @@ export function MarketDetailPage() {
     fourSnapshot != null &&
     (
       remainingSupplyNum > 0 ||
-      (fourSnapshot?.bondingQuoteAmount ?? 0) > 0 ||
-      (fourSnapshot?.targetQuoteAmount ?? 0) > 0
+      fourSnapshot?.bondingQuoteAmount != null
     )
   const bondingQuoteAmountNum = fourSnapshot?.bondingQuoteAmount ?? 0
   const targetQuoteAmountNum = fourSnapshot?.targetQuoteAmount ?? 0
@@ -683,9 +682,9 @@ export function MarketDetailPage() {
               ? `${formatTokenAmount(remainingSupplyNum)} ${detailVM.symbol?.toUpperCase() ?? 'TOKEN'}`
               : '数量待同步',
           bottomAmountText:
-            bondingQuoteAmountNum > 0
+            fourSnapshot?.bondingQuoteAmount != null
               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
-              : (targetQuoteAmountNum > 0 ? `${formatTokenAmount(targetQuoteAmountNum)} ${quoteSymbol}` : `${quoteSymbol} 同步中`),
+              : `${quoteSymbol} 同步中`,
           liquidityText: derivedFourLiquidityUsd > 0 ? formatCompact(derivedFourLiquidityUsd) : '内盘同步中',
         },
       ]
@@ -935,10 +934,9 @@ export function MarketDetailPage() {
                           <span>{quoteSymbol} 数量</span>
                           <strong>
                             {bondingQuoteAmountNum > 0
+                              || fourSnapshot?.bondingQuoteAmount === 0
                               ? `${formatTokenAmount(bondingQuoteAmountNum)} ${quoteSymbol}`
-                              : (targetQuoteAmountNum > 0
-                                  ? `${formatTokenAmount(targetQuoteAmountNum)} ${quoteSymbol}`
-                                  : `${quoteSymbol} 同步中`)}
+                              : `${quoteSymbol} 同步中`}
                           </strong>
                         </div>
                         <div>
