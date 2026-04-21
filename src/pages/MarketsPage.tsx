@@ -7,6 +7,7 @@ import { apiUrl } from '../lib/apiBase'
 import { formatCurrencyCompact, formatPriceByCurrency, useAppSettings } from '../components/AppSettingsProvider'
 
 const MARKET_SORT_KEY_PREFIX = 'marketSort'
+const FOUR_LIST_REFRESH_MS = 15_000
 
 function tokenFallbackSvgDataUrl(symbol: string) {
   const text = Array.from(String(symbol || '?').trim().replace(/[\uD800-\uDFFF]/g, '') || '?')
@@ -413,7 +414,7 @@ export function MarketsPage() {
       }
     }
     void loadNewOpen()
-    const t = setInterval(loadNewOpen, 30_000)
+    const t = setInterval(loadNewOpen, FOUR_LIST_REFRESH_MS)
     return () => { cancelled = true; clearInterval(t) }
   }, [])
 
@@ -582,20 +583,21 @@ export function MarketsPage() {
     const targets = rows
       .map((item) => tokenAddressFromId(item.id).toLowerCase())
       .filter((addr) => /^0x[a-f0-9]{40}$/.test(addr))
-      .filter((addr) => !fourPriceMap[addr] && !fourLoadingMap[addr])
       .slice(0, 18)
 
     if (targets.length === 0) return
-    
-    // 标记这些地址为正在加载
-    setFourLoadingMap(prev => {
-      const next = { ...prev }
-      targets.forEach(addr => { next[addr] = true })
-      return next
-    })
 
     let cancelled = false
     const loadFourSnapshots = async () => {
+      const pendingTargets = targets.filter((addr) => !fourLoadingMap[addr])
+      if (pendingTargets.length === 0) return
+
+      setFourLoadingMap((prev) => {
+        const next = { ...prev }
+        pendingTargets.forEach((addr) => { next[addr] = true })
+        return next
+      })
+
       try {
         const mergedPatch: Record<string, {
           current_price: number
@@ -619,7 +621,7 @@ export function MarketsPage() {
           isOuter?: boolean
         } | null> = {}
         try {
-          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(targets.join(','))}`), { cache: 'no-store' })
+          const res = await fetch(apiUrl(`/api/four-tokens?addresses=${encodeURIComponent(pendingTargets.join(','))}`), { cache: 'no-store' })
           if (res.ok) {
             const json = (await res.json()) as {
               snapshots?: Record<string, {
@@ -640,8 +642,8 @@ export function MarketsPage() {
           // fall through to per-token fallback below
         }
 
-        for (let i = 0; i < targets.length; i += 1) {
-          const address = targets[i]
+        for (let i = 0; i < pendingTargets.length; i += 1) {
+          const address = pendingTargets[i]
           const snapshot = snapshotMap[address.toLowerCase()] ?? null
           const isOuter = Boolean(snapshot?.isOuter)
           const currentPriceUsd =
@@ -707,7 +709,7 @@ export function MarketsPage() {
         if (!cancelled) {
           setFourLoadingMap((prev) => {
             const next = { ...prev }
-            targets.forEach((addr) => { delete next[addr] })
+            pendingTargets.forEach((addr) => { delete next[addr] })
             return next
           })
         }
@@ -715,8 +717,14 @@ export function MarketsPage() {
     }
 
     void loadFourSnapshots()
-    return () => { cancelled = true }
-  }, [rows, sourceTab, fourPriceMap, fourLoadingMap])
+    const timer = window.setInterval(() => {
+      void loadFourSnapshots()
+    }, FOUR_LIST_REFRESH_MS)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [rows, sourceTab, fourLoadingMap])
 
   const sections = useMemo(() => {
     const defaults = [
